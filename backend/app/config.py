@@ -1,8 +1,3 @@
-"""
-Backend Configuration Module
-Manages application settings, database URLs, CORS origins, and pricing files.
-"""
-
 import os
 from pydantic_settings import BaseSettings
 

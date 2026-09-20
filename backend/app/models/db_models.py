@@ -1,7 +1,3 @@
-"""
-SQLAlchemy Database Models for RideCompare
-"""
-
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean
 from sqlalchemy.orm import declarative_base

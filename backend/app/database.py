@@ -1,8 +1,3 @@
-"""
-Database Engine & Session Management for Python Backend
-Supports PostgreSQL with automated SQLite fallback and table auto-initialization.
-"""
-
 import os
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
@@ -12,30 +7,24 @@ from backend.app.models.db_models import Base, User, Search, Analytics
 
 DATABASE_URL = settings.DATABASE_URL
 
-# Handle PostgreSQL vs SQLite fallback connection
 try:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-    # Test connection
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    print("[Database] Successfully connected to PostgreSQL database.")
-except Exception as e:
-    print(f"[Database] PostgreSQL connection unavailable ({e}). Using SQLite local database fallback.")
+except Exception:
     sqlite_path = os.path.join(os.path.dirname(__file__), "ridecompare.db")
     DATABASE_URL = f"sqlite:///{sqlite_path}"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Auto-create tables on module load
 try:
     Base.metadata.create_all(bind=engine)
 except Exception as e:
-    print(f"[Database] Warning creating tables: {e}")
+    pass
 
 
 def get_db():
-    """Dependency generator for database sessions."""
     db = SessionLocal()
     try:
         yield db
@@ -44,7 +33,6 @@ def get_db():
 
 
 def check_db_health() -> bool:
-    """Verifies active connection to database."""
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -54,10 +42,8 @@ def check_db_health() -> bool:
 
 
 def init_db():
-    """Creates database tables and seeds initial mock data if empty."""
     Base.metadata.create_all(bind=engine)
     
-    # Check if searches are already seeded
     db: Session = SessionLocal()
     try:
         user_count = db.query(User).count()
@@ -68,7 +54,6 @@ def init_db():
 
         search_count = db.query(Search).count()
         if search_count == 0:
-            print("[Database] Seeding initial mock search and analytics data...")
             now = datetime.utcnow()
             mock_searches = [
                 Search(
@@ -131,9 +116,7 @@ def init_db():
             ]
             db.add_all(mock_analytics)
             db.commit()
-            print("[Database] Initial mock seed data successfully written.")
     except Exception as err:
         db.rollback()
-        print(f"[Database] Error initializing database seed: {err}")
     finally:
         db.close()

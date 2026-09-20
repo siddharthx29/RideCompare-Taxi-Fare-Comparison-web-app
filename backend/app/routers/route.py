@@ -1,12 +1,5 @@
-"""
-Route Calculation & Fare Comparison Router
-Calculates OSRM driving routes with Haversine fallback, computes fares,
-enriches with ML intelligence, and stores searches.
-Supports both GET query parameters and POST JSON body formats.
-"""
-
 from typing import Optional, List
-from fastapi import APIRouter, Query, Depends, HTTPException, BackgroundTasks, Body
+from fastapi import APIRouter, Query, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import httpx
@@ -19,14 +12,13 @@ router = APIRouter(tags=["Routing"])
 
 
 class RoutePostPayload(BaseModel):
-    pickup: List[float]  # [lat, lng]
-    drop: List[float]    # [lat, lng]
+    pickup: List[float]
+    drop: List[float]
     pickupName: Optional[str] = "Pickup Location"
     dropName: Optional[str] = "Drop Location"
 
 
 def log_historical_observations(comparison: dict, source: str, dest: str, lat1: float, lon1: float, lat2: float, lon2: float, distance_km: float, duration_min: float):
-    """Background task to log multi-provider fare observations for continuous ML retraining."""
     db = SessionLocal()
     try:
         for p in comparison.get("providers", []):
@@ -58,9 +50,8 @@ def log_historical_observations(comparison: dict, source: str, dest: str, lat1: 
             )
             db.add(rec)
         db.commit()
-    except Exception as err:
+    except Exception:
         db.rollback()
-        print(f"[Historical Log Error] {err}")
     finally:
         db.close()
 
@@ -76,7 +67,6 @@ async def _process_route_calculation(
     geometry = None
     osrm_success = False
 
-    # Query OSRM Driving Routing API
     try:
         osrm_url = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
         async with httpx.AsyncClient(timeout=4.0) as client:
@@ -89,8 +79,8 @@ async def _process_route_calculation(
                     duration_mins = route["duration"] / 60.0
                     geometry = route["geometry"]
                     osrm_success = True
-    except Exception as e:
-        print(f"⚠️ OSRM API timed out or unavailable ({e}). Using Haversine route approximation.")
+    except Exception:
+        pass
 
     if not osrm_success:
         straight_dist = calculate_haversine_distance(lat1, lon1, lat2, lon2)
@@ -104,7 +94,6 @@ async def _process_route_calculation(
             ]
         }
 
-    # Compute fares & ML intelligence predictions
     comparison = calculate_fares_and_scores(
         distance_km=distance_km,
         duration_mins=duration_mins,
@@ -117,13 +106,11 @@ async def _process_route_calculation(
         osrm_success=osrm_success
     )
 
-    # Calculate savings
     fares = [p["actualFare"] for p in comparison["providers"]]
     max_fare = max(fares) if fares else 0
     min_fare = min(fares) if fares else 0
     potential_savings = max_fare - min_fare
 
-    # Persist search log in database
     search_rec = Search(
         source=source_label,
         destination=dest_label,
@@ -142,7 +129,6 @@ async def _process_route_calculation(
     db.commit()
     db.refresh(search_rec)
 
-    # Background task for historical dataset collection
     if background_tasks:
         background_tasks.add_task(
             log_historical_observations,
@@ -150,7 +136,6 @@ async def _process_route_calculation(
             distance_km, duration_mins
         )
 
-    # Return unified structure compatible with both frontend and tests
     return {
         "success": True,
         "searchId": search_rec.id,
@@ -186,8 +171,8 @@ async def _process_route_calculation(
 
 @router.get("/route")
 async def get_route_and_comparison_get(
-    start: str = Query(..., description="Start coordinates lng,lat"),
-    end: str = Query(..., description="End coordinates lng,lat"),
+    start: str = Query(...),
+    end: str = Query(...),
     sourceName: Optional[str] = Query(None),
     destName: Optional[str] = Query(None),
     background_tasks: BackgroundTasks = None,

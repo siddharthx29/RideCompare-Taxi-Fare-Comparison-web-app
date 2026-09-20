@@ -1,19 +1,11 @@
-"""
-K-Means Clustering Module (Unsupervised Learning)
-Discovers underlying pricing regimes and patterns across fare observations.
-Calculates Silhouette Scores across K values to determine the optimal number of clusters.
-"""
-
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
-import joblib
 
 
-# Features used for discovering pricing regimes
 CLUSTER_FEATURES = [
     'distance_km',
     'duration_min',
@@ -26,12 +18,8 @@ CLUSTER_FEATURES = [
 
 
 def evaluate_optimal_k(X_scaled: np.ndarray, k_range: range = range(3, 7), sample_size: int = 4000) -> Dict[int, float]:
-    """
-    Evaluates Silhouette Score across candidate K values to pick the optimal cluster count.
-    """
     scores = {}
     
-    # Subsample if dataset is large for silhouette computation efficiency
     if len(X_scaled) > sample_size:
         indices = np.random.RandomState(42).choice(len(X_scaled), sample_size, replace=False)
         X_eval = X_scaled[indices]
@@ -44,15 +32,11 @@ def evaluate_optimal_k(X_scaled: np.ndarray, k_range: range = range(3, 7), sampl
         eval_labels = labels[indices] if len(X_scaled) > sample_size else labels
         score = silhouette_score(X_eval, eval_labels)
         scores[k] = round(float(score), 4)
-        print(f"  K={k} -> Silhouette Score: {scores[k]:.4f}")
 
     return scores
 
 
 def interpret_clusters(kmeans: KMeans, scaler: StandardScaler, df_features: pd.DataFrame, cluster_labels: np.ndarray) -> Dict[int, Dict[str, Any]]:
-    """
-    Analyzes cluster centroids in the original feature space and generates human-readable regime descriptions.
-    """
     df_temp = df_features.copy()
     df_temp['cluster'] = cluster_labels
 
@@ -67,7 +51,6 @@ def interpret_clusters(kmeans: KMeans, scaler: StandardScaler, df_features: pd.D
         avg_dist = group['distance_km'].mean()
         avg_speed = group['speed_kmh'].mean() if 'speed_kmh' in group else 25.0
 
-        # Heuristic interpretation based on centroids
         if avg_surge > 1.35 or avg_fare_km > 32.0:
             label = "Peak Hour Surge"
             desc = "High surge multiplier driven by peak transit hours or weather conditions."
@@ -107,27 +90,17 @@ def interpret_clusters(kmeans: KMeans, scaler: StandardScaler, df_features: pd.D
 
 
 def train_kmeans_pipeline(df: pd.DataFrame) -> Tuple[KMeans, StandardScaler, Dict[str, Any]]:
-    """
-    Fits K-Means clustering pipeline with automatic K selection and cluster profiling.
-    """
-    print("\n--- Training K-Means Clustering Model (Unsupervised) ---")
-    
-    # Feature extraction
     X = df[CLUSTER_FEATURES].copy().fillna(0)
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # Evaluate Silhouette Scores
     silhouette_dict = evaluate_optimal_k(X_scaled, k_range=range(3, 7))
     optimal_k = max(silhouette_dict, key=silhouette_dict.get)
     best_silhouette = silhouette_dict[optimal_k]
-    print(f"Optimal K selected: {optimal_k} with Silhouette Score: {best_silhouette:.4f}")
 
-    # Fit final K-Means model
     kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=15)
     cluster_labels = kmeans.fit_predict(X_scaled)
 
-    # Generate cluster profiles
     profiles = interpret_clusters(kmeans, scaler, df, cluster_labels)
 
     metadata = {

@@ -1,8 +1,3 @@
-"""
-Pricing Service & Fare Calculation Engine (Python Implementation)
-Calculates raw ground-truth provider fares and integrates directly with the ML Intelligence Engine.
-"""
-
 import os
 import json
 import math
@@ -12,7 +7,6 @@ from typing import Dict, Any, List, Tuple
 
 from ml.inference.predictor import FareIntelligenceEngine
 
-# Fallback fares configuration
 FALLBACK_FARES = {
     "dynamicPricing": {
         "morningPeak": {"startHour": 7, "endHour": 10, "multiplier": 1.4},
@@ -39,7 +33,7 @@ FALLBACK_FARES = {
     }
 }
 
-# Load fares.json if available
+
 def load_fares_config() -> dict:
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     possible_paths = [
@@ -53,7 +47,6 @@ def load_fares_config() -> dict:
                 with open(p, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
                     if cfg and "cities" in cfg:
-                        print(f"[Pricing Service] Loaded fares configuration from: {p}")
                         return cfg
             except Exception:
                 pass
@@ -61,13 +54,10 @@ def load_fares_config() -> dict:
 
 
 FARE_CONFIG = load_fares_config()
-
-# Direct in-process ML Intelligence Engine
 ml_engine = FareIntelligenceEngine()
 
 
 def detect_city(source: str, destination: str) -> str:
-    """Detects city from source and destination text."""
     text = f"{source} {destination}".lower()
     if any(k in text for k in ['kochi', 'cochin', 'ernakulam']):
         return 'Kochi'
@@ -83,8 +73,6 @@ def detect_city(source: str, destination: str) -> str:
 
 
 def get_surge_multiplier() -> Tuple[float, str]:
-    """Calculates active peak/night surge multiplier according to Indian Standard Time (IST)."""
-    # Current IST Time (UTC + 5:30)
     ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
     current_hour = ist_now.hour
 
@@ -104,7 +92,6 @@ def get_surge_multiplier() -> Tuple[float, str]:
 
 
 def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Calculates great-circle distance between two coordinate pairs in km."""
     R = 6371.0
     d_lat = math.radians(lat2 - lat1)
     d_lon = math.radians(lon2 - lon1)
@@ -113,12 +100,11 @@ def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: fl
     c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
     return R * c
 
-# Alias for compatibility
+
 haversine_km = calculate_haversine_distance
 
 
 def calculate_fares_for_route(route_info: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Calculates provider fares given a route info dictionary."""
     dist = route_info.get("distance_km", 5.0)
     dur = route_info.get("duration_min", 15.0)
     pickup = route_info.get("pickup_name", "Pickup Location")
@@ -139,7 +125,6 @@ def calculate_fares_for_route(route_info: Dict[str, Any]) -> List[Dict[str, Any]
         end_lat=lat2
     )
     
-    # Map providers to unified schema
     fares = []
     for p in result.get("providers", []):
         fares.append({
@@ -171,9 +156,6 @@ def calculate_fares_and_scores(
     end_lat: float,
     osrm_success: bool = True
 ) -> Dict[str, Any]:
-    """
-    Computes ground-truth provider fares and enriches them directly with the in-process ML engine.
-    """
     city = detect_city(source, destination)
     city_data = FARE_CONFIG.get("cities", {}).get(city) or FARE_CONFIG.get("cities", {}).get("Bangalore") or FALLBACK_FARES["cities"]["Bangalore"]
 
@@ -181,7 +163,6 @@ def calculate_fares_and_scores(
     straight_line_distance = calculate_haversine_distance(start_lat, start_lon, end_lat, end_lon)
     detour_distance = max(0.0, distance_km - straight_line_distance)
 
-    # Determine Airport Toll Estimate
     toll_estimate = 0.0
     if "toll" in city_data:
         combined = f"{source} {destination}".lower()
@@ -191,7 +172,6 @@ def calculate_fares_and_scores(
     pickup_addr = urllib.parse.quote(source)
     dropoff_addr = urllib.parse.quote(destination)
 
-    # Calculate actual provider fares
     providers_config = city_data.get("providers", {})
     raw_provider_records = []
 
@@ -205,7 +185,6 @@ def calculate_fares_and_scores(
         cost_per_km = round(actual_fare / max(0.1, distance_km), 1)
         cost_per_min = round(actual_fare / max(1.0, provider_eta), 1)
 
-        # Deep links
         lname = name.lower()
         if 'uber' in lname:
             app_link = f"uber://?action=setPickup&pickup[formatted_address]={pickup_addr}&dropoff[formatted_address]={dropoff_addr}"
@@ -248,7 +227,6 @@ def calculate_fares_and_scores(
             "isBestValue": False
         })
 
-    # Prepare for ML Inference
     ml_input_records = []
     for p in raw_provider_records:
         ml_input_records.append({
@@ -266,11 +244,9 @@ def calculate_fares_and_scores(
             "eta_minutes": p["etaMinutes"]
         })
 
-    # Execute ML ranking and enrichment
     ml_result = ml_engine.rank_and_compare_providers(ml_input_records, osrm_success=osrm_success)
     enriched_ml_map = {item["provider"]: item for item in ml_result.get("providers", [])}
 
-    # Merge ML predictions into provider records
     fares = [p["actualFare"] for p in raw_provider_records]
     times = [p["etaMinutes"] for p in raw_provider_records]
     min_fare = min(fares) if fares else 0
@@ -298,7 +274,6 @@ def calculate_fares_and_scores(
         p["smartScore"] = smart_score
         p["scoreBreakdown"] = ml_item.get("score_breakdown", {})
 
-        # Efficiency & Best value scores
         fare_eff = min_fare / p["actualFare"] if p["actualFare"] > 0 else 1.0
         time_eff = min_time / p["etaMinutes"] if p["etaMinutes"] > 0 else 1.0
         route_eff = min(1.0, (straight_line_distance / max(0.1, distance_km)) * (1.08 if p["vehicleType"] == 'Bike' else 1.0))
@@ -306,7 +281,6 @@ def calculate_fares_and_scores(
         p["efficiencyScore"] = round((time_eff * 40) + (fare_eff * 40) + (route_eff * 20))
         p["recommendationScore"] = round((fare_eff * 35) + (time_eff * 35) + (route_eff * 10) + ((p["rating"] / 5.0) * 20))
 
-    # Mark highlights
     lowest_fare = min(p["actualFare"] for p in raw_provider_records) if raw_provider_records else 0
     lowest_eta = min(p["etaMinutes"] for p in raw_provider_records) if raw_provider_records else 0
     highest_eff = max(p["efficiencyScore"] for p in raw_provider_records) if raw_provider_records else 0
@@ -322,7 +296,6 @@ def calculate_fares_and_scores(
         if p["smartScore"] == highest_smart:
             p["isBestValue"] = True
 
-    # Sort strictly by cheapest actual fare
     raw_provider_records.sort(key=lambda x: x["actualFare"])
 
     cheapest_name = next((p["provider"] for p in raw_provider_records if p["isCheapest"]), raw_provider_records[0]["provider"] if raw_provider_records else "None")
@@ -330,7 +303,6 @@ def calculate_fares_and_scores(
     most_eff_name = next((p["provider"] for p in raw_provider_records if p["isMostEfficient"]), raw_provider_records[0]["provider"] if raw_provider_records else "None")
     best_val_name = next((p["provider"] for p in raw_provider_records if p["isBestValue"]), raw_provider_records[0]["provider"] if raw_provider_records else "None")
 
-    # Recommendations summary
     recommended = next((p for p in raw_provider_records if p["provider"] == most_eff_name), raw_provider_records[0] if raw_provider_records else None)
     recommendation_reason = ""
     dist_adv = ""
@@ -350,7 +322,6 @@ def calculate_fares_and_scores(
         time_adv = f"Saves {round(max_time - recommended['etaMinutes'])} minutes compared to the slowest transport alternative."
         cost_adv = f"₹{round(max_fare - recommended['actualFare'])} saved compared to the most expensive travel option."
 
-    # Dynamic Insights
     insights = []
     if len(raw_provider_records) > 1:
         min_p = raw_provider_records[0]

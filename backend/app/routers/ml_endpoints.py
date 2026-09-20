@@ -1,22 +1,17 @@
-"""
-ML and Fare Endpoints for FastAPI Backend.
-Exposes fare comparison, predictive modeling, historical data, cluster profiles, model performance, and retraining.
-"""
-
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
-from sqlalchemy.orm import Session
+import sys
 import json
 import logging
+import datetime
 from pathlib import Path
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models.db_models import HistoricalFare, Analytics
 from ..services.pricing import calculate_fares_for_route, haversine_km
 
-# Import ML intelligence engine from ml package if available
-import sys
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -25,20 +20,15 @@ try:
     from ml.inference.predictor import FareIntelligenceEngine
     _ml_engine = FareIntelligenceEngine()
 except Exception as e:
-    logging.warning(f"Could not initialize FareIntelligenceEngine in ml_endpoints: {e}")
     _ml_engine = None
 
 router = APIRouter(prefix="/api", tags=["ml_and_fares"])
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------
-# Request / Response Schemas
-# ---------------------------------------------------------
-
 class FareCompareRequest(BaseModel):
-    pickup: str = Field(..., description="Pickup address or place name")
-    drop: str = Field(..., description="Destination address or place name")
+    pickup: str
+    drop: str
     pickup_lat: float = Field(..., ge=-90, le=90)
     pickup_lng: float = Field(..., ge=-180, le=180)
     drop_lat: float = Field(..., ge=-90, le=90)
@@ -49,8 +39,8 @@ class FareCompareRequest(BaseModel):
 
 
 class FarePredictRequest(BaseModel):
-    provider: str = Field("Uber", description="Provider name")
-    ride_type: str = Field("Mini", description="Vehicle category")
+    provider: str = "Uber"
+    ride_type: str = "Mini"
     distance_km: float = Field(..., gt=0)
     duration_min: float = Field(..., gt=0)
     hour_of_day: Optional[int] = Field(None, ge=0, le=23)
@@ -61,17 +51,9 @@ class FarePredictRequest(BaseModel):
     city: Optional[str] = "Delhi"
 
 
-# ---------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------
-
 @router.post("/fare/compare")
 async def compare_fares(payload: FareCompareRequest, db: Session = Depends(get_db)):
-    """
-    Direct endpoint for comparing provider fares with ML prediction and anomaly enrichment.
-    """
     try:
-        # Compute distance if not provided
         dist = payload.distance_km
         if not dist or dist <= 0:
             dist = haversine_km(payload.pickup_lat, payload.pickup_lng, payload.drop_lat, payload.drop_lng)
@@ -80,7 +62,6 @@ async def compare_fares(payload: FareCompareRequest, db: Session = Depends(get_d
         if not dur or dur <= 0:
             dur = max(5.0, round((dist / 25.0) * 60.0, 1))
 
-        # Calculate fare details
         route_info = {
             "distance_km": dist,
             "duration_min": dur,
@@ -90,14 +71,13 @@ async def compare_fares(payload: FareCompareRequest, db: Session = Depends(get_d
         
         fares = calculate_fares_for_route(route_info)
 
-        # Log search count
         try:
-            stat = db.query(Analytics).filter(Analytics.metric_name == "total_searches").first()
+            stat = db.query(Analytics).filter(Analytics.provider == "Total").first()
+            if not stat:
+                stat = db.query(Analytics).first()
             if stat:
-                stat.metric_value += 1
-            else:
-                db.add(Analytics(metric_name="total_searches", metric_value=1))
-            db.commit()
+                stat.clicks = (stat.clicks or 0) + 1
+                db.commit()
         except Exception:
             db.rollback()
 
@@ -107,20 +87,15 @@ async def compare_fares(payload: FareCompareRequest, db: Session = Depends(get_d
             "fares": fares
         }
     except Exception as e:
-        logger.error(f"Error in /fare/compare: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Fare comparison error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/fare/predict")
 async def predict_fare(payload: FarePredictRequest):
-    """
-    ML regression prediction for a specific ride configuration.
-    """
     if not _ml_engine:
-        raise HTTPException(status_code=503, detail="ML inference engine is not ready or models are missing.")
+        raise HTTPException(status_code=503, detail="ML inference engine unavailable")
 
     try:
-        import datetime
         now = datetime.datetime.now()
         hour = payload.hour_of_day if payload.hour_of_day is not None else now.hour
         dow = payload.day_of_week if payload.day_of_week is not None else now.weekday()
@@ -140,8 +115,7 @@ async def predict_fare(payload: FarePredictRequest):
         )
         return {"success": True, "prediction": pred_res}
     except Exception as e:
-        logger.error(f"Prediction error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/fare/history")
@@ -151,12 +125,9 @@ async def get_fare_history(
     provider: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """
-    Retrieves recent logged historical fares.
-    """
     query = db.query(HistoricalFare)
     if city:
-        query = query.filter(HistoricalFare.city.ilike(f"%{city}%"))
+        query = query.filter(HistoricalFare.destination.ilike(f"%{city}%"))
     if provider:
         query = query.filter(HistoricalFare.provider.ilike(f"%{provider}%"))
 
@@ -169,11 +140,11 @@ async def get_fare_history(
             {
                 "id": r.id,
                 "provider": r.provider,
-                "ride_type": r.ride_type,
-                "fare": r.fare,
+                "ride_type": r.vehicle_type,
+                "fare": r.actual_fare,
                 "distance_km": r.distance_km,
                 "duration_min": r.duration_min,
-                "city": r.city,
+                "city": r.destination,
                 "created_at": r.created_at.isoformat() if r.created_at else None
             }
             for r in records
@@ -183,11 +154,8 @@ async def get_fare_history(
 
 @router.get("/ml/clusters")
 async def get_cluster_profiles():
-    """
-    Returns unsupervised K-Means cluster profiling data for visualization.
-    """
     if not _ml_engine:
-        raise HTTPException(status_code=503, detail="ML inference engine not initialized.")
+        raise HTTPException(status_code=503, detail="ML engine unavailable")
 
     return {
         "success": True,
@@ -225,9 +193,6 @@ async def get_cluster_profiles():
 
 @router.get("/ml/model-performance")
 async def get_model_performance():
-    """
-    Returns the evaluation and benchmark metrics of the trained ML models.
-    """
     metrics_path = ROOT_DIR / "ml" / "models" / "saved" / "metrics.json"
     
     if metrics_path.exists():
@@ -239,10 +204,9 @@ async def get_model_performance():
                 "status": "active",
                 "metrics": metrics
             }
-        except Exception as e:
-            logger.warning(f"Error reading metrics.json: {e}")
+        except Exception:
+            pass
 
-    # Fallback to standard validated baseline
     return {
         "success": True,
         "status": "baseline",
@@ -260,27 +224,21 @@ async def get_model_performance():
 
 
 def _execute_retraining():
-    """Background task to run model retraining scripts."""
     try:
         from ml.training.fare_regression import train_regression_models
         from ml.training.kmeans_cluster import train_kmeans_cluster
         from ml.training.anomaly_detection import train_anomaly_detector
-        logger.info("Executing background ML retraining pipeline...")
         train_kmeans_cluster()
         train_regression_models()
         train_anomaly_detector()
         global _ml_engine
         _ml_engine = FareIntelligenceEngine()
-        logger.info("Background ML retraining completed successfully.")
     except Exception as e:
-        logger.error(f"Background ML retraining error: {e}", exc_info=True)
+        logger.error(f"Retraining error: {e}")
 
 
 @router.post("/ml/retrain")
 async def retrain_ml_models(background_tasks: BackgroundTasks):
-    """
-    Triggers an asynchronous background retraining run for all ML models.
-    """
     background_tasks.add_task(_execute_retraining)
     return {
         "success": True,

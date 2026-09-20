@@ -1,20 +1,14 @@
-"""
-Geocoding Router (Proxies OpenStreetMap Nominatim with In-Memory TTL Cache and Offline Fallback)
-"""
-
 import time
 import urllib.parse
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from fastapi import APIRouter, Query, HTTPException
 import httpx
 
 router = APIRouter(tags=["Geocoding"])
 
-# In-memory cache with TTL (10 minutes)
 _cache: Dict[str, Dict[str, Any]] = {}
-CACHE_TTL = 10 * 60
+CACHE_TTL = 600
 
-# Offline fallback landmarks for high reliability
 FALLBACK_LANDMARKS = [
     {"display_name": "Connaught Place, New Delhi, Delhi, India", "lat": "28.6328", "lon": "77.2197", "displayName": "Connaught Place, New Delhi, Delhi, India", "lng": "77.2197"},
     {"display_name": "Indira Gandhi International Airport, New Delhi, Delhi, India", "lat": "28.5562", "lon": "77.1000", "displayName": "Indira Gandhi International Airport, New Delhi, Delhi, India", "lng": "77.1000"},
@@ -31,11 +25,10 @@ FALLBACK_LANDMARKS = [
 
 
 @router.get("/geocode")
-async def geocode_query(q: str = Query(..., min_length=1, description="Location search query")):
+async def geocode_query(q: str = Query(..., min_length=1)):
     normalized_q = q.strip().lower()
     now = time.time()
 
-    # Check cache hit
     if normalized_q in _cache:
         cached = _cache[normalized_q]
         if now - cached["timestamp"] < CACHE_TTL:
@@ -51,7 +44,6 @@ async def geocode_query(q: str = Query(..., min_length=1, description="Location 
             if res.status_code == 200:
                 raw_data = res.json()
                 if raw_data:
-                    # Format with standard displayName and lng keys for frontend compatibility
                     formatted = [
                         {
                             **item,
@@ -62,15 +54,13 @@ async def geocode_query(q: str = Query(..., min_length=1, description="Location 
                     ]
                     _cache[normalized_q] = {"data": formatted, "timestamp": now}
                     return formatted
-    except Exception as e:
-        print(f"⚠️ Geocoding upstream warning: {e}")
+    except Exception:
+        pass
 
-    # Fallback to local landmark matching if upstream is slow or rate-limited
     matches = [
         item for item in FALLBACK_LANDMARKS
         if any(term in item["displayName"].lower() for term in normalized_q.split())
     ]
-    
     if not matches:
         matches = FALLBACK_LANDMARKS[:3]
 

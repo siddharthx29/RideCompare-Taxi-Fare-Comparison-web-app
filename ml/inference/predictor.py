@@ -1,9 +1,3 @@
-"""
-Fare Predictor & ML Inference Engine
-Preloads models in memory for sub-millisecond inference.
-Calculates expected fare, cluster regime, anomaly detection, confidence score, and multi-factor ranking.
-"""
-
 import os
 import json
 import numpy as np
@@ -28,7 +22,6 @@ class FareIntelligenceEngine:
         self.iso_scaler = None
         self.metadata: Dict[str, Any] = {}
 
-        # Default multi-factor ranking weights
         self.ranking_weights = {
             'price': 0.40,
             'eta': 0.30,
@@ -39,7 +32,6 @@ class FareIntelligenceEngine:
         self.load_models()
 
     def load_models(self) -> bool:
-        """Loads serialized model pipelines from disk into memory."""
         try:
             reg_path = os.path.join(self.models_dir, 'fare_regressor.joblib')
             kmeans_path = os.path.join(self.models_dir, 'kmeans_cluster.joblib')
@@ -49,7 +41,6 @@ class FareIntelligenceEngine:
             meta_path = os.path.join(self.models_dir, 'model_metadata.json')
 
             if not all(os.path.exists(p) for p in [reg_path, kmeans_path, kmeans_scaler_path, iso_path, iso_scaler_path, meta_path]):
-                print(f"[ML Engine] Model files not found in {self.models_dir}. Need to run training pipeline.")
                 self.loaded = False
                 return False
 
@@ -63,10 +54,8 @@ class FareIntelligenceEngine:
                 self.metadata = json.load(f)
 
             self.loaded = True
-            print(f"[ML Engine] Successfully loaded ML models (Version: {self.metadata.get('version', '1.0.0')})")
             return True
-        except Exception as e:
-            print(f"[ML Engine] Error loading models: {e}")
+        except Exception:
             self.loaded = False
             return False
 
@@ -78,23 +67,16 @@ class FareIntelligenceEngine:
         osrm_success: bool = True,
         diff_pct: float = 0.0
     ) -> Dict[str, Any]:
-        """
-        Calculates multi-factor prediction confidence score and categorical rating.
-        """
-        # Baseline confidence derived from model R2 on validation set
         base_score = float(self.metadata.get('regression_metrics', {}).get('r2', 0.92)) * 80.0
 
-        # Distance penalty if outside common urban bounds (e.g. >40 km or <0.5 km)
         dist_score = 10.0
         if distance_km < 0.8:
             dist_score = 5.0
         elif distance_km > 35.0:
             dist_score = max(2.0, 10.0 - (distance_km - 35.0) * 0.4)
 
-        # Routing precision score
         routing_score = 10.0 if osrm_success else 4.0
 
-        # Residual divergence penalty (if actual fare deviates wildly from ML expected)
         res_penalty = 0.0
         abs_diff_pct = abs(diff_pct)
         if abs_diff_pct > 40.0:
@@ -120,10 +102,6 @@ class FareIntelligenceEngine:
         provider_record: Dict[str, Any],
         osrm_success: bool = True
     ) -> Dict[str, Any]:
-        """
-        Predicts expected fare, assigns K-Means cluster pricing regime,
-        detects anomalies, and computes confidence for a provider quote.
-        """
         norm_rec = normalize_fare_record(provider_record)
         df_single = pd.DataFrame([norm_rec])
         df_feat = engineer_features(df_single)
@@ -134,7 +112,6 @@ class FareIntelligenceEngine:
         provider = str(norm_rec.get('provider', 'Unknown'))
         vehicle_type = str(norm_rec.get('vehicle_type', 'Cab'))
 
-        # Fallback values if models are not loaded
         if not self.loaded:
             est_fare = round(actual_fare * 0.98, 2)
             cluster_id = 0
@@ -143,7 +120,6 @@ class FareIntelligenceEngine:
             anomaly_reason = "Model in fallback mode"
             conf = {'confidence_score': 85.0, 'confidence_level': 'Medium'}
         else:
-            # 1. K-Means Cluster Assignment
             cluster_features = [
                 'distance_km', 'duration_min', 'actual_fare',
                 'fare_per_km', 'fare_per_min', 'surge_multiplier', 'traffic_level'
@@ -152,12 +128,10 @@ class FareIntelligenceEngine:
             X_cluster_scaled = self.kmeans_scaler.transform(X_cluster)
             cluster_id = int(self.kmeans.predict(X_cluster_scaled)[0])
             
-            # Look up human-readable cluster label
             cluster_profiles = self.metadata.get('cluster_profiles', {})
             profile = cluster_profiles.get(str(cluster_id), {})
             cluster_label = profile.get('label', f'Pricing Regime {cluster_id}')
 
-            # 2. Supervised Regression Prediction
             df_feat['cluster_id'] = cluster_id
             num_cols = self.metadata.get('regression_features', {}).get('numerical', [
                 'distance_km', 'duration_min', 'surge_multiplier', 'traffic_level',
@@ -169,7 +143,6 @@ class FareIntelligenceEngine:
             pred_val = float(self.regressor.predict(X_reg)[0])
             est_fare = max(15.0, round(pred_val, 2))
 
-            # 3. Anomaly Detection
             is_anomaly, anomaly_score, anomaly_reason = evaluate_anomaly(
                 self.iso_forest,
                 self.iso_scaler,
@@ -178,7 +151,6 @@ class FareIntelligenceEngine:
                 actual_fare=actual_fare
             )
 
-            # 4. Confidence Scoring
             diff = actual_fare - est_fare
             diff_pct = (diff / max(1.0, est_fare)) * 100.0
             conf = self.calculate_confidence(distance_km, duration_min, provider, osrm_success, diff_pct)
@@ -212,7 +184,6 @@ class FareIntelligenceEngine:
         surge_multiplier: float = 1.0,
         city: str = "Delhi"
     ) -> Dict[str, Any]:
-        """Convenience method for predicting fare directly from raw parameters."""
         raw_fare = 50.0 + (distance_km * 14.0) + (duration_min * 2.0) * surge_multiplier
         rec = {
             "provider": provider,
@@ -238,10 +209,6 @@ class FareIntelligenceEngine:
         provider_records: List[Dict[str, Any]],
         osrm_success: bool = True
     ) -> Dict[str, Any]:
-        """
-        Enriches all provider options with ML metrics, performs transparent multi-factor scoring,
-        and generates comparative insights.
-        """
         enriched_providers = []
         for p in provider_records:
             enriched_providers.append(self.predict_provider_fare(p, osrm_success=osrm_success))
@@ -249,7 +216,6 @@ class FareIntelligenceEngine:
         if not enriched_providers:
             return {'providers': [], 'insights': {}, 'best_provider': None}
 
-        # Multi-factor smart ranking
         min_fare = min(p['actual_fare'] for p in enriched_providers)
         max_fare = max(p['actual_fare'] for p in enriched_providers)
         min_eta = min(p.get('eta_minutes', 10) for p in enriched_providers)
@@ -257,20 +223,12 @@ class FareIntelligenceEngine:
 
         w = self.ranking_weights
         for p in enriched_providers:
-            # Price efficiency score (0 - 100)
             price_score = 100.0 if max_fare == min_fare else ((max_fare - p['actual_fare']) / (max_fare - min_fare)) * 100.0
-            
-            # ETA score (0 - 100)
             eta = p.get('eta_minutes', 10)
             eta_score = 100.0 if max_eta == min_eta else ((max_eta - eta) / (max_eta - min_eta)) * 100.0
-
-            # Confidence score (0 - 100)
             conf_score = p['confidence_score']
-
-            # Provider reliability score based on vehicle & type
             rel_score = 95.0 if 'Premier' in p['provider'] else (90.0 if 'Uber' in p['provider'] or 'Ola' in p['provider'] else 85.0)
 
-            # Combined transparent smart score
             smart_score = round(
                 (w['price'] * price_score) +
                 (w['eta'] * eta_score) +
@@ -286,7 +244,6 @@ class FareIntelligenceEngine:
                 'reliability_score': round(rel_score, 1)
             }
 
-        # Determine highlights
         cheapest = min(enriched_providers, key=lambda x: x['actual_fare'])
         fastest = min(enriched_providers, key=lambda x: x.get('eta_minutes', 999))
         highest_score = max(enriched_providers, key=lambda x: x['smart_score'])
@@ -296,7 +253,6 @@ class FareIntelligenceEngine:
             p['is_fastest'] = (p['provider'] == fastest['provider'])
             p['is_best_value'] = (p['provider'] == highest_score['provider'])
 
-        # Comparative insights
         fare_spread = round(max_fare - min_fare, 2)
         spread_pct = round((fare_spread / max(1.0, min_fare)) * 100.0, 1) if min_fare > 0 else 0.0
 

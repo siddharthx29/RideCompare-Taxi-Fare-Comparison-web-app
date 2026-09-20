@@ -1,10 +1,6 @@
-"""
-Analytics Router & Booking Redirect Logger (Python Implementation)
-"""
-
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func, case
 from sqlalchemy.orm import Session
@@ -28,14 +24,12 @@ class RedirectPayload(BaseModel):
 @router.post("/redirect")
 async def record_booking_redirect(payload: RedirectPayload, db: Session = Depends(get_db)):
     try:
-        # Update search record with selected provider
         if payload.searchId:
             search_item = db.query(Search).filter(Search.id == payload.searchId).first()
             if search_item:
                 search_item.selected_provider = payload.provider
                 db.commit()
 
-        # Update or insert into analytics ledger for today
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         analytic_item = db.query(Analytics).filter(
             Analytics.provider == payload.provider,
@@ -57,7 +51,6 @@ async def record_booking_redirect(payload: RedirectPayload, db: Session = Depend
 
         db.commit()
 
-        # Generate default redirect URL based on provider
         p_lower = payload.provider.lower()
         if "uber" in p_lower:
             redirect_url = "https://m.uber.com/looking"
@@ -81,12 +74,10 @@ async def record_booking_redirect(payload: RedirectPayload, db: Session = Depend
 @router.get("/analytics")
 async def get_aggregated_analytics(db: Session = Depends(get_db)):
     try:
-        # 1. Total searches & average savings
         total_searches = db.query(Search).count()
         avg_savings_val = db.query(func.coalesce(func.avg(Search.savings), 0.0)).scalar()
         avg_savings = round(float(avg_savings_val))
 
-        # 2. Top 5 Popular Routes
         popular_routes_rows = db.query(
             Search.source,
             Search.destination,
@@ -98,7 +89,6 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
             for r in popular_routes_rows
         ]
 
-        # 3. Provider Shares (Clicks, Redirects, Fare)
         provider_shares_rows = db.query(
             Analytics.provider,
             func.sum(Analytics.clicks).label("clicks"),
@@ -116,7 +106,6 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
             for r in provider_shares_rows
         ]
 
-        # 4. 7-Day Daily Trends
         now = datetime.utcnow()
         daily_trends = []
         for i in range(6, -1, -1):
@@ -134,7 +123,6 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
                 "count": day_count
             })
 
-        # 5. Cheapest Provider Selection Rates
         cheapest_rows = db.query(
             Search.cheapest_provider.label("provider"),
             func.count(Search.id).label("times_cheapest"),
@@ -150,7 +138,6 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
             for r in cheapest_rows
         ]
 
-        # Selection percentage
         total_with_sel = db.query(Search).filter(Search.selected_provider != None).count()
         cheapest_selections = db.query(Search).filter(
             Search.selected_provider != None,
