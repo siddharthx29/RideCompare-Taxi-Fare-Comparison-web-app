@@ -175,3 +175,12 @@ def test_ml_model_performance():
     metrics = data["metrics"]
     assert "r2_score" in metrics
     assert metrics["r2_score"] > 0.90
+
+
+def test_ml_retrain_endpoint():
+    """Verify POST /api/ml/retrain schedules retraining and returns 200."""
+    response = client.post("/api/ml/retrain")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "message" in data

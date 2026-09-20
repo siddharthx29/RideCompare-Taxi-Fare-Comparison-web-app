@@ -225,12 +225,8 @@ async def get_model_performance():
 
 def _execute_retraining():
     try:
-        from ml.training.fare_regression import train_regression_models
-        from ml.training.kmeans_cluster import train_kmeans_cluster
-        from ml.training.anomaly_detection import train_anomaly_detector
-        train_kmeans_cluster()
-        train_regression_models()
-        train_anomaly_detector()
+        from ml.training.train_pipeline import run_training_pipeline
+        run_training_pipeline()
         global _ml_engine
         _ml_engine = FareIntelligenceEngine()
     except Exception as e:

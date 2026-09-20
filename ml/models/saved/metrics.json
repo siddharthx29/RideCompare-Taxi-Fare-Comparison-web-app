@@ -1,0 +1,11 @@
+{
+  "model_type": "Gradient Boosting Regressor",
+  "r2_score": 0.9803,
+  "mae": 20.67,
+  "rmse": 34.3,
+  "mape_percent": 5.96,
+  "silhouette_score": 0.3323,
+  "optimal_k": 3,
+  "anomaly_contamination": 0.03,
+  "dataset_size": 12000
+}

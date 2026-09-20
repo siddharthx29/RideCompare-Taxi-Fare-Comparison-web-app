@@ -1,6 +1,6 @@
 {
-  "version": "v20260920.1927",
-  "last_trained": "2026-09-20T19:27:05.152781",
+  "version": "v20260920.2107",
+  "last_trained": "2026-09-20T21:07:42.203366",
   "total_training_records": 12000,
   "optimal_k_clusters": 3,
   "silhouette_score": 0.3323,
