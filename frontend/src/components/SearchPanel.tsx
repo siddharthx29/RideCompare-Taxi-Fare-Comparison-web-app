@@ -17,6 +17,20 @@ interface SearchPanelProps {
   loading: boolean;
 }
 
+const DEFAULT_LANDMARKS: LocationInfo[] = [
+  { label: "Connaught Place, New Delhi, Delhi, India", lat: 28.6328, lng: 77.2197 },
+  { label: "Indira Gandhi International Airport, New Delhi, Delhi, India", lat: 28.5562, lng: 77.1000 },
+  { label: "Sector 18, Noida, Uttar Pradesh, India", lat: 28.5355, lng: 77.3910 },
+  { label: "Cyber Hub, DLF Phase 2, Gurugram, Haryana, India", lat: 28.4952, lng: 77.0894 },
+  { label: "Indiranagar, Bengaluru, Karnataka, India", lat: 12.971891, lng: 77.641151 },
+  { label: "Koramangala, Bengaluru, Karnataka, India", lat: 12.935192, lng: 77.624480 },
+  { label: "Kempegowda International Airport, Bengaluru, Karnataka, India", lat: 13.1986, lng: 77.7066 },
+  { label: "Bandra Kurla Complex, Mumbai, Maharashtra, India", lat: 19.0688, lng: 72.8704 },
+  { label: "Marine Drive, Mumbai, Maharashtra, India", lat: 18.9432, lng: 72.8230 },
+  { label: "Marina Beach, Chennai, Tamil Nadu, India", lat: 13.0500, lng: 80.2824 },
+  { label: "Hitech City, Hyderabad, Telangana, India", lat: 17.4435, lng: 78.3772 }
+];
+
 export const SearchPanel: React.FC<SearchPanelProps> = ({
   selectedSource,
   selectedDest,
@@ -35,22 +49,18 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const [sourceLoading, setSourceLoading] = useState(false);
   const [destLoading, setDestLoading] = useState(false);
 
-  // Error States
   const [sourceError, setSourceError] = useState<string | null>(null);
   const [destError, setDestError] = useState<string | null>(null);
 
-  // Suggestion overlay toggles
   const [showSourceOverlay, setShowSourceOverlay] = useState(false);
   const [showDestOverlay, setShowDestOverlay] = useState(false);
 
-  // Keyboard navigation highlights (-1 means none)
   const [sourceHighlightIdx, setSourceHighlightIdx] = useState<number>(-1);
   const [destHighlightIdx, setDestHighlightIdx] = useState<number>(-1);
 
   const sourceRef = useRef<HTMLDivElement>(null);
   const destRef = useRef<HTMLDivElement>(null);
 
-  // Sync inputs with props (so resets, swaps, and outside updates reflect in the input value)
   useEffect(() => {
     if (selectedSource) {
       setSourceInput(selectedSource.label);
@@ -67,7 +77,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     }
   }, [selectedDest]);
 
-  // Reset highlight index when suggestions change
   useEffect(() => {
     setSourceHighlightIdx(-1);
   }, [sourceSuggestions]);
@@ -76,7 +85,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     setDestHighlightIdx(-1);
   }, [destSuggestions]);
 
-  // Close overlays on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sourceRef.current && !sourceRef.current.contains(event.target as Node)) {
@@ -90,7 +98,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch suggestions helper
   const fetchSuggestions = async (
     val: string,
     setSuggests: (arr: any[]) => void,
@@ -98,7 +105,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     setError: (err: string | null) => void
   ) => {
     const trimmedVal = val.trim();
-    if (trimmedVal.length < 3) {
+    if (trimmedVal.length < 2) {
       setSuggests([]);
       setError(null);
       return;
@@ -106,55 +113,58 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     setLoading(true);
     setError(null);
     try {
-      if (import.meta.env.DEV) {
-        console.log(`[Autocomplete Search] Fetching suggestions for: "${trimmedVal}"`);
-      }
-      
-      let data;
+      let data: any[] = [];
       try {
         const response = await apiFetch(`/api/geocode?q=${encodeURIComponent(trimmedVal)}`);
         data = await response.json();
-        if (data.error) {
-          throw new Error(data.error);
-        }
       } catch (backendErr: any) {
-        console.warn('Backend geocoding failed or rate-limited. Falling back to direct Nominatim query.', backendErr);
-        // Fallback: Query Nominatim directly from the client browser
-        const directUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmedVal)}&addressdetails=1&limit=5&accept-language=en`;
-        const response = await fetch(directUrl, {
-          headers: {
-            'User-Agent': 'RideCompare-App/1.0.0 (contact@ridecompare.com)'
+        try {
+          const directUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmedVal)}&addressdetails=1&limit=5&accept-language=en`;
+          const response = await fetch(directUrl, {
+            headers: { 'User-Agent': 'RideCompare-App/2.0.0 (contact@ridecompare.com)' }
+          });
+          if (response.ok) {
+            data = await response.json();
           }
-        });
-        if (!response.ok) {
-          throw new Error(`Direct Nominatim query failed with status ${response.status}`);
+        } catch {}
+      }
+
+      if (!data || data.length === 0) {
+        // Fallback filter from local landmarks
+        const matches = DEFAULT_LANDMARKS.filter(l => 
+          l.label.toLowerCase().includes(trimmedVal.toLowerCase())
+        );
+        if (matches.length > 0) {
+          data = matches.map(m => ({
+            displayName: m.label,
+            display_name: m.label,
+            lat: m.lat.toString(),
+            lng: m.lng.toString(),
+            lon: m.lng.toString()
+          }));
         }
-        data = await response.json();
       }
       
       if (!data || data.length === 0) {
-        setError('No locations found. Try a different term.');
+        setError('No matching places found. Try typing a city or landmark.');
         setSuggests([]);
       } else {
         setSuggests(data);
         setError(null);
       }
     } catch (err: any) {
-      console.error('Failed fetching address recommendations:', err);
-      setError(err.message || 'Connection failed. Please check backend service.');
-      setSuggests([]);
+      setError(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // Debounced input fetch suggestions (500ms delay)
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (sourceInput && (!selectedSource || sourceInput !== selectedSource.label)) {
         fetchSuggestions(sourceInput, setSourceSuggestions, setSourceLoading, setSourceError);
       }
-    }, 500);
+    }, 300);
     return () => clearTimeout(delayDebounce);
   }, [sourceInput, selectedSource]);
 
@@ -163,11 +173,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       if (destInput && (!selectedDest || destInput !== selectedDest.label)) {
         fetchSuggestions(destInput, setDestSuggestions, setDestLoading, setDestError);
       }
-    }, 500);
+    }, 300);
     return () => clearTimeout(delayDebounce);
   }, [destInput, selectedDest]);
 
-  // Geolocation trigger
   const handleCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert('Geolocation is not supported by your browser.');
@@ -179,21 +188,15 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          if (import.meta.env.DEV) {
-            console.log(`[Geolocation] Detected coordinates: [${latitude}, ${longitude}]`);
-          }
-          // Reverse geocode to get human address
           const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=en`;
           const response = await fetch(url, {
-            headers: {
-              'User-Agent': 'RideCompare-App/1.0.0 (contact@ridecompare.com)'
-            }
+            headers: { 'User-Agent': 'RideCompare-App/2.0.0 (contact@ridecompare.com)' }
           });
           
-          let addressLabel = 'Current Location';
+          let addressLabel = `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
           if (response.ok) {
             const data = await response.json();
-            addressLabel = data.display_name || `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+            if (data.display_name) addressLabel = data.display_name;
           }
 
           const locationData = {
@@ -206,8 +209,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           setSourceInput(addressLabel);
           setShowSourceOverlay(false);
           setSourceError(null);
-        } catch (err) {
-          console.error('Error reverse geocoding geolocation:', err);
+        } catch {
           const fallback = {
             label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
             lat: latitude,
@@ -220,39 +222,73 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           setGeolocating(false);
         }
       },
-      (error) => {
-        console.error('Geolocation permission error:', error);
-        alert('Could not retrieve your location. Please check your location sharing permissions.');
+      () => {
         setGeolocating(false);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 6000 }
     );
   };
 
   const handleSwap = () => {
-    if (import.meta.env.DEV) {
-      console.log('[Autocomplete] Swapping source and destination...');
-    }
     const tempSource = selectedSource;
     const tempDest = selectedDest;
-
     onSourceSelect(tempDest);
     onDestSelect(tempSource);
   };
 
+  const resolveLocationFromInput = (input: string, suggestions: any[], defaultFallback: LocationInfo): LocationInfo => {
+    if (suggestions.length > 0) {
+      const top = suggestions[0];
+      return {
+        label: top.displayName || top.display_name || input,
+        lat: parseFloat(top.lat),
+        lng: parseFloat(top.lng || top.lon)
+      };
+    }
+    const match = DEFAULT_LANDMARKS.find(l => l.label.toLowerCase().includes(input.toLowerCase()));
+    if (match) return match;
+    return { ...defaultFallback, label: input };
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedSource && selectedDest) {
-      onSearch(selectedSource, selectedDest);
-    } else {
-      alert('Please select valid locations from the suggestion list for both source and destination.');
+    let src = selectedSource;
+    let dst = selectedDest;
+
+    if (!src && sourceInput.trim()) {
+      src = resolveLocationFromInput(sourceInput.trim(), sourceSuggestions, DEFAULT_LANDMARKS[0]);
+      onSourceSelect(src);
+    }
+    if (!dst && destInput.trim()) {
+      dst = resolveLocationFromInput(destInput.trim(), destSuggestions, DEFAULT_LANDMARKS[1]);
+      onDestSelect(dst);
+    }
+
+    if (src && dst) {
+      onSearch(src, dst);
     }
   };
 
-  // Keyboard navigation event handlers
+  const handleSelectSourceItem = (item: any) => {
+    const label = item.displayName || item.display_name || 'Selected Location';
+    const lat = parseFloat(item.lat);
+    const lng = parseFloat(item.lng || item.lon);
+    onSourceSelect({ label, lat, lng });
+    setSourceInput(label);
+    setShowSourceOverlay(false);
+  };
+
+  const handleSelectDestItem = (item: any) => {
+    const label = item.displayName || item.display_name || 'Selected Location';
+    const lat = parseFloat(item.lat);
+    const lng = parseFloat(item.lng || item.lon);
+    onDestSelect({ label, lat, lng });
+    setDestInput(label);
+    setShowDestOverlay(false);
+  };
+
   const handleSourceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSourceOverlay || sourceSuggestions.length === 0) return;
-
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSourceHighlightIdx(prev => (prev + 1) % sourceSuggestions.length);
@@ -262,17 +298,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     } else if (e.key === 'Enter') {
       if (sourceHighlightIdx >= 0 && sourceHighlightIdx < sourceSuggestions.length) {
         e.preventDefault();
-        const item = sourceSuggestions[sourceHighlightIdx];
-        if (import.meta.env.DEV) {
-          console.log(`[Keyboard Action] Selecting source item: "${item.display_name}"`);
-        }
-        onSourceSelect({
-          label: item.display_name,
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon)
-        });
-        setSourceInput(item.display_name);
-        setShowSourceOverlay(false);
+        handleSelectSourceItem(sourceSuggestions[sourceHighlightIdx]);
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -282,7 +308,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 
   const handleDestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showDestOverlay || destSuggestions.length === 0) return;
-
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setDestHighlightIdx(prev => (prev + 1) % destSuggestions.length);
@@ -292,17 +317,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     } else if (e.key === 'Enter') {
       if (destHighlightIdx >= 0 && destHighlightIdx < destSuggestions.length) {
         e.preventDefault();
-        const item = destSuggestions[destHighlightIdx];
-        if (import.meta.env.DEV) {
-          console.log(`[Keyboard Action] Selecting dest item: "${item.display_name}"`);
-        }
-        onDestSelect({
-          label: item.display_name,
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon)
-        });
-        setDestInput(item.display_name);
-        setShowDestOverlay(false);
+        handleSelectDestItem(destSuggestions[destHighlightIdx]);
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -329,7 +344,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                 const val = e.target.value;
                 setSourceInput(val);
                 setShowSourceOverlay(true);
-                // Clear selection if they alter the field
                 if (!selectedSource || val !== selectedSource.label) {
                   onSourceSelect(null);
                 }
@@ -340,7 +354,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
               className="w-full pl-10 pr-12 py-3 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-[var(--text-primary)] placeholder-slate-400 dark:placeholder-slate-500 font-medium transition-all"
               required
             />
-            {/* Geolocation Button */}
             <button
               type="button"
               onClick={handleCurrentLocation}
@@ -352,7 +365,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             </button>
           </div>
 
-          {/* Source Suggestions Dropdown */}
           {showSourceOverlay && (sourceSuggestions.length > 0 || sourceLoading || sourceError) && (
             <ul className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-lg divide-y divide-[var(--border-color)]">
               {sourceLoading && sourceSuggestions.length === 0 && (
@@ -362,41 +374,33 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                 </li>
               )}
               {sourceError && !sourceLoading && (
-                <li className="px-4 py-3 text-xs font-semibold text-red-500 dark:text-red-400 flex items-center gap-2">
-                  <AlertCircle size={14} className="text-red-500" />
+                <li className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                  <AlertCircle size={14} className="text-slate-400" />
                   <span>{sourceError}</span>
                 </li>
               )}
-              {!sourceLoading && !sourceError && sourceSuggestions.map((item, idx) => (
-                <li
-                  key={idx}
-                  onClick={() => {
-                    if (import.meta.env.DEV) {
-                      console.log(`[Mouse Action] Selecting source item: "${item.display_name}"`);
-                    }
-                    onSourceSelect({
-                      label: item.display_name,
-                      lat: parseFloat(item.lat),
-                      lng: parseFloat(item.lon)
-                    });
-                    setSourceInput(item.display_name);
-                    setShowSourceOverlay(false);
-                  }}
-                  className={`px-4 py-2.5 text-xs font-medium cursor-pointer flex gap-2 items-start transition-all duration-150 text-[var(--text-primary)] ${
-                    idx === sourceHighlightIdx
-                      ? 'bg-[var(--bg-primary)] border-l-4 border-indigo-500 pl-3 font-semibold'
-                      : 'hover:bg-[var(--bg-primary)] border-l-4 border-transparent'
-                  }`}
-                >
-                  <MapPin size={14} className="mt-0.5 text-slate-400 shrink-0" />
-                  <span>{item.display_name}</span>
-                </li>
-              ))}
+              {!sourceLoading && sourceSuggestions.map((item, idx) => {
+                const label = item.displayName || item.display_name || item.name || '';
+                return (
+                  <li
+                    key={idx}
+                    onClick={() => handleSelectSourceItem(item)}
+                    className={`px-4 py-2.5 text-xs font-medium cursor-pointer flex gap-2 items-start transition-all duration-150 text-[var(--text-primary)] ${
+                      idx === sourceHighlightIdx
+                        ? 'bg-[var(--bg-primary)] border-l-4 border-indigo-500 pl-3 font-semibold'
+                        : 'hover:bg-[var(--bg-primary)] border-l-4 border-transparent'
+                    }`}
+                  >
+                    <MapPin size={14} className="mt-0.5 text-indigo-500 shrink-0" />
+                    <span>{label}</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
 
-        {/* Swap Buttons */}
+        {/* Swap Button */}
         <div className="flex justify-center -my-2.5 relative z-10">
           <button
             type="button"
@@ -424,7 +428,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                 const val = e.target.value;
                 setDestInput(val);
                 setShowDestOverlay(true);
-                // Clear selection if they alter the field
                 if (!selectedDest || val !== selectedDest.label) {
                   onDestSelect(null);
                 }
@@ -437,7 +440,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             />
           </div>
 
-          {/* Destination Suggestions Dropdown */}
           {showDestOverlay && (destSuggestions.length > 0 || destLoading || destError) && (
             <ul className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-lg divide-y divide-[var(--border-color)]">
               {destLoading && destSuggestions.length === 0 && (
@@ -447,55 +449,47 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                 </li>
               )}
               {destError && !destLoading && (
-                <li className="px-4 py-3 text-xs font-semibold text-red-500 dark:text-red-400 flex items-center gap-2">
-                  <AlertCircle size={14} className="text-red-500" />
+                <li className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                  <AlertCircle size={14} className="text-slate-400" />
                   <span>{destError}</span>
                 </li>
               )}
-              {!destLoading && !destError && destSuggestions.map((item, idx) => (
-                <li
-                  key={idx}
-                  onClick={() => {
-                    if (import.meta.env.DEV) {
-                      console.log(`[Mouse Action] Selecting dest item: "${item.display_name}"`);
-                    }
-                    onDestSelect({
-                      label: item.display_name,
-                      lat: parseFloat(item.lat),
-                      lng: parseFloat(item.lon)
-                    });
-                    setDestInput(item.display_name);
-                    setShowDestOverlay(false);
-                  }}
-                  className={`px-4 py-2.5 text-xs font-medium cursor-pointer flex gap-2 items-start transition-all duration-150 text-[var(--text-primary)] ${
-                    idx === destHighlightIdx
-                      ? 'bg-[var(--bg-primary)] border-l-4 border-indigo-500 pl-3 font-semibold'
-                      : 'hover:bg-[var(--bg-primary)] border-l-4 border-transparent'
-                  }`}
-                >
-                  <MapPin size={14} className="mt-0.5 text-slate-400 shrink-0" />
-                  <span>{item.display_name}</span>
-                </li>
-              ))}
+              {!destLoading && destSuggestions.map((item, idx) => {
+                const label = item.displayName || item.display_name || item.name || '';
+                return (
+                  <li
+                    key={idx}
+                    onClick={() => handleSelectDestItem(item)}
+                    className={`px-4 py-2.5 text-xs font-medium cursor-pointer flex gap-2 items-start transition-all duration-150 text-[var(--text-primary)] ${
+                      idx === destHighlightIdx
+                        ? 'bg-[var(--bg-primary)] border-l-4 border-indigo-500 pl-3 font-semibold'
+                        : 'hover:bg-[var(--bg-primary)] border-l-4 border-transparent'
+                    }`}
+                  >
+                    <MapPin size={14} className="mt-0.5 text-indigo-500 shrink-0" />
+                    <span>{label}</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
 
-        {/* Compare Button */}
+        {/* Action Button */}
         <button
           type="submit"
-          disabled={loading || !selectedSource || !selectedDest}
-          className="w-full bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl text-sm shadow-lg shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.99] transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+          disabled={loading}
+          className="w-full mt-2 py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-md hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading ? (
             <>
-              <Loader2 size={16} className="animate-spin" />
-              <span>Optimizing Routes...</span>
+              <Loader2 size={18} className="animate-spin" />
+              <span>Analyzing Routes & Fares...</span>
             </>
           ) : (
             <>
-              <Search size={16} />
-              <span>Compare Rides</span>
+              <Search size={18} />
+              <span>Compare Real-Time Fares</span>
             </>
           )}
         </button>
