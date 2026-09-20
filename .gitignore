@@ -5,6 +5,9 @@
 .env.*
 !.env.example
 *.local
+*.db
+*.sqlite
+*.sqlite3
 
 # Node & Package Managers
 node_modules/

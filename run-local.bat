@@ -1,27 +1,22 @@
 @echo off
-title RideCompare Local Startup with ML Engine
+title Smart Taxi Fare Comparison - Local Runner
 echo ====================================================
-echo    Starting RideCompare & ML Intelligence Engine    
+echo    Smart Taxi Fare Comparison - 100%% Python Backend
 echo ====================================================
 
 cd "%~dp0"
 
-echo 🧠 Starting Python ML Intelligence Microservice (Port 5001)...
-start "RideCompare ML Engine" cmd /k "python ml/server.py"
+echo 📦 Installing / Verifying Python dependencies...
+call pip install -r requirements.txt
 
-cd backend
-
-echo 📦 Checking backend dependencies...
+echo 🌐 Installing / Verifying Frontend dependencies...
+cd frontend
 call npm install
+cd ..
 
-echo 🗄️ Setting up database and running migrations...
-call npm run db:setup
-if %ERRORLEVEL% neq 0 (
-    echo.
-    echo ⚠️ Database setup warning! Please verify PostgreSQL is running if database persistence is needed.
-    echo Backend will proceed with in-memory or fallback handling.
-    echo.
-)
+echo 🚀 Starting FastAPI Python Backend on http://localhost:5000 ...
+start "FastAPI Backend" cmd /k "uvicorn backend.app.main:app --host 0.0.0.0 --port 5000 --reload"
 
-echo 🚀 Starting local backend server in development mode...
+echo 🎨 Starting Vite React Frontend on http://localhost:5173 ...
+cd frontend
 call npm run dev

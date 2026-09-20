@@ -13,23 +13,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-
-  ml:
-    build:
-      context: .
-      dockerfile: ml/Dockerfile
-    container_name: ridecompare-ml
-    restart: always
-    ports:
-      - "5001:5001"
-    environment:
-      - PORT=5001
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: ridecompare-backend
     restart: always
     ports:
@@ -37,11 +25,9 @@ services:
     environment:
       - PORT=5000
       - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/ridecompare
-      - ML_SERVICE_URL=http://ml:5001
-      - NODE_ENV=production
+      - ENVIRONMENT=production
     depends_on:
       - db
-      - ml
 
   frontend:
     build:

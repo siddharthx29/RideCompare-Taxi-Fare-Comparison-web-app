@@ -1,6 +1,8 @@
-# Smart Taxi Fare Comparison — ML/AI Intelligence Platform 🚖🧠
+# Smart Taxi Fare Comparison — Python Backend & ML/AI Intelligence Platform 🚖🧠
 
-RideCompare is a production-grade, intelligent real-time taxi fare comparison and fare analysis platform. It aggregates live provider quotes (Uber, Ola, Rapido, Local Taxi), calculates road routes with OpenStreetMap and OSRM, and enriches every comparison with machine-learning pricing intelligence, unsupervised pricing regime clustering, supervised fare regression, Isolation Forest anomaly detection, and transparent multi-factor ranking.
+RideCompare is a production-ready, intelligent real-time taxi fare comparison and fare intelligence platform built on a **100% Python Backend (FastAPI + SQLAlchemy + Scikit-Learn)** and a modern **React + Leaflet frontend**.
+
+It aggregates provider fare estimates (Uber, Ola, Rapido, Local Taxi), computes realistic road routes using OpenStreetMap Nominatim and OSRM with Haversine fallback, and enriches every query with **unsupervised pricing regime clustering (K-Means)**, **supervised regression predictions (Gradient Boosting)**, **multivariate anomaly detection (Isolation Forest)**, and **transparent multi-factor confidence & smart ranking**.
 
 ---
 
@@ -8,17 +10,17 @@ RideCompare is a production-grade, intelligent real-time taxi fare comparison an
 
 ```mermaid
 flowchart TD
-    UserRequest[User Enters Pickup & Destination] --> Nominatim[OSM Nominatim Geocoding API]
-    Nominatim --> OSRM[OSRM Driving Route Engine]
-    OSRM --> ExpressBackend[Express API Gateway :5000]
+    UserRequest[User Enters Pickup & Destination] --> Nominatim[OSM Nominatim Geocoding API / Fallback]
+    Nominatim --> OSRM[OSRM Driving Route Engine / Haversine]
+    OSRM --> FastAPISystem[FastAPI Python Backend :5000]
 
-    subgraph ML_Microservice [Python ML Intelligence Microservice :5001]
+    subgraph ML_Subsystem [In-Process Python ML Intelligence Engine]
         Normalizer[Fare Normalization Layer]
         FeatEng[Feature Engineering Pipeline]
         KMeans[K-Means Clustering - Unsupervised Pricing Regimes]
         GBRegressor[Gradient Boosting Regressor - Supervised Fare Prediction]
         IsoForest[Isolation Forest - Anomaly Detection]
-        Confidence[Multi-Factor Confidence Scorer]
+        Confidence[Multi-Factor Confidence & Smart Scorer]
         
         Normalizer --> FeatEng
         FeatEng --> KMeans
@@ -27,10 +29,10 @@ flowchart TD
         FeatEng --> Confidence
     end
 
-    ExpressBackend -->|Live Quotes + Route Coordinates| ML_Microservice
-    ML_Microservice -->|ML Enriched Predictions & Insights| ExpressBackend
-    ExpressBackend --> PostgreSQL[(PostgreSQL: searches & historical_fares)]
-    ExpressBackend --> ReactFrontend[React 19 + Vite Frontend Client]
+    FastAPISystem -->|Direct Sub-Millisecond In-Process Call| ML_Subsystem
+    ML_Subsystem -->|Enriched Quotes & Insights| FastAPISystem
+    FastAPISystem --> DB[(PostgreSQL / SQLite Auto-Fallback)]
+    FastAPISystem --> ReactFrontend[React 19 + Leaflet + Tailwind Frontend]
 ```
 
 ---
@@ -49,7 +51,7 @@ The platform clearly distinguishes between three complementary machine learning 
   - `Peak Hour Surge / Long Distance`: High surge multiplier driven by peak hours or extended highway distances.
 * **Important:** K-Means is used strictly for **pattern discovery and regime labeling**, not for predicting numerical taxi fares.
 
-### 2. Supervised Learning: Supervised Fare Regression
+### 2. Supervised Learning: Gradient Boosting Fare Regression
 * **Purpose:** Estimates the theoretical expected fare (`predicted_fare`) based on route parameters and historical pricing patterns.
 * **Model Comparison:** Evaluated **Gradient Boosting Regressor** against **Random Forest Regressor** on a holdout test split (80/20):
   - **Gradient Boosting Regressor (Selected):** $R^2 = 0.9803$, $\text{MAE} = ₹20.67$, $\text{RMSE} = ₹34.30$, $\text{MAPE} = 5.96\%$.
@@ -70,58 +72,70 @@ The platform clearly distinguishes between three complementary machine learning 
 
 ## 🛠 Technology Stack
 
-- **Frontend:** React 19, TypeScript, Tailwind CSS v4, Vite, Leaflet Maps, Lucide Icons.
-- **Backend:** Node.js, Express.js, TypeScript, PostgreSQL Connection Pool (`pg`), Rate Limiter, CORS.
-- **Machine Learning Subsystem:** Python 3.11, FastAPI, Uvicorn, Scikit-Learn, Pandas, NumPy, Joblib.
-- **Routing & Geocoding:** OpenStreetMap (Nominatim), OSRM Routing Engine.
+- **Backend:** Python 3.11, FastAPI, Uvicorn, SQLAlchemy, Pydantic v2, HTTPX.
+- **Machine Learning Subsystem:** Scikit-Learn, Pandas, NumPy, Joblib (integrated in-process with sub-millisecond execution).
+- **Database:** PostgreSQL with automatic SQLite fallback (`ridecompare.db`).
+- **Frontend:** React 19, TypeScript, Tailwind CSS, Vite, Leaflet Maps, Lucide Icons.
+- **Routing & Geocoding:** OpenStreetMap (Nominatim), OSRM Routing Engine with Haversine fallback.
+- **Security:** Strict security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`), CORS origin validation, non-vulnerable open window rel handlers (`noopener,noreferrer`).
 - **Containerization:** Docker, Docker Compose.
 
 ---
 
 ## 🚀 Running the Application
 
-### Method 1: Local Development (Recommended)
+### Method 1: Automated Local Startup (Recommended)
 
-#### 1. Train the ML Models & Start ML Microservice
-```powershell
-# Run the training pipeline (generates models in ml/models/saved/)
-python -m ml.training.train_pipeline
+Run one of the startup scripts from the project root:
 
-# Launch the FastAPI ML microservice on port 5001
-python ml/server.py
-```
-
-#### 2. Start the Backend API (Port 5000)
-```powershell
-cd backend
-npm install
-npm run db:setup
-npm run dev
-```
-
-#### 3. Start the Frontend App (Port 5173 / 8080)
-```powershell
-cd ../frontend
-npm install
-npm run dev
-```
-
-Alternatively, run the automated startup script:
-- **Windows Batch:** `run-local.bat`
-- **PowerShell:** `run-local.ps1`
-- **Linux/macOS:** `run-local.sh`
+- **Windows Command Prompt:**
+  ```cmd
+  run-local.bat
+  ```
+- **Windows PowerShell:**
+  ```powershell
+  .\run-local.ps1
+  ```
+- **Linux / macOS:**
+  ```bash
+  chmod +x run-local.sh
+  ./run-local.sh
+  ```
 
 ---
 
-### Method 2: Docker Compose (All-in-One Containerization)
+### Method 2: Manual Step-by-Step
+
+#### 1. Install Dependencies & Retrain ML Models (if needed)
+```bash
+pip install -r requirements.txt
+python -m ml.training.train_pipeline
+```
+
+#### 2. Start the FastAPI Python Backend (Port 5000)
+```bash
+uvicorn backend.app.main:app --host 0.0.0.0 --port 5000 --reload
+```
+
+#### 3. Start the Vite React Frontend (Port 5173)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+### Method 3: Docker Compose
 
 ```bash
 docker-compose up --build
 ```
 - **Frontend:** [http://localhost:8080](http://localhost:8080)
-- **Backend API:** [http://localhost:5000](http://localhost:5000)
-- **ML Engine:** [http://localhost:5001](http://localhost:5001)
-- **PostgreSQL Database:** Port `5432`
+- **FastAPI Backend:** [http://localhost:5000](http://localhost:5000)
+- **FastAPI Interactive Docs:** [http://localhost:5000/docs](http://localhost:5000/docs)
 
 ---
 
@@ -129,68 +143,31 @@ docker-compose up --build
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/route` | Calculates OSRM route & returns comparison enriched with ML predictions and anomalies |
-| `GET` | `/api/fare/compare` | Direct fare comparison for given distance and duration |
-| `POST` | `/api/fare/predict` | Predicts expected fare for custom ride parameters |
-| `GET` | `/api/fare/history` | Fetches recent historical trip records from database |
+| `GET` | `/api/geocode?q=...` | Proxies Nominatim geocoding with caching and offline landmark fallbacks |
+| `GET` / `POST` | `/api/route` | Calculates OSRM route & returns quotes enriched with ML predictions and anomalies |
+| `POST` | `/api/fare/compare` | Direct multi-provider fare comparison for given coordinates |
+| `POST` | `/api/fare/predict` | Predicts expected fare for arbitrary vehicle/traffic parameters |
+| `GET` | `/api/fare/history` | Fetches logged historical trip records from database |
 | `GET` | `/api/ml/clusters` | Returns K-Means cluster profiles, centroids, and descriptions |
 | `GET` | `/api/ml/model-performance` | Returns MAE, RMSE, MAPE, $R^2$, and Silhouette evaluation metrics |
 | `POST` | `/api/ml/retrain` | Triggers background model retraining and hot-reloads models |
 | `GET` | `/api/analytics` | Aggregated user search and booking redirect statistics |
-| `GET` | `/health` | Server uptime and health status |
+| `POST` | `/api/redirect` | Tracks booking clicks and provider conversions |
+| `GET` | `/health` | Server uptime, database connectivity, and ML engine status |
 
 ---
 
 ## 🧪 Automated Testing
 
-### Python ML Test Suite
-```powershell
-python -m unittest ml/tests/test_ml_pipeline.py -v
-```
-Tests:
-- Fare normalization & rate calculations.
-- Feature engineering pipeline.
-- Supervised regression prediction accuracy.
-- Isolation Forest anomaly detection on normal vs outlier spikes.
-- Multi-factor confidence scoring.
-- Edge cases (short trips, extreme trips, missing parameters).
+Run the full Python test suite with pytest:
 
-### Backend Integration Tests
-```powershell
-npx --prefix backend ts-node src/__tests__/run_tests.ts
+```bash
+python -m pytest backend/tests/test_backend_api.py ml/tests/test_ml_pipeline.py -v
 ```
 
----
-
-## 📊 Database Schema (`historical_fares`)
-
-```sql
-CREATE TABLE IF NOT EXISTS historical_fares (
-    id SERIAL PRIMARY KEY,
-    provider VARCHAR(50) NOT NULL,
-    vehicle_type VARCHAR(30) NOT NULL,
-    source TEXT NOT NULL,
-    destination TEXT NOT NULL,
-    source_lat DOUBLE PRECISION,
-    source_lng DOUBLE PRECISION,
-    dest_lat DOUBLE PRECISION,
-    dest_lng DOUBLE PRECISION,
-    distance_km DOUBLE PRECISION NOT NULL,
-    duration_min DOUBLE PRECISION NOT NULL,
-    actual_fare DOUBLE PRECISION NOT NULL,
-    base_fare DOUBLE PRECISION DEFAULT 0.0,
-    surge_multiplier DOUBLE PRECISION DEFAULT 1.0,
-    platform_fee DOUBLE PRECISION DEFAULT 0.0,
-    toll_fee DOUBLE PRECISION DEFAULT 0.0,
-    traffic_condition VARCHAR(30) DEFAULT 'Normal',
-    weather_condition VARCHAR(30) DEFAULT 'Clear',
-    time_of_day VARCHAR(30) DEFAULT 'Regular',
-    day_of_week VARCHAR(20) DEFAULT 'Monday',
-    fare_per_km DOUBLE PRECISION,
-    fare_per_min DOUBLE PRECISION,
-    cluster_id INT,
-    cluster_label VARCHAR(50),
-    is_anomaly BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+All 16 tests verify:
+- Security headers and `/health` system checks.
+- Geocoding and route calculation with ML enrichment.
+- Gradient Boosting supervised regression and Isolation Forest anomaly detection.
+- Unsupervised K-Means clustering and pricing regime discovery.
+- Database persistence and analytics aggregation.

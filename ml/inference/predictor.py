@@ -199,6 +199,40 @@ class FareIntelligenceEngine:
             'anomaly_reason': anomaly_reason
         }
 
+    def predict_fare(
+        self,
+        provider: str = "Uber",
+        ride_type: str = "Mini",
+        distance_km: float = 10.0,
+        duration_min: float = 20.0,
+        hour_of_day: int = 14,
+        day_of_week: int = 2,
+        is_weekend: int = 0,
+        traffic_density: float = 1.0,
+        surge_multiplier: float = 1.0,
+        city: str = "Delhi"
+    ) -> Dict[str, Any]:
+        """Convenience method for predicting fare directly from raw parameters."""
+        raw_fare = 50.0 + (distance_km * 14.0) + (duration_min * 2.0) * surge_multiplier
+        rec = {
+            "provider": provider,
+            "vehicle_type": ride_type,
+            "distance_km": distance_km,
+            "duration_min": duration_min,
+            "actual_fare": round(raw_fare, 2),
+            "hour_of_day": hour_of_day,
+            "day_of_week": day_of_week,
+            "is_weekend": is_weekend,
+            "traffic_density": traffic_density,
+            "surge_multiplier": surge_multiplier,
+            "city": city
+        }
+        res = self.predict_provider_fare(rec)
+        res["confidence"] = res["confidence_level"]
+        res["pricing_regime"] = res["cluster_label"]
+        res["smart_score"] = round(max(50.0, min(98.0, 95.0 - (res["prediction_diff_pct"] * 0.4))), 1)
+        return res
+
     def rank_and_compare_providers(
         self,
         provider_records: List[Dict[str, Any]],

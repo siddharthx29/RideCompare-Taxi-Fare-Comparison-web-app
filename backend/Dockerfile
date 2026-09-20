@@ -1,31 +1,26 @@
-# Build Stage
-FROM node:18-alpine AS builder
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY package*.json tsconfig.json ./
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN npm ci
+# Copy requirements
+COPY backend/requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src ./src
+# Copy backend and ml modules
+COPY backend /app/backend
+COPY ml /app/ml
 
-RUN npm run build
-
-# Production Stage
-FROM node:18-alpine AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-COPY package*.json ./
-
-RUN npm ci --only=production
-
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/src/db/migrations ./dist/db/migrations
-COPY src/db/schema.sql ./src/db/schema.sql
-
+# Expose FastAPI backend port
 EXPOSE 5000
 
-CMD ["node", "dist/index.js"]
+ENV PORT=5000
+ENV ENVIRONMENT=production
+ENV PYTHONPATH=/app
+
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "5000"]
