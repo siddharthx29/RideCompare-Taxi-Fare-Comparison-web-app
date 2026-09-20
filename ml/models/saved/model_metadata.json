@@ -1,0 +1,118 @@
+{
+  "version": "v20260920.1927",
+  "last_trained": "2026-09-20T19:27:05.152781",
+  "total_training_records": 12000,
+  "optimal_k_clusters": 3,
+  "silhouette_score": 0.3323,
+  "silhouette_evaluations": {
+    "3": 0.3323,
+    "4": 0.3002,
+    "5": 0.282,
+    "6": 0.2737
+  },
+  "cluster_profiles": {
+    "0": {
+      "cluster_id": 0,
+      "label": "Peak Hour Surge",
+      "tag": "surge",
+      "description": "High surge multiplier driven by peak transit hours or weather conditions.",
+      "size": 2853,
+      "percentage": 23.8,
+      "avg_fare": 356.0,
+      "avg_fare_per_km": 48.39,
+      "avg_surge": 1.56,
+      "avg_traffic_level": 3.43,
+      "avg_distance_km": 8.11
+    },
+    "1": {
+      "cluster_id": 1,
+      "label": "Standard City Transit",
+      "tag": "standard",
+      "description": "Typical urban transit rates with standard traffic and base pricing.",
+      "size": 7787,
+      "percentage": 64.9,
+      "avg_fare": 233.31,
+      "avg_fare_per_km": 27.08,
+      "avg_surge": 1.13,
+      "avg_traffic_level": 1.75,
+      "avg_distance_km": 9.49
+    },
+    "2": {
+      "cluster_id": 2,
+      "label": "Long-Distance Transit",
+      "tag": "long_distance",
+      "description": "Extended highway routes with high baseline fares and lower per-km marginal rates.",
+      "size": 1360,
+      "percentage": 11.3,
+      "avg_fare": 850.09,
+      "avg_fare_per_km": 31.17,
+      "avg_surge": 1.34,
+      "avg_traffic_level": 2.58,
+      "avg_distance_km": 28.94
+    }
+  },
+  "regression_model": "Gradient Boosting Regressor",
+  "regression_metrics": {
+    "mae": 20.67,
+    "rmse": 34.3,
+    "mape": 5.96,
+    "r2": 0.9803
+  },
+  "regression_comparison": {
+    "random_forest": {
+      "mae": 23.51,
+      "rmse": 42.21,
+      "mape": 6.41,
+      "r2": 0.9702
+    },
+    "gradient_boosting": {
+      "mae": 20.67,
+      "rmse": 34.3,
+      "mape": 5.96,
+      "r2": 0.9803
+    }
+  },
+  "regression_features": {
+    "numerical": [
+      "distance_km",
+      "duration_min",
+      "surge_multiplier",
+      "traffic_level",
+      "hour_sin",
+      "hour_cos",
+      "is_weekend",
+      "cluster_id"
+    ],
+    "categorical": [
+      "provider",
+      "vehicle_type"
+    ]
+  },
+  "anomaly_detection": {
+    "contamination": 0.03,
+    "features": [
+      "distance_km",
+      "duration_min",
+      "actual_fare",
+      "fare_per_km",
+      "fare_per_min",
+      "surge_multiplier"
+    ],
+    "training_anomalies_detected": 360,
+    "anomaly_rate_percent": 3.0
+  },
+  "providers_supported": [
+    "Local Taxi",
+    "Ola Mini",
+    "Ola Prime",
+    "Rapido Auto",
+    "Rapido Bike",
+    "Uber Go",
+    "Uber Premier"
+  ],
+  "vehicle_types_supported": [
+    "Auto",
+    "Bike",
+    "Cab"
+  ]
+}

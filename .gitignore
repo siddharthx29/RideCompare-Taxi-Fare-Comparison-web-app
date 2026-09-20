@@ -1,0 +1,64 @@
+# Root .gitignore for Smart Taxi Fare Comparison
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Node & Package Managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs & caches
+dist/
+dist-ssr/
+build/
+coverage/
+.turbo/
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+
+# System and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary training data / raw scratch files (Keep models/saved/ metadata & joblib tracked)
+ml/data/raw/*.csv
+ml/data/processed/

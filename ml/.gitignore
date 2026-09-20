@@ -1,0 +1,14 @@
+# ML Microservice .gitignore
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+venv/
+.pytest_cache/
+
+# Raw dataset generation scratch files (keep trained models in saved/)
+data/raw/*.csv
+data/processed/

@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ridecompare-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: ridecompare
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  ml:
+    build:
+      context: .
+      dockerfile: ml/Dockerfile
+    container_name: ridecompare-ml
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ridecompare-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/ridecompare
+      - ML_SERVICE_URL=http://ml:5001
+      - NODE_ENV=production
+    depends_on:
+      - db
+      - ml
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ridecompare-frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

@@ -1,0 +1,13 @@
+# Root .dockerignore
+node_modules/
+dist/
+build/
+.git/
+.env
+*.local
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+Thumbs.db
+ml/data/raw/*.csv
