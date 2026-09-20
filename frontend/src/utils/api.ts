@@ -1,78 +1,74 @@
 const getApiBaseUrl = (): string => {
-  // If there's an environment variable injected
   const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) return envUrl;
   
-  if (typeof window !== 'undefined' && window.location) {
-    const hostname = window.location.hostname;
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      // If the envUrl is present and does not point to localhost, use it.
-      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
-        return envUrl;
-      }
-      // Since the backend serves the frontend static build from the same server,
-      // we default to the current domain origin to prevent CORS/cross-origin network errors.
-      return window.location.origin;
-    }
+  // In browser, using relative path allows Vite dev proxy or production static serving to handle routing seamlessly
+  if (typeof window !== 'undefined') {
+    return '';
   }
   
-  return envUrl || 'http://localhost:5000';
+  return 'http://127.0.0.1:5000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const fullUrl = `${baseUrl}${cleanEndpoint}`;
-
-  // Log Request URL, Method, and Payload
-  console.log(`[API Request] URL: ${fullUrl}`);
-  console.log(`[API Request] Method: ${options.method || 'GET'}`);
-  if (options.body) {
-    console.log(`[API Request Payload]`, options.body);
-  }
+  
+  // Primary URL using current origin / proxy
+  const primaryUrl = `${API_BASE_URL}${cleanEndpoint}`;
 
   try {
-    const response = await fetch(fullUrl, options);
+    const response = await fetch(primaryUrl, options);
+    if (response.ok) {
+      return response;
+    }
     
-    // Log response status
-    console.log(`[API Response] URL: ${fullUrl} | Status: ${response.status} ${response.statusText}`);
-
-    // Clone response to parse and log payload safely without locking the body stream
-    const responseClone = response.clone();
+    // If not OK, parse payload for error message
     let payload: any = null;
     try {
-      const contentType = responseClone.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        payload = await responseClone.json();
-      } else {
-        payload = await responseClone.text();
-      }
-      console.log(`[API Response Body] URL: ${fullUrl} | Body:`, payload);
-    } catch (logErr) {
-      console.warn(`[API Response Body Log Error] URL: ${fullUrl} | Could not read body:`, logErr);
+      const clone = response.clone();
+      payload = await clone.json();
+    } catch {
+      try {
+        const clone = response.clone();
+        payload = await clone.text();
+      } catch {}
     }
 
-    if (!response.ok) {
-      let errMsg = `HTTP error! status: ${response.status}`;
-      if (payload) {
-        if (typeof payload === 'object') {
-          errMsg = payload.error || payload.message || errMsg;
-        } else if (typeof payload === 'string' && payload.trim().length > 0) {
-          errMsg = payload;
-        }
+    let errMsg = `HTTP error! status: ${response.status}`;
+    if (payload) {
+      if (typeof payload === 'object') {
+        errMsg = payload.error || payload.message || payload.detail || errMsg;
+      } else if (typeof payload === 'string' && payload.trim().length > 0) {
+        errMsg = payload;
       }
-      throw new Error(errMsg);
     }
-
-    return response;
+    throw new Error(errMsg);
   } catch (error: any) {
-    let finalError = error;
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      finalError = new Error('Network Connection Error: Failed to connect to the backend API server. Please check your network connection or backend service status.');
+    // If relative fetch failed (e.g. proxy issue), try direct fallback to http://127.0.0.1:5000
+    if (primaryUrl.startsWith('/') && typeof window !== 'undefined') {
+      try {
+        const directUrl = `http://127.0.0.1:5000${cleanEndpoint}`;
+        const fallbackRes = await fetch(directUrl, options);
+        if (fallbackRes.ok) {
+          return fallbackRes;
+        }
+      } catch {}
+      try {
+        const directUrl2 = `http://localhost:5000${cleanEndpoint}`;
+        const fallbackRes2 = await fetch(directUrl2, options);
+        if (fallbackRes2.ok) {
+          return fallbackRes2;
+        }
+      } catch {}
     }
-    console.error(`[API Error Details] URL: ${fullUrl} | Error:`, finalError);
+
+    let finalError = error;
+    if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      finalError = new Error('Network Connection Error: Failed to connect to the backend API server. Please ensure the Python FastAPI backend is running on port 5000 (uvicorn backend.app.main:app --port 5000).');
+    }
+    console.error(`[API Error] Endpoint: ${cleanEndpoint} | Error:`, finalError);
     throw finalError;
   }
 }
-
