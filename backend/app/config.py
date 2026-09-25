@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     @property
     def ENV(self) -> str:
         return self.ENVIRONMENT
-    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "")
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
     ADMIN_KEY: str = os.getenv("ADMIN_KEY", "")
 
     @property
