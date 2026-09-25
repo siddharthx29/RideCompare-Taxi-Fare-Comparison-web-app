@@ -4,22 +4,17 @@ export interface LocationInfo {
   label: string;
   lat: number;
   lng: number;
+  address?: Record<string, string>;
 }
 
-export interface ScoreBreakdown {
-  priceScore: number;
-  etaScore: number;
-  confidenceScore: number;
-  reliabilityScore: number;
+export interface RouteGeometry {
+  type: 'LineString';
+  coordinates: [number, number][];
 }
 
-export interface FareVolatility {
-  absolute_change: number;
-  percentage_change: number;
-  change_per_minute: number;
-  volatility_score: 'LOW' | 'MODERATE' | 'HIGH';
-  price_trend: 'RISING' | 'FALLING' | 'STABLE';
-  recent_history: number[];
+export interface FareHistory {
+  fares: number[];
+  trend: 'RISING' | 'FALLING' | 'STABLE';
 }
 
 export interface RideProviderDetails {
@@ -28,34 +23,40 @@ export interface RideProviderDetails {
   distanceKm: number;
   etaMinutes: number;
 
-  // Actual calculated fares & ML estimations
-  actualFare: number;
+  // Real-time Provider Pricing (authoritative source)
+  actualFare: number | null;
   estimatedFare: number;
-  predictedFare: number;
-  predictionDiff: number;
-  predictionDiffPct: number;
+  isLive?: boolean;
+  liveAvailable?: boolean;
+
+  // ML Pricing Intelligence
+  predictedFare?: number;
+  predictedFareMin?: number;
+  predictedFareMax?: number;
+  typicalFareRange?: string;
+  predictionDiff?: number;
+  predictionDiffPct?: number;
+  demandLevel?: string;
+  priceTrend?: string;
+  priceAnomaly?: string;
+  anomalyReason?: string;
+  mlInsight?: string;
+  clusterId?: number;
+  clusterLabel?: string;
+  confidenceLevel?: string;
+  confidenceScore?: number;
+  smartScore?: number;
 
   // Currency & Localized formatting
   currency?: string;
   currencySymbol?: string;
 
-  // Machine Learning insights
+  // Pricing details
   surgeMultiplier: number;
-  confidence: 'High' | 'Medium' | 'Low';
-  confidenceScore: number;
-  confidenceLevel: 'High' | 'Medium' | 'Low';
-  clusterId: number;
-  clusterLabel: string;
-  isAnomaly: boolean;
-  anomalyReason?: string;
 
-  // Scoring & Efficiency
-  smartScore: number;
-  scoreBreakdown?: ScoreBreakdown;
+  // Comparison and efficiency
   costPerKm: number;
   costPerMin: number;
-  efficiencyScore: number;
-  recommendationScore: number;
 
   // Itemized fee components
   baseFare: number;
@@ -73,7 +74,8 @@ export interface RideProviderDetails {
   isBestValue: boolean;
   isStale?: boolean;
   quoteAgeSeconds?: number;
-  volatility?: FareVolatility;
+  retrieved_at?: string;
+  priceHistory?: FareHistory;
 
   // Regional & Government-Backed Public Mobility
   isGovernmentBacked?: boolean;
@@ -93,13 +95,6 @@ export interface ComparisonRecommendations {
   costAdvantage: string;
 }
 
-export interface ModelMetadata {
-  version: string;
-  algorithm: string;
-  r2Score: number;
-  mae: number;
-}
-
 export interface ComparisonResult {
   distanceKm: number;
   durationMins: number;
@@ -109,6 +104,7 @@ export interface ComparisonResult {
   currency?: string;
   currencySymbol?: string;
   isServiceable?: boolean;
+  message?: string;
   regionalNotice?: string;
   supportedRegions?: string[];
   surgeRuleName: string;
@@ -117,43 +113,8 @@ export interface ComparisonResult {
   pricingRegime: string;
   fareSpread: number;
   spreadPercentage: number;
-  anomalyCount: number;
   providers: RideProviderDetails[];
   recommendations: ComparisonRecommendations;
   insights: string[];
-  modelMetadata?: ModelMetadata;
   routeHash?: string;
-}
-
-export interface RegressionMetrics {
-  mae: number;
-  rmse: number;
-  mape: number;
-  r2: number;
-}
-
-export interface ClusteringMetrics {
-  optimal_k: number;
-  silhouette_score: number;
-  silhouette_evaluations: Record<string, number>;
-}
-
-export interface AnomalyMetrics {
-  contamination: number;
-  training_anomalies_detected: number;
-  anomaly_rate_percent: number;
-}
-
-export interface MLModelPerformance {
-  status: string;
-  version: string;
-  last_trained: string;
-  total_training_records: number;
-  regression_model: string;
-  regression_metrics: RegressionMetrics;
-  clustering_metrics: ClusteringMetrics;
-  anomaly_metrics: AnomalyMetrics;
-  cluster_profiles: Record<string, any>;
-  providers_supported: string[];
-  vehicle_types_supported: string[];
 }

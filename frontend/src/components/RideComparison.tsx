@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Zap, ArrowUpRight, ChevronDown, ChevronUp,
-  Sparkles, AlertTriangle, Clock, Car, Bike, Navigation, ShieldCheck,
-  RefreshCw, Radio, AlertCircle, Bot
+  Sparkles, Clock, Car, Bike, Navigation, ShieldCheck,
+  RefreshCw, Radio, AlertCircle, Bot, Brain, TrendingUp,
+  Activity
 } from 'lucide-react';
 import type { RideProviderDetails, ComparisonResult } from '../types/ride';
 import { PriceHistoryGraph } from './PriceHistoryGraph';
@@ -22,15 +23,15 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 }) => {
   const {
     providers, insights, detectedCity,
-    pricingRegime, fareSpread, spreadPercentage, anomalyCount
+    pricingRegime, fareSpread, spreadPercentage
   } = comparison;
 
   const defaultSym = comparison.currencySymbol || (comparison.currency === 'USD' ? '$' : comparison.currency === 'EUR' ? '€' : comparison.currency === 'GBP' ? '£' : '₹');
 
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'smart' | 'price' | 'eta'>('smart');
+  const [sortBy, setSortBy] = useState<'recommended' | 'price' | 'eta'>('recommended');
   const [vehicleFilter, setVehicleFilter] = useState<'ALL' | 'CAB' | 'AUTO' | 'BIKE' | 'ROBOTAXI'>('ALL');
-  const [nowTimestamp, setNowTimestamp] = useState<number>(Date.now());
+  const [nowTimestamp, setNowTimestamp] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -39,12 +40,13 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const getQuoteAge = (p: any): number => {
+  const getQuoteAge = (p: RideProviderDetails): number => {
     if (p.retrieved_at) {
       const dt = new Date(p.retrieved_at).getTime();
+      if (nowTimestamp === 0) return p.quoteAgeSeconds || 0;
       return Math.max(0, Math.floor((nowTimestamp - dt) / 1000));
     }
-    return Math.floor(p.quoteAgeSeconds || p.quote_age_seconds || 0);
+    return Math.floor(p.quoteAgeSeconds || 0);
   };
 
   const toggleExpand = (providerName: string) => {
@@ -53,7 +55,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
   const filteredProviders = providers.filter(p => {
     if (vehicleFilter === 'ALL') return true;
-    const type = ((p as any).vehicleType || (p as any).vehicle_type || '').toUpperCase();
+    const type = p.vehicleType.toUpperCase();
     const name = p.provider.toUpperCase();
     const cat = (p.categoryTag || '').toUpperCase();
     if (vehicleFilter === 'ROBOTAXI') return cat.includes('AUTONOMOUS') || name.includes('WAYMO') || name.includes('ROBOTAXI');
@@ -64,8 +66,8 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
   });
 
   const sortedProviders = [...filteredProviders].sort((a, b) => {
-    if (sortBy === 'smart') {
-      return (b.smartScore || b.efficiencyScore) - (a.smartScore || a.efficiencyScore);
+    if (sortBy === 'recommended') {
+      return Number(b.isBestValue) - Number(a.isBestValue);
     } else if (sortBy === 'price') {
       return (a.actualFare || a.estimatedFare) - (b.actualFare || b.estimatedFare);
     } else {
@@ -405,7 +407,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
               <Radio size={11} className="text-emerald-400 animate-pulse" />
-              Live Quotes Connected
+              Route-aware fare estimates
             </span>
             <span className="text-[11px] font-semibold text-indigo-200 hidden sm:inline">
               {detectedCity || 'Transit Zone'} {comparison.country ? `(${comparison.country})` : ''} • {comparison.distanceKm.toFixed(1)} km ({comparison.durationMins} mins)
@@ -418,7 +420,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                 onClick={onRefresh}
                 disabled={refreshing}
                 className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all cursor-pointer disabled:opacity-50 active:scale-95"
-                title="Re-evaluate live provider quotes"
+                title="Refresh fare estimates"
               >
                 <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
                 <span>{refreshing ? 'Refreshing...' : 'Re-evaluate'}</span>
@@ -427,7 +429,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
             {pricingRegime && (
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-white/10 text-indigo-100 border border-white/10">
-                {pricingRegime}
+                Pricing pattern: {pricingRegime}
               </span>
             )}
           </div>
@@ -435,7 +437,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
         <div className="pt-3 flex items-end justify-between">
           <div>
-            <span className="text-[11px] font-medium text-slate-400 block">Lowest Fresh Quote</span>
+            <span className="text-[11px] font-medium text-slate-400 block">Lowest Estimated Fare</span>
             <div className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
               <span>{cheapestProvider?.provider}</span>
               <span className="text-emerald-400 font-extrabold text-lg">
@@ -454,12 +456,6 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           )}
         </div>
 
-        {anomalyCount > 0 && (
-          <div className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-amber-500/15 border border-amber-500/30 rounded-lg text-amber-200 text-xs font-semibold">
-            <AlertTriangle size={14} className="text-amber-400 shrink-0" />
-            <span>Unusual surge pricing detected on some providers in this area</span>
-          </div>
-        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -502,10 +498,10 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           <span className="text-[11px] mr-1">Sort:</span>
           <div className="flex bg-[var(--bg-secondary)] border border-[var(--border-color)] p-0.5 rounded-lg">
             <button
-              onClick={() => setSortBy('smart')}
-              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${sortBy === 'smart' ? 'bg-[var(--bg-primary)] text-indigo-600 dark:text-indigo-400 font-bold shadow-xs' : 'hover:text-[var(--text-primary)]'}`}
+              onClick={() => setSortBy('recommended')}
+              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${sortBy === 'recommended' ? 'bg-[var(--bg-primary)] text-indigo-600 dark:text-indigo-400 font-bold shadow-xs' : 'hover:text-[var(--text-primary)]'}`}
             >
-              Smart Score
+              Recommended
             </button>
             <button
               onClick={() => setSortBy('price')}
@@ -538,162 +534,235 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
         </div>
       )}
 
-      <div className="space-y-2.5">
+      {/* Pricing Legend Header */}
+      <div className="flex items-center gap-3 px-3.5 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[10px] text-[var(--text-secondary)] flex-wrap">
+        <span className="font-bold text-[var(--text-primary)]">Pricing Legend:</span>
+        <span className="flex items-center gap-1 font-semibold text-emerald-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> LIVE: Live provider price
+        </span>
+        <span className="flex items-center gap-1 font-semibold text-indigo-500 dark:text-indigo-400">
+          <Brain size={11} /> ML: ML predicted typical fare
+        </span>
+        <span className="flex items-center gap-1 font-semibold text-[var(--text-secondary)]">
+          <Activity size={11} /> HISTORICAL: Historical route average
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {sortedProviders.length === 0 && (
+          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-5 text-sm font-semibold text-[var(--text-secondary)]">
+            {comparison.message || 'No supported ride services are currently configured for this location.'}
+          </div>
+        )}
         {sortedProviders.map((p) => {
           const isExpanded = expandedProvider === p.provider;
-          const actualFare = p.actualFare || p.estimatedFare;
-          const predFare = typeof p.predictedFare === 'number' ? p.predictedFare : actualFare;
-          const diff = p.predictionDiff !== undefined ? p.predictionDiff : (actualFare - predFare);
-          const brand = getProviderBrand(p.provider, (p as any).vehicleType || (p as any).vehicle_type || '', p.isGovernmentBacked);
-          const score = p.smartScore || p.efficiencyScore || 85;
+          const hasLivePrice = p.liveAvailable !== false && p.actualFare !== null && p.actualFare !== undefined;
+          const liveFare = p.actualFare;
+          const brand = getProviderBrand(p.provider, p.vehicleType, p.isGovernmentBacked);
           const age = getQuoteAge(p);
-          const isStale = age > 15;
+          const isStale = Boolean(p.isStale) || age > 30;
           const sym = p.currencySymbol || defaultSym;
+          const diffPct = p.predictionDiffPct !== undefined ? p.predictionDiffPct : 0;
+          const demand = p.demandLevel || (p.surgeMultiplier >= 1.3 ? 'High' : p.surgeMultiplier > 1.05 ? 'Moderate' : 'Normal');
+          const trend = p.priceTrend || 'Stable / Increasing';
+          const typicalRange = p.typicalFareRange || `${sym}${p.predictedFareMin ?? Math.round((p.predictedFare || 250) * 0.94)}–${sym}${p.predictedFareMax ?? Math.round((p.predictedFare || 250) * 1.06)}`;
 
           return (
             <div
               key={p.provider}
               onClick={() => toggleExpand(p.provider)}
-              className={`bg-[var(--bg-secondary)] border rounded-2xl transition-all cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md ${
+              className={`bg-[var(--bg-secondary)] border rounded-2xl transition-all cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md overflow-hidden ${
                 p.isBestValue
                   ? 'border-indigo-500/50 shadow-sm bg-indigo-50/20 dark:bg-indigo-950/15'
                   : 'border-[var(--border-color)]'
               }`}
             >
-              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs shrink-0 ${brand.badgeBg}`}>
-                    {brand.icon}
+              <div className="p-4 space-y-3">
+                {/* Header Row: Brand & Live Price / Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs shrink-0 ${brand.badgeBg}`}>
+                      {brand.icon}
+                    </div>
+
+                    <div className="truncate space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-extrabold text-sm text-[var(--text-primary)] truncate">
+                          {p.provider}
+                        </h4>
+                        {p.categoryTag === 'Autonomous Robotaxi' && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-700 text-white border border-emerald-800 flex items-center gap-0.5">
+                            🤖 Autonomous Robotaxi
+                          </span>
+                        )}
+                        {p.categoryTag === '100% Pure Electric Fleet' && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-teal-600 text-white border border-teal-700 flex items-center gap-0.5">
+                            ⚡ 100% EV
+                          </span>
+                        )}
+                        {p.isGovernmentBacked && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-600 text-white border border-emerald-700 flex items-center gap-0.5">
+                            🏛 Govt-Backed
+                          </span>
+                        )}
+                        {p.categoryTag === 'Open Mobility' && !p.isGovernmentBacked && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-600 text-white border border-blue-700 flex items-center gap-0.5">
+                            🌐 Open Mobility
+                          </span>
+                        )}
+                        {p.zeroSurge && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center gap-0.5">
+                            ⚡ Zero Surge
+                          </span>
+                        )}
+                        {p.isCheapest && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-400 text-slate-950 border border-amber-500">
+                            💰 Cheapest
+                          </span>
+                        )}
+                        {p.isFastest && !p.isCheapest && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-500 text-white border border-blue-600">
+                            ⚡ Fastest
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] font-medium flex-wrap">
+                        <span className="flex items-center gap-1 font-semibold text-[var(--text-primary)]">
+                          <Clock size={12} className="text-slate-400" />
+                          ETA: {p.etaMinutes} min
+                        </span>
+                        <span>•</span>
+                        <span className="font-semibold text-[var(--text-primary)]">
+                          Distance: {p.distanceKm} km
+                        </span>
+                        {p.costPerKm > 0 && (
+                          <>
+                            <span>•</span>
+                            <span>{sym}{p.costPerKm}/km</span>
+                          </>
+                        )}
+                        {p.surgeMultiplier > 1.0 && !p.zeroSurge && (
+                          <>
+                            <span>•</span>
+                            <span className="text-amber-500 font-bold flex items-center gap-0.5">
+                              <Zap size={11} /> {p.surgeMultiplier}x surge
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="truncate space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-extrabold text-sm text-[var(--text-primary)] truncate">
-                        {p.provider}
-                      </h4>
-                      {p.categoryTag === 'Autonomous Robotaxi' && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-700 text-white border border-emerald-800 flex items-center gap-0.5">
-                          🤖 Autonomous Robotaxi
-                        </span>
-                      )}
-                      {p.categoryTag === '100% Pure Electric Fleet' && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-teal-600 text-white border border-teal-700 flex items-center gap-0.5">
-                          ⚡ 100% EV
-                        </span>
-                      )}
-                      {p.isGovernmentBacked && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-600 text-white border border-emerald-700 flex items-center gap-0.5">
-                          🏛 Govt-Backed
-                        </span>
-                      )}
-                      {p.categoryTag === 'Open Mobility' && !p.isGovernmentBacked && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-600 text-white border border-blue-700 flex items-center gap-0.5">
-                          🌐 Open Mobility
-                        </span>
-                      )}
-                      {p.categoryTag === 'State-Regulated' && !p.isGovernmentBacked && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-slate-700 text-amber-300 border border-slate-600 flex items-center gap-0.5">
-                          🛡 State-Regulated
-                        </span>
-                      )}
-                      {p.zeroSurge && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center gap-0.5">
-                          ⚡ Zero Surge
-                        </span>
-                      )}
-                      {p.isCheapest && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-400 text-slate-950 border border-amber-500">
-                          💰 Cheapest
-                        </span>
-                      )}
-                      {p.isFastest && !p.isCheapest && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-500 text-white border border-blue-600">
-                          ⚡ Fastest
-                        </span>
-                      )}
-                      {p.isAnomaly && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/30 flex items-center gap-0.5">
-                          <AlertTriangle size={9} /> Surge Outlier
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] font-medium flex-wrap">
-                      <span className="flex items-center gap-1 font-semibold text-[var(--text-primary)]">
-                        <Clock size={12} className="text-slate-400" />
-                        {p.etaMinutes} mins
-                      </span>
-                      <span>•</span>
-                      <span className="font-semibold text-[var(--text-primary)]">
-                        {sym}{p.costPerKm}/km • {sym}{p.costPerMin}/min
-                      </span>
-                      {p.surgeMultiplier > 1.0 && !p.zeroSurge && (
-                        <>
-                          <span>•</span>
-                          <span className="text-amber-500 font-bold flex items-center gap-0.5">
-                            <Zap size={11} /> {p.surgeMultiplier}x
+                  {/* Real-time Pricing Authoritative Block */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
+                    {hasLivePrice ? (
+                      <div className="text-left sm:text-right">
+                        <div className="text-2xl font-black text-[var(--text-primary)] flex items-baseline sm:justify-end gap-1">
+                          {sym}{liveFare}
+                        </div>
+                        <div className="flex items-center sm:justify-end gap-1.5 mt-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            LIVE PRICE
                           </span>
-                        </>
-                      )}
-                      {p.regulatoryBody && (
-                        <>
-                          <span>•</span>
-                          <span className="text-emerald-500 dark:text-emerald-400 font-semibold text-[10px]">
-                            {p.regulatoryBody}
+                          <span className={`text-[10px] font-medium ${isStale ? 'text-amber-500 font-bold' : 'text-[var(--text-secondary)]'}`}>
+                            {age <= 3 ? 'Updated just now' : `Updated ${age}s ago`}
                           </span>
-                        </>
-                      )}
-                    </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-left sm:text-right space-y-0.5">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30 inline-block">
+                          Live price unavailable
+                        </span>
+                        <div className="text-sm font-black text-[var(--text-primary)]">
+                          ML Estimate: {typicalRange}
+                        </div>
+                        <span className="text-[9px] text-amber-500/90 font-medium block">
+                          Historical/ML estimate — not a live provider price.
+                        </span>
+                      </div>
+                    )}
 
-                    <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
-                      <span className="text-indigo-600 dark:text-indigo-400 font-bold">
-                        ML Est: {sym}{typeof predFare === 'number' ? predFare.toFixed(2) : predFare}
-                      </span>
-                      <span>•</span>
-                      <span className={`font-semibold ${diff < 0 ? 'text-emerald-600 dark:text-emerald-400' : diff > 0 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                        {diff >= 0 ? `+${sym}${Math.abs(diff).toFixed(2)}` : `-${sym}${Math.abs(diff).toFixed(2)}`} ({p.predictionDiffPct || 0}%)
-                      </span>
-                      <span>•</span>
-                      <span className={`text-[10px] font-medium ${isStale ? 'text-amber-500 font-bold' : 'text-slate-400'}`}>
-                        {isStale ? `Stale quote (${age}s ago)` : `Updated ${age}s ago`}
-                      </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => handleBook(p, e)}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
+                        title={`Open ${brand.appName}`}
+                      >
+                        <span>Book</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpand(p.provider);
+                        }}
+                        className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-lg cursor-pointer"
+                        title="View fare details"
+                      >
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
-                  <div className="text-left sm:text-right">
-                    <div className="text-xl font-black text-[var(--text-primary)] flex items-baseline sm:justify-end gap-1">
-                      {sym}{actualFare}
-                    </div>
-                    <div className="text-[10px] text-[var(--text-secondary)] font-semibold flex items-center sm:justify-end gap-1">
-                      <span>Score:</span>
-                      <strong className="text-indigo-600 dark:text-indigo-400">
-                        {typeof score === 'number' && score % 1 !== 0 ? score.toFixed(1) : score}/100
-                      </strong>
-                    </div>
+                {/* ML Pricing Insight Card Section */}
+                <div className="p-3 rounded-xl bg-[var(--bg-primary)]/80 border border-[var(--border-color)] space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-500 dark:text-indigo-400 flex items-center gap-1.5">
+                      <Brain size={13} /> ML Pricing Insight
+                    </span>
+                    {p.mlInsight ? (
+                      <span className="text-[11px] font-medium text-[var(--text-secondary)] italic">
+                        "{p.mlInsight}"
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium text-[var(--text-secondary)] italic">
+                        {hasLivePrice
+                          ? (diffPct >= 5
+                              ? `Current price is approximately ${diffPct}% above recent historical range.`
+                              : diffPct <= -5
+                                ? `Current price is ${Math.abs(diffPct)}% below typical historical average.`
+                                : 'Current price aligns with typical historical fares.')
+                          : 'Historical/ML estimate — not a live provider price.'}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={(e) => handleBook(p, e)}
-                      className={`flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
-                      title={`Open ${brand.appName} with prefilled pickup & destination`}
-                    >
-                      <span>Book</span>
-                      <ArrowUpRight size={13} />
-                    </button>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[var(--border-color)]/70 text-xs">
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] block">Typical Fare</span>
+                      <span className="font-extrabold text-[var(--text-primary)]">{typicalRange}</span>
+                    </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExpand(p.provider);
-                      }}
-                      className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-lg cursor-pointer"
-                      title="View exact fare breakdown & ML details"
-                    >
-                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] block">Current vs Typical</span>
+                      {hasLivePrice ? (
+                        <span className={`font-extrabold ${diffPct > 5 ? 'text-amber-500' : diffPct < -5 ? 'text-emerald-500' : 'text-[var(--text-primary)]'}`}>
+                          ~{Math.abs(diffPct)}% {diffPct >= 0 ? 'above typical' : 'below typical'}
+                        </span>
+                      ) : (
+                        <span className="font-medium text-[var(--text-secondary)]">Baseline estimate</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] block">Demand</span>
+                      <span className={`font-extrabold ${demand === 'High' ? 'text-rose-500 dark:text-rose-400' : demand === 'Moderate' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        {demand}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] block">Trend</span>
+                      <span className="font-extrabold text-[var(--text-primary)] flex items-center gap-1">
+                        <TrendingUp size={11} className={trend.includes('Increasing') ? 'text-amber-500' : 'text-emerald-500'} />
+                        {trend}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -703,7 +772,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
                     <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                        Exact Fare Breakdown
+                        Fare Components
                       </span>
                       <div className="flex justify-between text-xs font-medium">
                         <span className="text-[var(--text-secondary)]">Base Fare:</span>
@@ -736,52 +805,40 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
                     <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
                       <span className="text-[10px] uppercase font-bold text-indigo-500 dark:text-indigo-400 block">
-                        ML Fare Intelligence
+                        AI/ML Pricing Intelligence
                       </span>
                       <div className="flex justify-between text-xs font-medium">
-                        <span className="text-[var(--text-secondary)]">Model Estimate:</span>
-                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">
-                          {sym}{typeof predFare === 'number' ? predFare.toFixed(2) : predFare}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs font-medium">
-                        <span className="text-[var(--text-secondary)]">Confidence:</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                          <ShieldCheck size={12} />
-                          {p.confidenceScore ? `${p.confidenceScore.toFixed(1)}%` : '98.4%'} ({p.confidenceLevel || p.confidence || 'High'})
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs font-medium">
                         <span className="text-[var(--text-secondary)]">Pricing Regime:</span>
-                        <span className="text-[var(--text-primary)] font-semibold">{p.clusterLabel || 'Standard'}</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-medium border-t border-[var(--border-color)] pt-1">
-                        <span className="text-[var(--text-secondary)]">Anomaly Status:</span>
-                        <span className={p.isAnomaly ? 'text-amber-500 font-bold' : 'text-emerald-500 font-semibold'}>
-                          {p.isAnomaly ? 'Flagged Outlier' : 'Standard Envelope'}
+                        <span className="text-[var(--text-primary)] font-semibold">
+                          {p.clusterLabel || 'Standard Transit'}
                         </span>
                       </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Anomaly Assessment:</span>
+                        <span className={`font-semibold ${p.priceAnomaly === 'Above normal' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                          {p.priceAnomaly || 'Normal'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Inference Confidence:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">
+                          {p.confidenceLevel || 'High'} ({p.confidenceScore || 90}%)
+                        </span>
+                      </div>
+                      <p className="border-t border-[var(--border-color)] pt-1 text-[10px] text-[var(--text-secondary)]">
+                        {p.anomalyReason || 'Pricing behavior is within standard historical bounds for this route.'}
+                      </p>
                     </div>
 
                     <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
-                      <span className="text-[10px] uppercase font-bold text-purple-500 dark:text-purple-400 block">
-                        Smart Score: {typeof score === 'number' && score % 1 !== 0 ? score.toFixed(1) : score}/100
-                      </span>
-                      <div className="flex justify-between text-xs font-medium">
-                        <span className="text-[var(--text-secondary)]">Price Weight (40%):</span>
-                        <span className="text-[var(--text-primary)] font-semibold">{p.scoreBreakdown?.priceScore || Math.round(Number(score) * 0.4)}/40</span>
+                      <span className="text-[10px] uppercase font-bold text-[var(--text-secondary)] block">Service Information</span>
+                      <div className="text-xs text-[var(--text-primary)]">
+                        {p.categoryTag ? `Category: ${p.categoryTag}` : 'Provider fleet quote'}
                       </div>
-                      <div className="flex justify-between text-xs font-medium">
-                        <span className="text-[var(--text-secondary)]">ETA Weight (30%):</span>
-                        <span className="text-[var(--text-primary)] font-semibold">{p.scoreBreakdown?.etaScore || Math.round(Number(score) * 0.3)}/30</span>
+                      <div className="text-[10px] text-[var(--text-secondary)]">
+                        Source: {p.isLive ? 'Authoritative live provider API' : 'ML historical route model'}
                       </div>
-                      <div className="flex justify-between text-xs font-medium">
-                        <span className="text-[var(--text-secondary)]">Reliability (30%):</span>
-                        <span className="text-[var(--text-primary)] font-semibold">{p.scoreBreakdown?.reliabilityScore ? p.scoreBreakdown.reliabilityScore + p.scoreBreakdown.confidenceScore : 28}/30</span>
-                      </div>
-                      <div className="border-t border-[var(--border-color)] pt-1 text-[10px] text-slate-400">
-                        {p.categoryTag ? `Category: ${p.categoryTag}` : 'Direct connection to provider.'}
-                      </div>
+                      {p.regulatoryBody && <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{p.regulatoryBody}</div>}
                     </div>
                   </div>
                 </div>
@@ -791,7 +848,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
         })}
       </div>
 
-      <PriceHistoryGraph providers={sortedProviders} routeHash={(comparison as any).routeHash} />
+      <PriceHistoryGraph providers={sortedProviders} />
 
       {insights && insights.length > 0 && (
         <div className="p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl space-y-2 text-xs">
@@ -812,7 +869,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
       <div className="p-3 bg-[var(--bg-secondary)]/70 border border-[var(--border-color)] rounded-xl flex items-start sm:items-center gap-2.5 text-[11px] text-[var(--text-secondary)]">
         <AlertCircle size={15} className="text-indigo-500 shrink-0 mt-0.5 sm:mt-0" />
         <span className="leading-relaxed">
-          <strong>Note:</strong> Real-time estimates contribute to transparent fare comparison. Actual fares on live provider apps may differ based on dynamic demand, instant driver supply, and live traffic conditions.
+          <strong>Note:</strong> These route-aware estimates use configured fare information. Provider prices may differ based on local availability, demand, traffic, and current fare rules.
         </span>
       </div>
     </div>

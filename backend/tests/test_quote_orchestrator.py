@@ -15,7 +15,8 @@ def test_quote_orchestrator_parallel_fetch():
         drop_lng=77.7500,
         city="Bangalore",
         surge_multiplier=1.0,
-        toll_charge=0.0
+        toll_charge=0.0,
+        allowed_adapters=["Uber", "Ola", "Rapido", "NammaYatri"]
     ))
 
     assert len(quotes) >= 6

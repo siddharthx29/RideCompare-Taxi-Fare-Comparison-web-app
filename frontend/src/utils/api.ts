@@ -12,6 +12,27 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+const getErrorMessage = (payload: unknown, status: number): string => {
+  const fallback = `HTTP error! status: ${status}`;
+  if (typeof payload === 'string' && payload.trim()) return payload;
+  if (typeof payload !== 'object' || payload === null) return fallback;
+
+  const record = payload as Record<string, unknown>;
+  const message = [record.error, record.message, record.detail].find(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0
+  );
+  return message || fallback;
+};
+
+const tryFetch = async (url: string, options: RequestInit): Promise<Response | null> => {
+  try {
+    const response = await fetch(url, options);
+    return response.ok ? response : null;
+  } catch {
+    return null;
+  }
+};
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
@@ -25,50 +46,32 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     }
     
     // If not OK, parse payload for error message
-    let payload: any = null;
+    let payload: unknown = null;
     try {
-      const clone = response.clone();
-      payload = await clone.json();
+      payload = await response.clone().json();
     } catch {
       try {
-        const clone = response.clone();
-        payload = await clone.text();
-      } catch {}
-    }
-
-    let errMsg = `HTTP error! status: ${response.status}`;
-    if (payload) {
-      if (typeof payload === 'object') {
-        errMsg = payload.error || payload.message || payload.detail || errMsg;
-      } else if (typeof payload === 'string' && payload.trim().length > 0) {
-        errMsg = payload;
+        payload = await response.clone().text();
+      } catch {
+        payload = null;
       }
     }
-    throw new Error(errMsg);
-  } catch (error: any) {
+
+    throw new Error(getErrorMessage(payload, response.status));
+  } catch (error: unknown) {
     // If relative fetch failed (e.g. proxy issue), try direct fallback to http://127.0.0.1:5000
     if (primaryUrl.startsWith('/') && typeof window !== 'undefined') {
-      try {
-        const directUrl = `http://127.0.0.1:5000${cleanEndpoint}`;
-        const fallbackRes = await fetch(directUrl, options);
-        if (fallbackRes.ok) {
-          return fallbackRes;
-        }
-      } catch {}
-      try {
-        const directUrl2 = `http://localhost:5000${cleanEndpoint}`;
-        const fallbackRes2 = await fetch(directUrl2, options);
-        if (fallbackRes2.ok) {
-          return fallbackRes2;
-        }
-      } catch {}
+      const fallbackRes = await tryFetch(`http://127.0.0.1:5000${cleanEndpoint}`, options);
+      if (fallbackRes) return fallbackRes;
+      const fallbackResLocalhost = await tryFetch(`http://localhost:5000${cleanEndpoint}`, options);
+      if (fallbackResLocalhost) return fallbackResLocalhost;
     }
 
-    let finalError = error;
+    let finalError = error instanceof Error ? error : new Error('Unknown API request failure.');
     if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
       finalError = new Error('Network Connection Error: Failed to connect to the backend API server. Please ensure the Python FastAPI backend is running on port 5000 (uvicorn backend.app.main:app --port 5000).');
     }
-    console.error(`[API Error] Endpoint: ${cleanEndpoint} | Error:`, finalError);
+    console.error('[API Error]', finalError);
     throw finalError;
   }
 }

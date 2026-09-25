@@ -1,71 +1,171 @@
-import time
+import asyncio
 import logging
-import urllib.parse
-from typing import Dict, Any, List
-from fastapi import APIRouter, Query
+import os
+import re
+import time
+from typing import Any, Dict, List, Optional, Tuple
+
 import httpx
+from fastapi import APIRouter, Query
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(tags=["Geocoding"])
 
-_cache: Dict[str, Dict[str, Any]] = {}
-CACHE_TTL_SECONDS = 600
+GEOCODING_BASE_URL = os.getenv("GEOCODING_BASE_URL", "https://nominatim.openstreetmap.org").rstrip("/")
+GEOCODING_USER_AGENT = os.getenv(
+    "GEOCODING_USER_AGENT", "RideCompare/2.1 (https://ridecompare.com; contact: support@ridecompare.com)"
+)
+CACHE_TTL_SECONDS = 900
+_cache: Dict[str, Tuple[float, Any]] = {}
+_request_lock = asyncio.Lock()
+_last_provider_request = 0.0
 
-FALLBACK_LANDMARKS = [
-    {"display_name": "Connaught Place, New Delhi, Delhi, India", "lat": "28.6328", "lon": "77.2197", "displayName": "Connaught Place, New Delhi, Delhi, India", "lng": "77.2197"},
-    {"display_name": "Indira Gandhi International Airport, New Delhi, Delhi, India", "lat": "28.5562", "lon": "77.1000", "displayName": "Indira Gandhi International Airport, New Delhi, Delhi, India", "lng": "77.1000"},
-    {"display_name": "Sector 18, Noida, Uttar Pradesh, India", "lat": "28.5355", "lon": "77.3910", "displayName": "Sector 18, Noida, Uttar Pradesh, India", "lng": "77.3910"},
-    {"display_name": "Cyber Hub, DLF Phase 2, Gurugram, Haryana, India", "lat": "28.4952", "lon": "77.0894", "displayName": "Cyber Hub, DLF Phase 2, Gurugram, Haryana, India", "lng": "77.0894"},
-    {"display_name": "Indiranagar, Bengaluru, Karnataka, India", "lat": "12.971891", "lon": "77.641151", "displayName": "Indiranagar, Bengaluru, Karnataka, India", "lng": "77.641151"},
-    {"display_name": "Koramangala, Bengaluru, Karnataka, India", "lat": "12.935192", "lon": "77.624480", "displayName": "Koramangala, Bengaluru, Karnataka, India", "lng": "77.624480"},
-    {"display_name": "Kempegowda International Airport, Bengaluru, Karnataka, India", "lat": "13.1986", "lon": "77.7066", "displayName": "Kempegowda International Airport, Bengaluru, Karnataka, India", "lng": "77.7066"},
-    {"display_name": "Bandra Kurla Complex, Mumbai, Maharashtra, India", "lat": "19.0688", "lon": "72.8704", "displayName": "Bandra Kurla Complex, Mumbai, Maharashtra, India", "lng": "72.8704"},
-    {"display_name": "Marine Drive, Mumbai, Maharashtra, India", "lat": "18.9432", "lon": "72.8230", "displayName": "Marine Drive, Mumbai, Maharashtra, India", "lng": "72.8230"},
-    {"display_name": "Marina Beach, Chennai, Tamil Nadu, India", "lat": "13.0500", "lon": "80.2824", "displayName": "Marina Beach, Chennai, Tamil Nadu, India", "lng": "80.2824"},
-    {"display_name": "Hitech City, Hyderabad, Telangana, India", "lat": "17.4435", "lon": "78.3772", "displayName": "Hitech City, Hyderabad, Telangana, India", "lng": "78.3772"}
-]
+
+def _normalize(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def _cache_get(key: str) -> Optional[Any]:
+    cached = _cache.get(key)
+    if cached and time.time() - cached[0] < CACHE_TTL_SECONDS:
+        return cached[1]
+    _cache.pop(key, None)
+    return None
+
+
+def _cache_set(key: str, value: Any) -> None:
+    if len(_cache) > 1000:
+        now = time.time()
+        for old_key, (timestamp, _) in list(_cache.items()):
+            if now - timestamp >= CACHE_TTL_SECONDS:
+                _cache.pop(old_key, None)
+    _cache[key] = (time.time(), value)
+
+
+def _format_result(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        **item,
+        "displayName": item.get("display_name", ""),
+        "lng": item.get("lon", "0"),
+        "address": item.get("address", {}),
+    }
+
+
+def _rank_result(item: Dict[str, Any], query: str, near_lat: Optional[float], near_lon: Optional[float]) -> float:
+    normalized_query = _normalize(query)
+    name = _normalize(str(item.get("name") or ""))
+    display_name = _normalize(str(item.get("display_name") or ""))
+    address = item.get("address", {})
+    address_text = _normalize(" ".join(str(value) for value in address.values()))
+    score = 0.0
+    if name == normalized_query:
+        score += 100
+    elif normalized_query and normalized_query in name:
+        score += 70
+    elif normalized_query and normalized_query in display_name:
+        score += 55
+    elif normalized_query and normalized_query in address_text:
+        score += 35
+
+    query_terms = [term for term in normalized_query.split() if len(term) > 1]
+    score += 5 * sum(term in display_name for term in query_terms)
+    if near_lat is not None and near_lon is not None:
+        try:
+            lat, lon = float(item["lat"]), float(item["lon"])
+            score -= min(20.0, ((lat - near_lat) ** 2 + (lon - near_lon) ** 2) ** 0.5 * 15)
+        except (KeyError, TypeError, ValueError):
+            pass
+    return score
+
+
+def _viewbox(latitude: float, longitude: float) -> str:
+    return f"{longitude - 0.35},{latitude + 0.25},{longitude + 0.35},{latitude - 0.25}"
+
+
+async def _provider_get(client: httpx.AsyncClient, endpoint: str, params: Dict[str, Any]) -> httpx.Response:
+    global _last_provider_request
+    async with _request_lock:
+        elapsed = time.monotonic() - _last_provider_request
+        if elapsed < 1.0:
+            await asyncio.sleep(1.0 - elapsed)
+        response = await client.get(f"{GEOCODING_BASE_URL}{endpoint}", params=params)
+        _last_provider_request = time.monotonic()
+        return response
+
+
+async def _search_nominatim(
+    client: httpx.AsyncClient,
+    query: str,
+    near_lat: Optional[float],
+    near_lon: Optional[float],
+) -> List[Dict[str, Any]]:
+    params: Dict[str, Any] = {
+        "format": "jsonv2",
+        "q": query,
+        "addressdetails": 1,
+        "limit": 5,
+        "accept-language": "en",
+        "layer": "address,poi",
+    }
+    if near_lat is not None and near_lon is not None:
+        params["viewbox"] = _viewbox(near_lat, near_lon)
+    response = await _provider_get(client, "/search", params)
+    response.raise_for_status()
+    results = response.json()
+    return results if isinstance(results, list) else []
 
 
 @router.get("/geocode")
-async def geocode_query(q: str = Query(..., min_length=1)):
-    normalized_q = q.strip().lower()
-    now = time.time()
+async def geocode_query(
+    q: str = Query(..., min_length=3, max_length=200),
+    near_lat: Optional[float] = Query(None, ge=-90, le=90),
+    near_lon: Optional[float] = Query(None, ge=-180, le=180),
+    context: Optional[str] = Query(None, max_length=200),
+):
+    query = " ".join(q.split())
+    normalized_context = _normalize(context or "")
+    key = f"search:{_normalize(query)}:{normalized_context}:{round(near_lat or 0, 2)}:{round(near_lon or 0, 2)}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
 
-    if normalized_q in _cache:
-        cached = _cache[normalized_q]
-        if now - cached["timestamp"] < CACHE_TTL_SECONDS:
-            return cached["data"]
-
-    url = f"https://nominatim.openstreetmap.org/search?format=json&q={urllib.parse.quote(q)}&addressdetails=1&limit=5&accept-language=en"
-
+    target_query = ", ".join(part for part in (query, context) if part)
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            headers = {"User-Agent": "RideCompare-App/2.0.0 (contact@ridecompare.com)"}
-            res = await client.get(url, headers=headers)
+        async with httpx.AsyncClient(timeout=5.0, headers={"User-Agent": GEOCODING_USER_AGENT}) as client:
+            results = await _search_nominatim(client, target_query, near_lat, near_lon)
+            if not results and target_query != query:
+                results = await _search_nominatim(client, query, near_lat, near_lon)
+    except (httpx.HTTPError, ValueError) as error:
+        logger.warning("Geocoding provider request failed: %s", error)
+        results = []
 
-            if res.status_code == 200:
-                raw_data = res.json()
-                if raw_data:
-                    formatted = [
-                        {
-                            **item,
-                            "displayName": item.get("display_name", ""),
-                            "lng": item.get("lon", "0.0")
-                        }
-                        for item in raw_data
-                    ]
-                    _cache[normalized_q] = {"data": formatted, "timestamp": now}
-                    return formatted
-    except Exception as err:
-        logger.debug("Nominatim geocoding lookup error (%s). Falling back to known landmarks.", err)
+    results.sort(key=lambda item: _rank_result(item, query, near_lat, near_lon), reverse=True)
+    formatted = [_format_result(item) for item in results[:5]]
+    _cache_set(key, formatted)
+    return formatted
 
-    matches = [
-        item for item in FALLBACK_LANDMARKS
-        if any(term in item["displayName"].lower() for term in normalized_q.split())
-    ]
-    if not matches:
-        matches = FALLBACK_LANDMARKS[:3]
 
-    _cache[normalized_q] = {"data": matches, "timestamp": now}
-    return matches
+@router.get("/geocode/reverse")
+async def reverse_geocode(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+):
+    key = f"reverse:{round(lat, 5)}:{round(lon, 5)}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+    try:
+        async with httpx.AsyncClient(timeout=5.0, headers={"User-Agent": GEOCODING_USER_AGENT}) as client:
+            response = await _provider_get(
+                client,
+                "/reverse",
+                {"format": "jsonv2", "lat": lat, "lon": lon, "zoom": 18, "addressdetails": 1, "accept-language": "en"},
+            )
+            response.raise_for_status()
+            result = response.json()
+            formatted = _format_result(result) if isinstance(result, dict) else {}
+    except (httpx.HTTPError, ValueError) as error:
+        logger.warning("Reverse geocoding request failed: %s", error)
+        formatted = {}
+    _cache_set(key, formatted)
+    return formatted

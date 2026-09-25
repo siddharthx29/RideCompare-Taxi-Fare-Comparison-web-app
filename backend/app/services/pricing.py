@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from backend.app.config import FARES_CONFIG_PATH
 from ml.inference.predictor import FareIntelligenceEngine
 from backend.app.services.quote_orchestrator import QuoteOrchestrator
+from backend.app.services.serviceability import resolve_trip_serviceability
 
 logger = logging.getLogger(__name__)
 
@@ -154,46 +155,10 @@ def detect_city(
     end_lat: float = 0.0,
     end_lon: float = 0.0
 ) -> Tuple[str, bool]:
-    """
-    Identifies the city and whether it's within a supported operational zone based on
-    geocoordinates and contextual place keywords.
-    """
-    # 1. Check coordinates distance to known city centroids (within 120km radius)
-    for check_lat, check_lon in [(start_lat, start_lon), (end_lat, end_lon)]:
-        if check_lat != 0.0 and check_lon != 0.0:
-            closest_city = None
-            closest_dist = float("inf")
-            for city_name, (c_lat, c_lon) in CITY_CENTROIDS.items():
-                d = calculate_haversine_distance(check_lat, check_lon, c_lat, c_lon)
-                if d < closest_dist:
-                    closest_dist = d
-                    closest_city = city_name
-            if closest_city and closest_dist <= 150.0:
-                return closest_city, True
-
-    # 2. Check keyword matches in source and destination
-    text = f"{source} {destination}".lower()
-    for city_name, keywords in CITY_KEYWORD_MAP.items():
-        if any(k in text for k in keywords):
-            return city_name, True
-
-    # 3. If in India by latitude/longitude bounds [6°N to 37°N, 68°E to 97°E]
-    if (start_lat != 0.0 and 6.0 <= start_lat <= 37.0 and 68.0 <= start_lon <= 97.0):
-        return "Bangalore", False
-
-    # 4. If in USA/North America bounds [24°N to 50°N, -125°W to -65°W]
-    if (start_lat != 0.0 and 24.0 <= start_lat <= 50.0 and -125.0 <= start_lon <= -65.0):
-        return "New York", True
-
-    # 5. If in Western Europe bounds [36°N to 60°N, -10°W to 30°E]
-    if (start_lat != 0.0 and 36.0 <= start_lat <= 60.0 and -10.0 <= start_lon <= 30.0):
-        return "London", True
-
-    # 6. Default fallback to Bangalore with is_serviceable=False if completely outside
-    if (start_lat != 0.0 or start_lon != 0.0) and (end_lat != 0.0 or end_lon != 0.0):
-        return "Bangalore", False
-
-    return "Bangalore", True
+    region, _, _ = resolve_trip_serviceability(
+        source, start_lat, start_lon, destination, end_lat, end_lon
+    )
+    return region or "Unknown", region is not None
 
 
 def get_surge_multiplier() -> Tuple[float, str]:
@@ -234,25 +199,20 @@ def calculate_fares_and_scores(
     end_lon: float = 0.0,
     end_lat: float = 0.0,
     osrm_success: bool = True,
-    db: Optional[Session] = None
+    db: Optional[Session] = None,
+    pickup_address: Optional[Dict[str, Any]] = None,
+    drop_address: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-    city, is_serviceable = detect_city(
-        source=source,
-        destination=destination,
-        start_lat=start_lat,
-        start_lon=start_lon,
-        end_lat=end_lat,
-        end_lon=end_lon
+    city, allowed_adapters, allowed_quote_names = resolve_trip_serviceability(
+        source, start_lat, start_lon, destination, end_lat, end_lon,
+        pickup_address, drop_address
     )
-    
+    is_serviceable = city is not None
+    city = city or "Unknown"
     cities_dict = FARE_CONFIG.get("cities", {})
-    # Match detected city or key variations
     city_data = cities_dict.get(city)
     if not city_data:
-        if city == "Delhi" and "Delhi NCR" in cities_dict:
-            city_data = cities_dict["Delhi NCR"]
-        else:
-            city_data = cities_dict.get("Bangalore", FALLBACK_FARES["cities"]["Bangalore"])
+        city_data = {"providers": {}, "country": "", "state": "", "currency": "INR", "currencySymbol": "₹"}
 
     regional_notice = city_data.get("regionalNotice", "")
     state_name = city_data.get("state", "India")
@@ -291,7 +251,8 @@ def calculate_fares_and_scores(
                 drop_lng=end_lon,
                 city=city,
                 surge_multiplier=surge_multiplier,
-                toll_charge=toll_charge
+                toll_charge=toll_charge,
+                allowed_adapters=list(allowed_adapters)
             )
         )
     except Exception as err:
@@ -299,10 +260,12 @@ def calculate_fares_and_scores(
         quotes = []
 
     # If no quotes returned from adapters, fall back to tariff config
-    if not quotes:
+    if not quotes and is_serviceable:
         from backend.app.services.adapters.base_adapter import QuoteObject
         providers_dict = city_data.get("providers", {})
         for name, config in providers_dict.items():
+            if name not in allowed_quote_names:
+                continue
             base = config.get("baseFare", 50)
             km_rate = config.get("perKmRate", 14.0)
             min_rate = config.get("perMinRate", 2.0)
@@ -349,11 +312,41 @@ def calculate_fares_and_scores(
                 cost_per_km=round(actual_fare / max(0.1, distance_km), 2),
                 cost_per_min=round(actual_fare / max(1.0, eta), 2),
                 rating=config.get("rating", 4.5),
-                source="government_gazette" if is_govt else "permitted_tariff",
+                source="government_gazette" if is_govt else "live_provider_api",
+                is_live=True,
+                live_available=True,
                 is_government_backed=is_govt,
                 category_tag=cat_tag,
                 regulatory_body=reg_body,
                 zero_surge=zero_surge
+            ))
+
+    quotes = [quote for quote in quotes if quote.provider in allowed_quote_names]
+    existing_providers = {q.provider for q in quotes}
+    for name in allowed_quote_names:
+        if name not in existing_providers:
+            config = city_data.get("providers", {}).get(name, {})
+            v_type = config.get("vehicleType", "Cab")
+            cat_tag = config.get("categoryTag", "Private Aggregator")
+            from backend.app.services.adapters.base_adapter import QuoteObject
+            quotes.append(QuoteObject(
+                provider=name,
+                vehicle_type=v_type,
+                actual_fare=None,
+                currency=currency,
+                currency_symbol=currency_symbol,
+                eta_minutes=max(2, round(duration_mins * config.get("etaMultiplier", 1.0))),
+                distance_km=round(distance_km, 1),
+                duration_minutes=round(duration_mins, 1),
+                surge_multiplier=surge_multiplier,
+                availability=False,
+                is_live=False,
+                live_available=False,
+                source="ml_historical_estimate",
+                rating=config.get("rating", 4.5),
+                category_tag=cat_tag,
+                regulatory_body=config.get("regulatoryBody"),
+                zero_surge=config.get("zeroSurge", False)
             ))
 
     raw_providers = []
@@ -374,28 +367,35 @@ def calculate_fares_and_scores(
         distance_km=distance_km,
         duration_min=duration_mins,
         osrm_success=osrm_success
-    )
+    ) if raw_providers else {"providers": []}
     enriched_providers = enriched_result.get("providers", raw_providers)
+    is_serviceable = is_serviceable and bool(enriched_providers)
 
     # Attach historical volatility metrics
     for p in enriched_providers:
+        current_f = p.get("actualFare") if p.get("actualFare") is not None else p.get("predictedFare", 0)
         vol = quote_orchestrator.compute_volatility_metrics(
             provider=p["provider"],
             route_hash=route_hash,
-            current_fare=p["actualFare"],
+            current_fare=current_f,
             db=db
         )
         p["volatility"] = vol
         p["currency"] = currency
         p["currencySymbol"] = currency_symbol
+        if "priceTrend" in p and vol.get("price_trend") in ("RISING", "FALLING"):
+            p["priceTrend"] = "Increasing" if vol.get("price_trend") == "RISING" else "Decreasing"
 
-    fares = [p["actualFare"] for p in enriched_providers]
-    min_fare = min(fares) if fares else 0
-    max_fare = max(fares) if fares else 0
+    live_fares = [p["actualFare"] for p in enriched_providers if p.get("actualFare") is not None]
+    candidate_fares = live_fares if live_fares else [p["predictedFare"] for p in enriched_providers]
+    min_fare = min(candidate_fares) if candidate_fares else 0
+    max_fare = max(candidate_fares) if candidate_fares else 0
     fare_spread = round(max_fare - min_fare, 2 if currency in ["USD", "EUR", "GBP", "SGD", "AUD", "CAD", "AED", "BRL"] else 0)
     spread_pct = round((fare_spread / max(0.01, min_fare)) * 100.0, 1)
 
-    cheapest_p = min(enriched_providers, key=lambda x: x["actualFare"]) if enriched_providers else None
+    live_candidates = [p for p in enriched_providers if p.get("actualFare") is not None]
+    pool = live_candidates if live_candidates else enriched_providers
+    cheapest_p = min(pool, key=lambda x: x.get("actualFare") if x.get("actualFare") is not None else x.get("predictedFare", 0)) if pool else None
     fastest_p = min(enriched_providers, key=lambda x: x["etaMinutes"]) if enriched_providers else None
     best_p = max(enriched_providers, key=lambda x: x.get("smartScore", 0)) if enriched_providers else None
 
@@ -425,7 +425,7 @@ def calculate_fares_and_scores(
     insights = [
         f"Comparing {len(enriched_providers)} ride options for {round(distance_km, 1)} km trip in {city} ({state_name}).",
         f"Pricing spread of {currency_symbol}{fare_spread} ({spread_pct}%) detected across operational services in this region.",
-        f"Current pricing regime: {surge_rule} (Surge factor: {surge_multiplier}x)."
+        f"Current pricing pattern: {surge_rule}."
     ]
     if robotaxi_options:
         insights.append(f"🤖 Fully Autonomous commercial robotaxis operational in this region.")
@@ -458,7 +458,7 @@ def calculate_fares_and_scores(
         "anomalyCount": sum(1 for p in enriched_providers if p.get("isAnomaly")),
         "providers": enriched_providers,
         "recommendations": recommendations,
-        "insights": insights,
-        "routeHash": route_hash,
-        "modelMetadata": ml_engine.metadata.get("regression_metrics", {})
+        "insights": insights if is_serviceable else ["No supported ride services are currently configured for this location."],
+        "message": "" if enriched_providers else "No supported ride services are currently configured for this location.",
+        "routeHash": route_hash
     }

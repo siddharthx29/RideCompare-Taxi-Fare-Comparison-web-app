@@ -1,14 +1,14 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import type { RideProviderDetails } from '../types/ride';
 
 interface PriceHistoryGraphProps {
-  providers: any[];
-  routeHash?: string;
+  providers: RideProviderDetails[];
 }
 
 export const PriceHistoryGraph: React.FC<PriceHistoryGraphProps> = ({ providers }) => {
   // Collect history series from providers
-  const providersWithHistory = providers.filter(p => p.volatility && p.volatility.recent_history && p.volatility.recent_history.length > 0);
+  const providersWithHistory = providers.filter(p => (p.priceHistory?.fares?.length ?? 0) > 0);
 
   if (providersWithHistory.length === 0) {
     return null;
@@ -17,7 +17,7 @@ export const PriceHistoryGraph: React.FC<PriceHistoryGraphProps> = ({ providers 
   // Find min and max for scaling
   let allFares: number[] = [];
   providersWithHistory.forEach(p => {
-    allFares = allFares.concat(p.volatility.recent_history);
+    allFares = allFares.concat(p.priceHistory?.fares || []);
   });
 
   const minFare = Math.max(0, Math.min(...allFares) * 0.9);
@@ -49,10 +49,10 @@ export const PriceHistoryGraph: React.FC<PriceHistoryGraphProps> = ({ providers 
           </div>
           <div>
             <h5 className="font-bold text-xs text-[var(--text-primary)]">
-              Live Observed Price Movement & Volatility
+              Historical Fare Changes
             </h5>
             <span className="text-[10px] text-[var(--text-secondary)] font-medium">
-              Observed fare fluctuations over recent searches for this corridor.
+              Fare estimates recorded for this route in recent searches.
             </span>
           </div>
         </div>
@@ -76,7 +76,7 @@ export const PriceHistoryGraph: React.FC<PriceHistoryGraphProps> = ({ providers 
 
           {/* Provider Polylines */}
           {providersWithHistory.map((p) => {
-            const hist: number[] = p.volatility.recent_history;
+            const hist: number[] = p.priceHistory?.fares || [];
             if (hist.length < 2) {
               const y = paddingY + plotHeight - ((hist[0] - minFare) / range) * plotHeight;
               return (
@@ -129,8 +129,7 @@ export const PriceHistoryGraph: React.FC<PriceHistoryGraphProps> = ({ providers 
       {/* Volatility Legend & Trend Chips */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 border-t border-[var(--border-color)]">
         {providersWithHistory.slice(0, 3).map((p) => {
-          const vol = p.volatility || {};
-          const trend = vol.price_trend || 'STABLE';
+          const trend = p.priceHistory?.trend || 'STABLE';
           const stroke = getProviderStroke(p.provider);
 
           return (
@@ -145,7 +144,7 @@ export const PriceHistoryGraph: React.FC<PriceHistoryGraphProps> = ({ providers 
                 {trend === 'FALLING' && <TrendingDown size={12} className="text-emerald-500" />}
                 {trend === 'STABLE' && <Minus size={12} className="text-slate-400" />}
                 <span className="text-[10px] font-semibold text-[var(--text-secondary)]">
-                  {vol.volatility_score || 'LOW'}
+                  {trend === 'RISING' ? 'Rising' : trend === 'FALLING' ? 'Falling' : 'Stable'}
                 </span>
               </div>
             </div>

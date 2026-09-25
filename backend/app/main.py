@@ -33,11 +33,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Smart Taxi Fare Comparison API",
-    description="Multi-provider real-time fare aggregation with ML price intelligence and anomaly detection.",
+    title="RideCompare API",
+    description="Route-aware fare estimates, provider availability, and platform analytics.",
     version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.ENVIRONMENT.lower() in {"production", "prod"} else "/docs",
+    redoc_url=None if settings.ENVIRONMENT.lower() in {"production", "prod"} else "/redoc",
     lifespan=lifespan
 )
 
@@ -47,9 +47,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response: Response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 
@@ -58,39 +59,28 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
 @app.get("/health", tags=["System"])
 async def health_check():
     db_healthy = check_db_health()
-    models_dir = ROOT_DIR / "ml" / "models" / "saved"
-    has_models = (
-        (models_dir / "fare_regressor.joblib").exists() and
-        (models_dir / "kmeans_cluster.joblib").exists() and
-        (models_dir / "anomaly_detector.joblib").exists()
-    )
-
     return {
         "status": "healthy" if db_healthy else "degraded",
-        "service": "Smart Taxi Fare Comparison API",
+        "service": "RideCompare API",
         "version": "2.0.0",
         "database": "connected" if db_healthy else "unavailable",
-        "ml_engine": "ready" if has_models else "fallback_mode",
         "environment": settings.ENVIRONMENT
     }
 
 
 # Include API Routers
 app.include_router(geocode.router, prefix="/api")
-app.include_router(geocode.router)
 app.include_router(route.router, prefix="/api")
-app.include_router(route.router)
 app.include_router(analytics.router, prefix="/api")
-app.include_router(analytics.router)
 app.include_router(ml_endpoints.router)
 
 # Serve built frontend in production if available

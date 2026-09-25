@@ -1,45 +1,44 @@
-"""
-FastAPI ML Microservice Server
-Exposes high-performance REST APIs for fare prediction, pricing cluster analysis,
-anomaly detection, and model lifecycle management on Port 5001.
-"""
+"""Loopback-only internal inference service."""
 
+import logging
 import os
 import sys
+from typing import List, Optional
 
-# Ensure root workspace directory is on sys.path
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+import uvicorn
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import uvicorn
 
 from ml.inference.predictor import FareIntelligenceEngine
-from ml.training.train_pipeline import run_training_pipeline
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="RideCompare ML Intelligence Engine",
-    description="Machine Learning service for real-time taxi fare prediction, clustering, and anomaly detection.",
-    version="1.0.0"
+    title="RideCompare Internal Inference Service",
+    description="Internal inference API. Do not expose this service directly to the public internet.",
+    version="1.0.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv("ML_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8080").split(",")
+        if origin.strip()
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
-# Initialize in-memory ML inference engine
 engine = FareIntelligenceEngine()
 
 
-# Request / Response Schemas
 class ProviderFareRequest(BaseModel):
     provider: str
     vehicle_type: str = "Cab"
@@ -73,39 +72,32 @@ class CompareRequest(BaseModel):
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "healthy",
-        "service": "RideCompare ML Intelligence Engine",
-        "models_loaded": engine.loaded,
-        "model_version": engine.metadata.get("version", "unknown")
-    }
+    return {"status": "healthy", "service": "RideCompare Internal Inference Service"}
 
 
 @app.post("/predict")
 def predict_fare(payload: ProviderFareRequest):
-    """Predicts expected fare, confidence, cluster, and anomaly for a single provider."""
     try:
-        res = engine.predict_provider_fare(payload.model_dump())
-        return res
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+        return engine.predict_provider_fare(payload.model_dump())
+    except Exception as error:
+        logger.exception("Internal inference request failed")
+        raise HTTPException(status_code=500, detail="Inference request failed.") from error
 
 
 @app.post("/compare")
 def compare_and_enrich_fares(payload: CompareRequest):
-    """Enriches all providers with ML intelligence, anomalies, and multi-factor transparent ranking."""
     try:
         provider_dicts = []
-        for p in payload.providers:
-            d = p.model_dump()
-            d["distance_km"] = payload.distance_km
-            d["duration_min"] = payload.duration_min
-            d["traffic_condition"] = payload.traffic_condition
-            d["weather_condition"] = payload.weather_condition
-            d["time_of_day"] = payload.time_of_day
-            d["day_of_week"] = payload.day_of_week
-            d["surge_multiplier"] = max(d.get("surge_multiplier", 1.0), payload.surge_multiplier)
-            provider_dicts.append(d)
+        for provider in payload.providers:
+            item = provider.model_dump()
+            item["distance_km"] = payload.distance_km
+            item["duration_min"] = payload.duration_min
+            item["traffic_condition"] = payload.traffic_condition
+            item["weather_condition"] = payload.weather_condition
+            item["time_of_day"] = payload.time_of_day
+            item["day_of_week"] = payload.day_of_week
+            item["surge_multiplier"] = max(item.get("surge_multiplier", 1.0), payload.surge_multiplier)
+            provider_dicts.append(item)
 
         result = engine.rank_and_compare_providers(provider_dicts, osrm_success=payload.osrm_success)
         return {
@@ -119,71 +111,10 @@ def compare_and_enrich_fares(payload: CompareRequest):
             "anomaly_count": result["insights"].get("anomaly_count", 0),
             "providers": result["providers"],
             "insights": result["insights"],
-            "model_metadata": {
-                "version": engine.metadata.get("version", "1.0.0"),
-                "algorithm": "Adaptive Ensemble Regressor (Production)",
-                "r2_score": engine.metadata.get("regression_metrics", {}).get("r2", 0.98),
-                "mae": engine.metadata.get("regression_metrics", {}).get("mae", 20.6)
-            }
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Comparison error: {str(e)}")
-
-
-@app.get("/clusters")
-def get_cluster_profiles():
-    """Returns cluster descriptions, silhouette scores, and characteristics."""
-    return {
-        "optimal_k": engine.metadata.get("optimal_k_clusters", 3),
-        "silhouette_score": engine.metadata.get("silhouette_score", 0.33),
-        "silhouette_evaluations": engine.metadata.get("silhouette_evaluations", {}),
-        "cluster_profiles": engine.metadata.get("cluster_profiles", {})
-    }
-
-
-@app.get("/model-performance")
-def get_model_performance():
-    """Returns complete validation metrics for Supervised Regression, Clustering, and Anomaly Detection."""
-    return {
-        "status": "success",
-        "version": engine.metadata.get("version", "1.0.0"),
-        "last_trained": engine.metadata.get("last_trained", "N/A"),
-        "total_training_records": engine.metadata.get("total_training_records", 0),
-        "regression_model": "Adaptive Ensemble Regressor (Production)",
-        "regression_metrics": engine.metadata.get("regression_metrics", {
-            "mae": 20.67, "rmse": 34.3, "mape": 5.96, "r2": 0.9803
-        }),
-        "regression_comparison": engine.metadata.get("regression_comparison", {}),
-        "clustering_metrics": {
-            "optimal_k": engine.metadata.get("optimal_k_clusters", 3),
-            "silhouette_score": engine.metadata.get("silhouette_score", 0.3323),
-            "silhouette_evaluations": engine.metadata.get("silhouette_evaluations", {})
-        },
-        "anomaly_metrics": engine.metadata.get("anomaly_detection", {
-            "contamination": 0.03, "training_anomalies_detected": 360, "anomaly_rate_percent": 3.0
-        }),
-        "cluster_profiles": engine.metadata.get("cluster_profiles", {}),
-        "providers_supported": engine.metadata.get("providers_supported", []),
-        "vehicle_types_supported": engine.metadata.get("vehicle_types_supported", [])
-    }
-
-
-def retrain_worker():
-    """Background task to retrain models and hot-reload them."""
-    print("[Retrain Task] Starting background retraining...")
-    run_training_pipeline()
-    engine.load_models()
-    print("[Retrain Task] Background retraining finished and models hot-reloaded!")
-
-
-@app.post("/retrain")
-def trigger_retraining(background_tasks: BackgroundTasks):
-    """Triggers ML model retraining in background."""
-    background_tasks.add_task(retrain_worker)
-    return {
-        "status": "accepted",
-        "message": "Model retraining triggered in background. System will automatically hot-reload models upon completion."
-    }
+    except Exception as error:
+        logger.exception("Internal comparison request failed")
+        raise HTTPException(status_code=500, detail="Comparison request failed.") from error
 
 
 if __name__ == "__main__":

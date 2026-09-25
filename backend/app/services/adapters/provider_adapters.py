@@ -57,9 +57,11 @@ def _build_quote(
         duration_minutes=round(duration_mins, 1),
         surge_multiplier=effective_surge,
         availability=True,
+        is_live=True,
+        live_available=True,
         retrieved_at=now.isoformat(),
         expires_at=(now + timedelta(seconds=60)).isoformat(),
-        source="government_gazette" if is_government_backed else "permitted_tariff",
+        source="government_gazette" if is_government_backed else "live_provider_api",
         base_fare=base_fare,
         distance_fare=round(d_fare, 2),
         duration_fare=round(t_fare, 2),
@@ -662,15 +664,7 @@ class LocalTaxiAdapter(ProviderAdapter):
                     )
                 ]
 
-            return [
-                _build_quote(
-                    provider_name="Local Metered Taxi", vehicle_type="Cab", base_fare=60.0, per_km=16.0, per_min=0.0,
-                    plat_fee=0.0, distance_km=distance_km, duration_mins=duration_mins, surge_multiplier=1.0,
-                    toll_charge=toll_charge, rating=3.6, eta_multiplier=1.25, app_link="tel:100",
-                    web_link="https://www.google.com/search?q=taxi+stand+near+me", is_government_backed=True,
-                    category_tag="State-Regulated", regulatory_body="Regional Transport Authority", zero_surge=True
-                )
-            ]
+            return []
         except Exception:
             self.record_failure()
             return []

@@ -1,42 +1,44 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
-    container_name: ridecompare-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: ridecompare
+      POSTGRES_USER: ${POSTGRES_USER:-ridecompare}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}
+      POSTGRES_DB: ${POSTGRES_DB:-ridecompare}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: ridecompare-backend
     restart: always
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     environment:
-      - PORT=5000
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/ridecompare
-      - ENVIRONMENT=production
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ridecompare}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}@db:5432/${POSTGRES_DB:-ridecompare}
+      ENVIRONMENT: production
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: ridecompare-frontend
     restart: always
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
 

@@ -13,23 +13,26 @@ interface SearchPanelProps {
   loading: boolean;
 }
 
-const DEFAULT_LANDMARKS: LocationInfo[] = [
-  { label: "Connaught Place, New Delhi, Delhi, India", lat: 28.6328, lng: 77.2197 },
-  { label: "Indira Gandhi International Airport, New Delhi, Delhi, India", lat: 28.5562, lng: 77.1000 },
-  { label: "Bandra Kurla Complex, Mumbai, Maharashtra, India", lat: 19.0688, lng: 72.8704 },
-  { label: "Marine Drive, Mumbai, Maharashtra, India", lat: 18.9432, lng: 72.8230 },
-  { label: "Indiranagar, Bengaluru, Karnataka, India", lat: 12.971891, lng: 77.641151 },
-  { label: "Kempegowda International Airport, Bengaluru, Karnataka, India", lat: 13.1986, lng: 77.7066 },
-  { label: "Panaji, North Goa, Goa, India", lat: 15.4989, lng: 73.8278 },
-  { label: "Baga Beach, North Goa, Goa, India", lat: 15.5553, lng: 73.7517 },
-  { label: "Manohar International Airport (Mopa), Goa, India", lat: 15.7533, lng: 73.8690 },
-  { label: "Park Street, Kolkata, West Bengal, India", lat: 22.5505, lng: 88.3527 },
-  { label: "Howrah Railway Station, Kolkata, West Bengal, India", lat: 22.5857, lng: 88.3426 },
-  { label: "MG Road, Kochi, Ernakulam, Kerala, India", lat: 9.9723, lng: 76.2784 },
-  { label: "Cochin International Airport (CIAL), Kochi, Kerala, India", lat: 10.1518, lng: 76.3930 },
-  { label: "Marina Beach, Chennai, Tamil Nadu, India", lat: 13.0500, lng: 80.2824 },
-  { label: "Hitech City, Hyderabad, Telangana, India", lat: 17.4435, lng: 78.3772 }
-];
+interface GeocodeResult {
+  name?: string;
+  displayName?: string;
+  display_name?: string;
+  lat: string | number;
+  lng?: string | number;
+  lon?: string | number;
+  address?: Record<string, string>;
+}
+
+const suggestionCache = new Map<string, GeocodeResult[]>();
+
+const locationContext = (location: LocationInfo | null): string => {
+  const address = location?.address || {};
+  return [
+    address.city || address.town || address.municipality || address.village || address.suburb,
+    address.state,
+    address.country
+  ].filter(Boolean).join(', ');
+};
 
 export const SearchPanel: React.FC<SearchPanelProps> = ({
   selectedSource,
@@ -42,8 +45,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const [sourceInput, setSourceInput] = useState('');
   const [destInput, setDestInput] = useState('');
   
-  const [sourceSuggestions, setSourceSuggestions] = useState<any[]>([]);
-  const [destSuggestions, setDestSuggestions] = useState<any[]>([]);
+  const [sourceSuggestions, setSourceSuggestions] = useState<GeocodeResult[]>([]);
+  const [destSuggestions, setDestSuggestions] = useState<GeocodeResult[]>([]);
 
   const [geolocating, setGeolocating] = useState(false);
   const [sourceLoading, setSourceLoading] = useState(false);
@@ -62,30 +65,6 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const destRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (selectedSource) {
-      setSourceInput(selectedSource.label);
-    } else if (!sourceLoading && !showSourceOverlay) {
-      setSourceInput('');
-    }
-  }, [selectedSource]);
-
-  useEffect(() => {
-    if (selectedDest) {
-      setDestInput(selectedDest.label);
-    } else if (!destLoading && !showDestOverlay) {
-      setDestInput('');
-    }
-  }, [selectedDest]);
-
-  useEffect(() => {
-    setSourceHighlightIdx(-1);
-  }, [sourceSuggestions]);
-
-  useEffect(() => {
-    setDestHighlightIdx(-1);
-  }, [destSuggestions]);
-
-  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sourceRef.current && !sourceRef.current.contains(event.target as Node)) {
         setShowSourceOverlay(false);
@@ -100,82 +79,84 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 
   const fetchSuggestions = async (
     val: string,
-    setSuggests: (arr: any[]) => void,
+    nearby: LocationInfo | null,
+    signal: AbortSignal,
+    setSuggests: (arr: GeocodeResult[]) => void,
     setLoading: (b: boolean) => void,
-    setError: (err: string | null) => void
+    setError: (err: string | null) => void,
+    setHighlight: (index: number) => void
   ) => {
+    setHighlight(-1);
     const trimmedVal = val.trim();
-    if (trimmedVal.length < 2) {
+    if (trimmedVal.length < 3) {
       setSuggests([]);
-      setError(null);
+      setError(trimmedVal ? 'Enter at least 3 characters to search.' : null);
       return;
     }
+    const context = locationContext(nearby);
+    const cacheKey = `${trimmedVal.toLocaleLowerCase().replace(/\s+/g, ' ')}|${context.toLocaleLowerCase()}`;
+    const cached = suggestionCache.get(cacheKey);
+    if (cached) {
+      setSuggests(cached);
+      setError(cached.length ? null : 'No exact location found. Try adding the city or nearby landmark.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      let data: any[] = [];
-      try {
-        const response = await apiFetch(`/api/geocode?q=${encodeURIComponent(trimmedVal)}`);
-        data = await response.json();
-      } catch (backendErr: any) {
-        try {
-          const directUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmedVal)}&addressdetails=1&limit=5&accept-language=en`;
-          const response = await fetch(directUrl, {
-            headers: { 'User-Agent': 'RideCompare-App/2.0.0 (contact@ridecompare.com)' }
-          });
-          if (response.ok) {
-            data = await response.json();
-          }
-        } catch {}
+      const params = new URLSearchParams({ q: trimmedVal });
+      if (context) params.set('context', context);
+      if (nearby) {
+        params.set('near_lat', String(nearby.lat));
+        params.set('near_lon', String(nearby.lng));
       }
-
+      const response = await apiFetch(`/api/geocode?${params.toString()}`, { signal });
+      const data = await response.json() as GeocodeResult[];
+      if (signal.aborted) return;
+      suggestionCache.set(cacheKey, data);
       if (!data || data.length === 0) {
-        // Fallback filter from local landmarks
-        const matches = DEFAULT_LANDMARKS.filter(l => 
-          l.label.toLowerCase().includes(trimmedVal.toLowerCase())
-        );
-        if (matches.length > 0) {
-          data = matches.map(m => ({
-            displayName: m.label,
-            display_name: m.label,
-            lat: m.lat.toString(),
-            lng: m.lng.toString(),
-            lon: m.lng.toString()
-          }));
-        }
-      }
-      
-      if (!data || data.length === 0) {
-        setError('No matching places found. Try typing a city or landmark.');
+        setError('No exact location found. Try adding the city or nearby landmark.');
         setSuggests([]);
       } else {
-        setSuggests(data);
+        setSuggests(data.slice(0, 5));
         setError(null);
       }
-    } catch (err: any) {
-      setError(null);
+    } catch {
+      if (!signal.aborted) {
+        setSuggests([]);
+        setError('Location search is temporarily unavailable. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   };
 
   useEffect(() => {
+    const controller = new AbortController();
     const delayDebounce = setTimeout(() => {
       if (sourceInput && (!selectedSource || sourceInput !== selectedSource.label)) {
-        fetchSuggestions(sourceInput, setSourceSuggestions, setSourceLoading, setSourceError);
+        void fetchSuggestions(sourceInput, selectedDest, controller.signal, setSourceSuggestions, setSourceLoading, setSourceError, setSourceHighlightIdx);
       }
-    }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [sourceInput, selectedSource]);
+    }, 450);
+    return () => {
+      clearTimeout(delayDebounce);
+      controller.abort();
+    };
+  }, [sourceInput, selectedSource, selectedDest]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const delayDebounce = setTimeout(() => {
       if (destInput && (!selectedDest || destInput !== selectedDest.label)) {
-        fetchSuggestions(destInput, setDestSuggestions, setDestLoading, setDestError);
+        void fetchSuggestions(destInput, selectedSource, controller.signal, setDestSuggestions, setDestLoading, setDestError, setDestHighlightIdx);
       }
-    }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [destInput, selectedDest]);
+    }, 450);
+    return () => {
+      clearTimeout(delayDebounce);
+      controller.abort();
+    };
+  }, [destInput, selectedDest, selectedSource]);
 
   const handleCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -188,21 +169,20 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=en`;
-          const response = await fetch(url, {
-            headers: { 'User-Agent': 'RideCompare-App/2.0.0 (contact@ridecompare.com)' }
-          });
-          
+          const response = await apiFetch(`/api/geocode/reverse?lat=${latitude}&lon=${longitude}`);
           let addressLabel = `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+          let address: Record<string, string> | undefined;
           if (response.ok) {
-            const data = await response.json();
+            const data = await response.json() as GeocodeResult;
             if (data.display_name) addressLabel = data.display_name;
+            if (data.address) address = data.address;
           }
 
           const locationData = {
             label: addressLabel,
             lat: latitude,
-            lng: longitude
+            lng: longitude,
+            address
           };
 
           onSourceSelect(locationData);
@@ -234,55 +214,45 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     const tempDest = selectedDest;
     onSourceSelect(tempDest);
     onDestSelect(tempSource);
-  };
-
-  const resolveLocationFromInput = (input: string, suggestions: any[], defaultFallback: LocationInfo): LocationInfo => {
-    if (suggestions.length > 0) {
-      const top = suggestions[0];
-      return {
-        label: top.displayName || top.display_name || input,
-        lat: parseFloat(top.lat),
-        lng: parseFloat(top.lng || top.lon)
-      };
-    }
-    const match = DEFAULT_LANDMARKS.find(l => l.label.toLowerCase().includes(input.toLowerCase()));
-    if (match) return match;
-    return { ...defaultFallback, label: input };
+    setSourceInput(tempDest?.label || '');
+    setDestInput(tempSource?.label || '');
+    setSourceSuggestions([]);
+    setDestSuggestions([]);
+    setSourceHighlightIdx(-1);
+    setDestHighlightIdx(-1);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    let src = selectedSource;
-    let dst = selectedDest;
-
-    if (!src && sourceInput.trim()) {
-      src = resolveLocationFromInput(sourceInput.trim(), sourceSuggestions, DEFAULT_LANDMARKS[0]);
-      onSourceSelect(src);
+    if (!selectedSource) {
+      setSourceError('Select a valid search result before comparing fares.');
+      setShowSourceOverlay(true);
+      return;
     }
-    if (!dst && destInput.trim()) {
-      dst = resolveLocationFromInput(destInput.trim(), destSuggestions, DEFAULT_LANDMARKS[1]);
-      onDestSelect(dst);
+    if (!selectedDest) {
+      setDestError('Select a valid search result before comparing fares.');
+      setShowDestOverlay(true);
+      return;
     }
-
-    if (src && dst) {
-      onSearch(src, dst);
-    }
+    onSearch(selectedSource, selectedDest);
   };
 
-  const handleSelectSourceItem = (item: any) => {
+  const handleSelectSourceItem = (item: GeocodeResult) => {
     const label = item.displayName || item.display_name || 'Selected Location';
-    const lat = parseFloat(item.lat);
-    const lng = parseFloat(item.lng || item.lon);
-    onSourceSelect({ label, lat, lng });
+    const lat = Number(item.lat);
+    const lng = Number(item.lng ?? item.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    onSourceSelect({ label, lat, lng, address: item.address });
     setSourceInput(label);
     setShowSourceOverlay(false);
   };
 
-  const handleSelectDestItem = (item: any) => {
+  const handleSelectDestItem = (item: GeocodeResult) => {
     const label = item.displayName || item.display_name || 'Selected Location';
-    const lat = parseFloat(item.lat);
-    const lng = parseFloat(item.lng || item.lon);
-    onDestSelect({ label, lat, lng });
+    const lat = Number(item.lat);
+    const lng = Number(item.lng ?? item.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    onDestSelect({ label, lat, lng, address: item.address });
     setDestInput(label);
     setShowDestOverlay(false);
   };
@@ -494,6 +464,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           )}
         </button>
       </form>
+      <p className="mt-3 text-center text-[10px] text-[var(--text-secondary)]">
+        Search data © <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>
+      </p>
     </div>
   );
 };

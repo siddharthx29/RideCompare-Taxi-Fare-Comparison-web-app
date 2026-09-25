@@ -15,8 +15,17 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from backend.app.main import app
+from backend.app.config import Settings
 
 client = TestClient(app)
+
+
+def test_production_cors_uses_only_explicit_origins():
+    assert Settings(ENVIRONMENT="production").allowed_origins_list == []
+    assert Settings(
+        ENVIRONMENT="production",
+        CORS_ORIGINS="https://app.example.com,https://admin.example.com",
+    ).allowed_origins_list == ["https://app.example.com", "https://admin.example.com"]
 
 
 def test_health_check():
@@ -25,9 +34,9 @@ def test_health_check():
     assert response.status_code == 200
     data = response.json()
     assert "status" in data
-    assert data["service"] == "Smart Taxi Fare Comparison API"
+    assert data["service"] == "RideCompare API"
     assert "database" in data
-    assert "ml_engine" in data
+    assert "ml_engine" not in data
 
 
 def test_security_headers():
@@ -35,7 +44,8 @@ def test_security_headers():
     response = client.get("/health")
     assert response.headers.get("x-content-type-options") == "nosniff"
     assert response.headers.get("x-frame-options") == "SAMEORIGIN"
-    assert response.headers.get("x-xss-protection") == "1; mode=block"
+    assert response.headers.get("permissions-policy") == "camera=(), microphone=(), geolocation=(self)"
+    assert response.headers.get("strict-transport-security") is None
 
 
 def test_geocode_nominatim_proxy():
@@ -51,13 +61,15 @@ def test_geocode_nominatim_proxy():
         assert "displayName" in place
 
 
-def test_route_calculation_and_ml_fare_intelligence():
-    """Verify route calculation generates coordinates, distance, and ML-enriched fares."""
+def test_route_calculation_returns_only_public_fare_fields():
+    """Verify route results keep fare details without exposing model internals."""
     payload = {
-        "pickup": [28.6328, 77.2197],  # Connaught Place, Delhi
-        "drop": [28.5355, 77.3910],    # Noida Sector 18
-        "pickupName": "Connaught Place, New Delhi",
-        "dropName": "Sector 18, Noida"
+        "pickup": [15.4989, 73.8278],
+        "drop": [15.5553, 73.7517],
+        "pickupName": "Panaji, North Goa, Goa, India",
+        "dropName": "Baga Beach, North Goa, Goa, India",
+        "pickupAddress": {"city": "Panaji", "state": "Goa", "country_code": "in"},
+        "dropAddress": {"city": "Baga", "state": "Goa", "country_code": "in"}
     }
     response = client.post("/api/route", json=payload)
     assert response.status_code == 200
@@ -69,62 +81,120 @@ def test_route_calculation_and_ml_fare_intelligence():
     assert len(data["route"]["coordinates"]) > 0
 
     assert "fares" in data
+    assert data["isServiceable"] is True
     assert len(data["fares"]) > 0
 
     first_fare = data["fares"][0]
     assert "provider" in first_fare
     assert "fare" in first_fare
-    assert "ml_predicted_fare" in first_fare
-    assert "prediction_delta" in first_fare
-    assert "pricing_regime" in first_fare
-    assert "confidence_score" in first_fare
-    assert "smart_score" in first_fare
     assert "booking_url" in first_fare
+    # Raw debugging metrics should not leak into public comparison
+    assert not {"modelMetadata", "rawMetrics", "mae", "rmse", "r2", "loss"} & set(data["comparison"])
+    for provider in data["comparison"]["providers"]:
+        # Both Live provider pricing and ML pricing intelligence are available
+        assert "actualFare" in provider
+        assert "isLive" in provider
+        assert "predictedFare" in provider
+        assert "typicalFareRange" in provider
+        assert "demandLevel" in provider
+        # Raw internal training metrics should not be present in public provider card
+        assert not {"mae", "rmse", "r2", "rawLoss", "hyperparameters"} & set(provider)
+        assert provider["provider"].startswith(("GoaMiles", "GTDC"))
+
+
+def test_admin_ml_metrics_endpoint():
+    """Verify internal /api/admin/ml-metrics returns model evaluation metrics."""
+    response = client.get("/api/admin/ml-metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert "Gradient Boosting" in data["model_type"]
+    assert data["model_version"].startswith("v")
+    assert data["metrics"]["mae"] > 0
+    assert data["metrics"]["r2"] > 0.9
+    assert data["total_training_records"] == 12000
+    assert "features" in data
+    assert "clustering" in data
+    assert "anomaly_detection" in data
+
+
+def test_admin_ml_metrics_auth_in_production(monkeypatch):
+    """Verify that in production with ADMIN_KEY set, unauthenticated requests are rejected with 403."""
+    from backend.app.config import settings
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(settings, "ADMIN_KEY", "secret-token-xyz")
+
+    # Unauthorized attempt
+    unauth = client.get("/api/admin/ml-metrics")
+    assert unauth.status_code == 403
+
+    # Authorized with Header
+    auth_header = client.get("/api/admin/ml-metrics", headers={"X-Admin-Key": "secret-token-xyz"})
+    assert auth_header.status_code == 200
+
+    # Authorized with query parameter
+    auth_query = client.get("/api/admin/ml-metrics?key=secret-token-xyz")
+    assert auth_query.status_code == 200
 
 
 def test_fare_compare_endpoint():
     """Verify POST /api/fare/compare calculates fares."""
     payload = {
-        "pickup": "Indira Gandhi Airport",
-        "drop": "Cyber Hub Gurgaon",
-        "pickup_lat": 28.5562,
-        "pickup_lng": 77.1000,
-        "drop_lat": 28.4952,
-        "drop_lng": 77.0894,
-        "distance_km": 14.5,
-        "duration_min": 25.0
+        "pickup": "Indiranagar, Bengaluru, India",
+        "drop": "Kempegowda International Airport, Bengaluru, India",
+        "pickup_lat": 12.971891,
+        "pickup_lng": 77.641151,
+        "drop_lat": 13.1986,
+        "drop_lng": 77.7066,
+        "distance_km": 35.0,
+        "duration_min": 55.0
     }
     response = client.post("/api/fare/compare", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
+    assert data["isServiceable"] is True
     assert len(data["fares"]) > 0
+    providers = {fare["provider"] for fare in data["fares"]}
+    assert all(name.startswith(("KSTDC", "Namma Yatri", "Uber", "Ola", "Rapido")) for name in providers)
 
 
-def test_fare_predict_ml_endpoint():
-    """Verify POST /api/fare/predict returns ML regression and anomaly insights."""
-    payload = {
-        "provider": "Uber",
-        "ride_type": "Mini",
-        "distance_km": 12.0,
-        "duration_min": 30.0,
-        "hour_of_day": 18,
-        "day_of_week": 4,
-        "is_weekend": 0,
-        "traffic_density": 1.4,
-        "surge_multiplier": 1.2,
-        "city": "Delhi"
-    }
-    response = client.post("/api/fare/predict", json=payload)
+def test_kochi_route_returns_only_configured_regional_services():
+    response = client.post("/api/fare/compare", json={
+        "pickup": "MG Road, Kochi, Kerala, India",
+        "drop": "Cochin International Airport, Kochi, Kerala, India",
+        "pickup_lat": 9.9723,
+        "pickup_lng": 76.2784,
+        "drop_lat": 10.1518,
+        "drop_lng": 76.3930,
+        "pickup_address": {"city": "Kochi", "state": "Kerala", "country_code": "in"},
+        "drop_address": {"city": "Kochi", "state": "Kerala", "country_code": "in"},
+        "distance_km": 30.0,
+        "duration_min": 50.0
+    })
     assert response.status_code == 200
     data = response.json()
-    assert data["success"] is True
-    assert "prediction" in data
-    pred = data["prediction"]
-    assert pred["predicted_fare"] > 0
-    assert "confidence" in pred
-    assert "smart_score" in pred
-    assert "pricing_regime" in pred
+    assert data["isServiceable"] is True
+    providers = {fare["provider"] for fare in data["fares"]}
+    assert providers
+    assert all(name.startswith(("Kerala Savari", "Uber", "Ola", "Rapido", "Namma Yatri")) for name in providers)
+    assert not {"GoaMiles Hatchback", "GTDC Tourist Taxi", "Local Metered Taxi"} & providers
+
+
+def test_unsupported_route_has_no_fabricated_provider():
+    response = client.post("/api/fare/compare", json={
+        "pickup": "Unsupported City, India",
+        "drop": "Unsupported City, India",
+        "pickup_lat": 18.0,
+        "pickup_lng": 79.0,
+        "drop_lat": 18.1,
+        "drop_lng": 79.1,
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["isServiceable"] is False
+    assert data["comparison"]["providers"] == []
+    assert data["message"] == "No supported ride services are currently configured for this location."
 
 
 def test_analytics_endpoints():
@@ -156,31 +226,12 @@ def test_booking_redirect_logging():
     assert "redirect_url" in data
 
 
-def test_ml_cluster_profiles():
-    """Verify GET /api/ml/clusters returns unsupervised cluster profiles."""
-    response = client.get("/api/ml/clusters")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert len(data["clusters"]) >= 3
-
-
-def test_ml_model_performance():
-    """Verify GET /api/ml/model-performance returns validation metrics."""
-    response = client.get("/api/ml/model-performance")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert "metrics" in data
-    metrics = data["metrics"]
-    assert "r2_score" in metrics
-    assert metrics["r2_score"] > 0.90
-
-
-def test_ml_retrain_endpoint():
-    """Verify POST /api/ml/retrain schedules retraining and returns 200."""
-    response = client.post("/api/ml/retrain")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert "message" in data
+@pytest.mark.parametrize("method,path", [
+    ("post", "/api/fare/predict"),
+    ("get", "/api/ml/clusters"),
+    ("get", "/api/ml/model-performance"),
+    ("post", "/api/ml/retrain"),
+])
+def test_internal_ml_endpoints_are_not_public(method, path):
+    response = getattr(client, method)(path)
+    assert response.status_code in {404, 405}

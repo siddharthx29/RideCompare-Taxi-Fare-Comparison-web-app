@@ -1,14 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { SearchPanel } from './components/SearchPanel';
 import { MapView } from './components/MapView';
 import { RideComparison } from './components/RideComparison';
-import { AnalyticsDashboard } from './components/AnalyticsDashboard';
-import { Sparkles, Download, X, Search, BarChart3, Home } from 'lucide-react';
-import type { ComparisonResult, LocationInfo } from './types/ride';
+import { PlatformAnalyticsDashboard } from './components/PlatformAnalyticsDashboard';
+import { InternalMLDashboard } from './components/InternalMLDashboard';
+import { Sparkles, Download, X, Search, BarChart3, Home, Lock } from 'lucide-react';
+import type { ComparisonResult, LocationInfo, RouteGeometry } from './types/ride';
 import { apiFetch } from './utils/api';
 
 const MAX_STRAIGHT_LINE_KM = 240;
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+}
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -22,21 +27,28 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('admin') === 'ml' || params.get('tab') === 'ml' || params.get('admin') === 'true' || params.get('view') === 'admin';
+  });
+  const [adminTab, setAdminTab] = useState<'analytics' | 'ml'>(() => {
+    if (typeof window === 'undefined') return 'analytics';
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('admin') === 'ml' || params.get('tab') === 'ml') ? 'ml' : 'analytics';
+  });
   const [loading, setLoading] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
 
   const [searchId, setSearchId] = useState<number | null>(null);
   const [sourceLoc, setSourceLoc] = useState<LocationInfo | null>(null);
   const [destLoc, setDestLoc] = useState<LocationInfo | null>(null);
-  const [routeGeometry, setRouteGeometry] = useState<any | null>(null);
+  const [routeGeometry, setRouteGeometry] = useState<RouteGeometry | null>(null);
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
-
-  const [lastSearchedSource, setLastSearchedSource] = useState<string>('');
-  const [lastSearchedDest, setLastSearchedDest] = useState<string>('');
-
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [searchPanelKey, setSearchPanelKey] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const lastSearchedRoute = useRef('');
 
   useEffect(() => {
     const root = document.documentElement;
@@ -50,7 +62,7 @@ function App() {
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowInstallBanner(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
@@ -58,6 +70,7 @@ function App() {
   }, []);
 
   const handleSearch = useCallback(async (source: LocationInfo, dest: LocationInfo) => {
+    lastSearchedRoute.current = `${source.lat},${source.lng}->${dest.lat},${dest.lng}`;
     const straightLineKm = haversineKm(source.lat, source.lng, dest.lat, dest.lng);
     if (straightLineKm > MAX_STRAIGHT_LINE_KM) {
       const estRoadKm = Math.round(straightLineKm * 1.25);
@@ -79,17 +92,22 @@ function App() {
     setSearchId(null);
 
     try {
-      const startParam = `${source.lng},${source.lat}`;
-      const endParam = `${dest.lng},${dest.lat}`;
-      const url = `/api/route?start=${startParam}&end=${endParam}&sourceName=${encodeURIComponent(source.label)}&destName=${encodeURIComponent(dest.label)}`;
+      const params = new URLSearchParams({
+        start: `${source.lng},${source.lat}`,
+        end: `${dest.lng},${dest.lat}`,
+        sourceName: source.label,
+        destName: dest.label
+      });
+      if (source.address) params.set('sourceAddress', JSON.stringify(source.address));
+      if (dest.address) params.set('destAddress', JSON.stringify(dest.address));
 
-      const response = await apiFetch(url);
+      const response = await apiFetch(`/api/route?${params.toString()}`);
       const result = await response.json();
       setSearchId(result.searchId || 1);
-      setRouteGeometry(result.geometry);
+      setRouteGeometry(result.geometry as RouteGeometry);
       setComparison(result.comparison);
-    } catch (err: any) {
-      const errMsg: string = err?.message || '';
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '';
       const isApiValidationError =
         errMsg.toLowerCase().includes('300') ||
         errMsg.toLowerCase().includes('exceeds') ||
@@ -102,119 +120,9 @@ function App() {
         return;
       }
 
-      // Offline fallback calculation
       const distKm = Math.max(1.0, parseFloat((straightLineKm * 1.25).toFixed(1)));
       const durMin = Math.max(5, Math.round((distKm / 25) * 60));
-
-      const fallbackProviders = [
-        {
-          provider: "Rapido Bike",
-          vehicleType: "Bike" as const,
-          distanceKm: distKm,
-          etaMinutes: Math.round(durMin * 0.8),
-          actualFare: Math.round(15 + (distKm * 7) + (durMin * 1)),
-          estimatedFare: Math.round(15 + (distKm * 7) + (durMin * 1)),
-          predictedFare: Math.round(15 + (distKm * 7) + (durMin * 1)),
-          predictionDiff: 0,
-          predictionDiffPct: 0,
-          surgeMultiplier: 1.0,
-          confidence: "High" as const,
-          confidenceScore: 92.0,
-          confidenceLevel: "High" as const,
-          clusterId: 0,
-          clusterLabel: "City Commute",
-          smartScore: 94.0,
-          isAnomaly: false,
-          costPerKm: parseFloat(((15 + (distKm * 7)) / distKm).toFixed(1)),
-          costPerMin: 2.5,
-          efficiencyScore: 94,
-          recommendationScore: 94,
-          baseFare: 15,
-          distanceFare: distKm * 7,
-          durationFare: durMin * 1,
-          platformFee: 5,
-          tollEstimate: 0,
-          rating: 4.4,
-          isCheapest: true,
-          isFastest: true,
-          isMostEfficient: true,
-          isBestValue: true,
-          webLink: "https://www.rapido.bike/",
-          appDeepLink: "rapido://booking"
-        },
-        {
-          provider: "Uber Go",
-          vehicleType: "Cab" as const,
-          distanceKm: distKm,
-          etaMinutes: Math.round(durMin * 1.0),
-          actualFare: Math.round(50 + (distKm * 14) + (durMin * 2.0) + 15),
-          estimatedFare: Math.round(50 + (distKm * 14) + (durMin * 2.0) + 15),
-          predictedFare: Math.round(50 + (distKm * 14) + (durMin * 2.0) + 15),
-          predictionDiff: 0,
-          predictionDiffPct: 0,
-          surgeMultiplier: 1.0,
-          confidence: "High" as const,
-          confidenceScore: 94.0,
-          confidenceLevel: "High" as const,
-          clusterId: 0,
-          clusterLabel: "City Commute",
-          smartScore: 86.0,
-          isAnomaly: false,
-          costPerKm: parseFloat(((50 + (distKm * 14)) / distKm).toFixed(1)),
-          costPerMin: 4.5,
-          efficiencyScore: 86,
-          recommendationScore: 86,
-          baseFare: 50,
-          distanceFare: distKm * 14,
-          durationFare: durMin * 2,
-          platformFee: 15,
-          tollEstimate: 0,
-          rating: 4.6,
-          isCheapest: false,
-          isFastest: false,
-          isMostEfficient: false,
-          isBestValue: false,
-          webLink: `https://m.uber.com/ul/?action=setPickup&pickup[formatted_address]=${encodeURIComponent(source.label)}&dropoff[formatted_address]=${encodeURIComponent(dest.label)}`,
-          appDeepLink: "uber://booking"
-        },
-        {
-          provider: "Ola Mini",
-          vehicleType: "Cab" as const,
-          distanceKm: distKm,
-          etaMinutes: Math.round(durMin * 1.05),
-          actualFare: Math.round(48 + (distKm * 14.5) + (durMin * 2.2) + 15),
-          estimatedFare: Math.round(48 + (distKm * 14.5) + (durMin * 2.2) + 15),
-          predictedFare: Math.round(48 + (distKm * 14.5) + (durMin * 2.2) + 15),
-          predictionDiff: 0,
-          predictionDiffPct: 0,
-          surgeMultiplier: 1.0,
-          confidence: "High" as const,
-          confidenceScore: 91.0,
-          confidenceLevel: "High" as const,
-          clusterId: 0,
-          clusterLabel: "City Commute",
-          smartScore: 85.0,
-          isAnomaly: false,
-          costPerKm: parseFloat(((48 + (distKm * 14.5)) / distKm).toFixed(1)),
-          costPerMin: 4.8,
-          efficiencyScore: 85,
-          recommendationScore: 85,
-          baseFare: 48,
-          distanceFare: distKm * 14.5,
-          durationFare: durMin * 2.2,
-          platformFee: 15,
-          tollEstimate: 0,
-          rating: 4.2,
-          isCheapest: false,
-          isFastest: false,
-          isMostEfficient: false,
-          isBestValue: false,
-          webLink: "https://www.olacabs.com/",
-          appDeepLink: "olacabs://app/launch"
-        }
-      ];
-
-      setSearchId(1);
+      setSearchId(null);
       setRouteGeometry({
         type: "LineString",
         coordinates: [
@@ -227,27 +135,25 @@ function App() {
         durationMins: durMin,
         straightLineDistance: distKm,
         detourDistance: 0,
-        detectedCity: "Bangalore",
+        detectedCity: "Unknown",
         surgeRuleName: "Standard",
-        pricingRegime: distKm > 20 ? "Long-Distance Transit" : "Standard City Transit",
-        fareSpread: fallbackProviders[fallbackProviders.length - 1].actualFare - fallbackProviders[0].actualFare,
-        spreadPercentage: Math.round(((fallbackProviders[fallbackProviders.length - 1].actualFare - fallbackProviders[0].actualFare) / fallbackProviders[0].actualFare) * 100),
-        anomalyCount: 0,
-        providers: fallbackProviders,
+        pricingRegime: "Standard",
+        isServiceable: false,
+        message: "Fare services are temporarily unavailable. Please try again.",
+        fareSpread: 0,
+        spreadPercentage: 0,
+        providers: [],
         recommendations: {
-          cheapest: "Rapido Bike",
-          fastest: "Rapido Bike",
-          mostEfficient: "Rapido Bike",
-          bestValue: "Rapido Bike",
-          recommendationReason: "Most cost-effective transport option for direct journey.",
+          cheapest: "",
+          fastest: "",
+          mostEfficient: "",
+          bestValue: "",
+          recommendationReason: "",
           distanceAdvantage: `Direct route of ${distKm} km.`,
           timeAdvantage: `Estimated travel duration ~${durMin} mins.`,
           costAdvantage: `Save with the most economical option.`
         },
-        insights: [
-          `Direct distance estimate: ${distKm} km across urban routes.`,
-          `Estimated travel time: approximately ${durMin} mins.`
-        ]
+        insights: []
       });
     } finally {
       setLoading(false);
@@ -256,19 +162,17 @@ function App() {
 
   useEffect(() => {
     if (sourceLoc && destLoc) {
-      const sourceKey = `${sourceLoc.lat},${sourceLoc.lng}`;
-      const destKey = `${destLoc.lat},${destLoc.lng}`;
-      if (lastSearchedSource !== sourceKey || lastSearchedDest !== destKey) {
-        setLastSearchedSource(sourceKey);
-        setLastSearchedDest(destKey);
+      const routeKey = `${sourceLoc.lat},${sourceLoc.lng}->${destLoc.lat},${destLoc.lng}`;
+      if (lastSearchedRoute.current !== routeKey) {
+        lastSearchedRoute.current = routeKey;
         handleSearch(sourceLoc, destLoc);
       }
     }
-  }, [sourceLoc, destLoc, lastSearchedSource, lastSearchedDest, handleSearch]);
+  }, [sourceLoc, destLoc, handleSearch]);
 
   const handleInstallApp = async () => {
     if (!deferredPrompt) return;
-    deferredPrompt.prompt();
+    await deferredPrompt.prompt();
     setDeferredPrompt(null);
     setShowInstallBanner(false);
   };
@@ -280,8 +184,8 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ searchId, provider, fare })
       });
-    } catch (err) {
-      console.error('Failed logging redirect click:', err);
+    } catch (error) {
+      console.error('Failed logging redirect click:', error);
     }
   };
 
@@ -291,8 +195,8 @@ function App() {
     setRouteGeometry(null);
     setComparison(null);
     setSearchId(null);
-    setLastSearchedSource('');
-    setLastSearchedDest('');
+    lastSearchedRoute.current = '';
+    setSearchPanelKey((key) => key + 1);
     setDistanceError(null);
   };
 
@@ -339,8 +243,48 @@ function App() {
         )}
 
         {showAdmin ? (
-          <div className="glass-panel p-6 rounded-2xl">
-            <AnalyticsDashboard />
+          <div className="space-y-4">
+            {adminTab === 'analytics' ? (
+              <div className="space-y-4">
+                <div className="glass-panel p-6 rounded-2xl">
+                  <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--border-color)]">
+                    <div>
+                      <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">Platform Analytics</h2>
+                      <p className="text-xs text-[var(--text-secondary)] font-medium">Aggregated search volumes, pricing spread, and provider utilization.</p>
+                    </div>
+                    <button
+                      onClick={() => setShowAdmin(false)}
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1 cursor-pointer"
+                    >
+                      ← Return to Fare Comparison
+                    </button>
+                  </div>
+                  <PlatformAnalyticsDashboard />
+                </div>
+
+                {/* Discrete Developer/Admin Gate (Hidden from ordinary consumer flows) */}
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => {
+                      const pin = window.prompt("Enter Internal Developer Passcode:");
+                      if (pin === "admin" || pin === "dev123" || pin === "ridecompare") {
+                        setAdminTab('ml');
+                      } else if (pin !== null) {
+                        alert("Access denied. Invalid credentials.");
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] opacity-30 hover:opacity-80 transition-opacity cursor-pointer px-3 py-1"
+                    title="Restricted Internal ML Diagnostic Benchmarks"
+                  >
+                    <Lock size={10} /> Internal Model Telemetry
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="glass-panel p-6 rounded-2xl">
+                <InternalMLDashboard onExit={() => setAdminTab('analytics')} />
+              </div>
+            )}
           </div>
         ) : (
           <div>
@@ -356,12 +300,13 @@ function App() {
                       <span className="bg-gradient-to-r from-indigo-600 to-indigo-400 dark:from-indigo-400 dark:to-indigo-300 bg-clip-text text-transparent">Save Time. Save Money.</span>
                     </h2>
                     <p className="text-sm font-semibold text-[var(--text-secondary)] leading-relaxed max-w-[480px]">
-                      Find the fastest and cheapest ride across global and regional platforms — Uber, Waymo, Grab, Careem, Bolt, FreeNow, Namma Yatri, and regulated local taxis with live ML pricing intelligence.
+                      Compare route-aware fare estimates, ETAs, and configured local ride services with smart pricing insights.
                     </p>
                   </div>
 
                   <div className="max-w-[480px] shadow-xl shadow-slate-900/5 dark:shadow-black/20">
                     <SearchPanel
+                      key={searchPanelKey}
                       selectedSource={sourceLoc}
                       selectedDest={destLoc}
                       onSourceSelect={setSourceLoc}
@@ -498,7 +443,7 @@ function App() {
             This platform facilitates real-time fare comparison across services, but actual prices on live apps may vary based on instant driver availability, real-time traffic surges, local tolls, and dynamic platform adjustments.
           </p>
           <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-secondary)]/70 pt-1">
-            RideCompare Aggregator • Powered by OpenStreetMap, Project-OSRM & ML Fare Intelligence
+            RideCompare • Location search by OpenStreetMap contributors • Routes by Project OSRM
           </p>
         </div>
       </footer>

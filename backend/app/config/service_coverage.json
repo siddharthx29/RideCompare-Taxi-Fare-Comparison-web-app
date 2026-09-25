@@ -1,0 +1,103 @@
+{
+  "regions": {
+    "Goa": {
+      "country_code": "IN",
+      "state_aliases": ["goa"],
+      "city_aliases": ["goa", "panaji", "panjim", "baga", "calangute", "candolim", "vasco da gama", "margao", "mapusa", "dabolim", "mopa", "anjuna", "arambol", "colva", "morjim", "porvorim"],
+      "bounds": {"south": 14.9, "north": 15.9, "west": 73.6, "east": 74.4},
+      "providers": ["GoaMiles"],
+      "quote_names": ["GoaMiles Hatchback", "GoaMiles Sedan", "GTDC Tourist Taxi"],
+      "intercity": false
+    },
+    "Kochi": {
+      "country_code": "IN",
+      "state_aliases": ["kerala"],
+      "city_aliases": ["kochi", "cochin", "ernakulam", "kakkanad", "aluva", "edappally", "fort kochi", "mattancherry", "kalamassery", "cial", "vyttila", "tripunithura"],
+      "bounds": {"south": 9.65, "north": 10.3, "west": 75.9, "east": 76.65},
+      "providers": ["Uber", "Ola", "Rapido", "NammaYatri", "KeralaSavari"],
+      "quote_names": ["Kerala Savari Auto", "Kerala Savari Cab", "Uber Go", "Uber Premier", "Rapido Bike", "Rapido Auto", "Ola Mini", "Namma Yatri Auto", "Namma Yatri Cab"],
+      "intercity": false
+    },
+    "Bangalore": {
+      "country_code": "IN",
+      "state_aliases": ["karnataka"],
+      "city_aliases": ["bangalore", "bengaluru", "indiranagar", "koramangala", "whitefield", "electronic city", "hebbal", "jayanagar", "bellandur", "marathahalli", "yelahanka", "sarjapur", "hsr", "silk board", "jp nagar", "rajajinagar", "malleswaram", "kempegowda international airport", "kia airport"],
+      "bounds": {"south": 12.65, "north": 13.35, "west": 77.2, "east": 78.0},
+      "providers": ["LocalTaxi", "Uber", "Ola", "Rapido", "NammaYatri"],
+      "quote_names": ["Namma Yatri Auto", "Namma Yatri Cab", "KSTDC Airport Taxi", "Uber Go", "Uber Premier", "Rapido Bike", "Rapido Auto", "Ola Mini", "Ola Prime"],
+      "intercity": false
+    },
+    "Mumbai": {
+      "country_code": "IN",
+      "state_aliases": ["maharashtra"],
+      "city_aliases": ["mumbai", "bombay", "bandra kurla complex", "marine drive", "andheri", "bandra", "thane", "navi mumbai", "juhu", "colaba"],
+      "bounds": {"south": 18.85, "north": 19.35, "west": 72.7, "east": 73.1},
+      "providers": ["LocalTaxi", "Uber", "Ola", "Rapido"],
+      "quote_names": ["Mumbai Kaali Peeli", "Mumbai Cool Cab", "Mumbai Metered Auto", "Uber Go", "Uber Premier", "Rapido Auto", "Ola Mini", "Ola Prime"],
+      "intercity": false
+    },
+    "Kolkata": {
+      "country_code": "IN",
+      "state_aliases": ["west bengal"],
+      "city_aliases": ["kolkata", "calcutta", "howrah", "salt lake", "park street", "dum dum", "sealdah", "new town", "esplanade"],
+      "bounds": {"south": 22.35, "north": 22.75, "west": 88.15, "east": 88.55},
+      "providers": ["YatriSathi", "Uber", "Ola", "Rapido"],
+      "quote_names": ["Yatri Sathi Meter Taxi", "Kolkata Yellow Taxi", "Uber Go", "Uber Premier", "Rapido Bike", "Rapido Auto", "Ola Mini"],
+      "intercity": false
+    },
+    "Tokyo": {
+      "country_code": "JP",
+      "state_aliases": ["tokyo"],
+      "city_aliases": ["tokyo", "shinjuku", "shibuya", "ginza", "haneda", "narita", "roppongi", "akihabara", "ueno"],
+      "bounds": {"south": 35.4, "north": 36.0, "west": 139.2, "east": 140.0},
+      "providers": ["GoAppJapan", "Uber"],
+      "quote_names": ["GO App (Tokyo Nihon Kotsu)", "Uber Taxi Tokyo"],
+      "intercity": false
+    },
+    "San Francisco": {
+      "country_code": "US",
+      "state_aliases": ["california"],
+      "city_aliases": ["san francisco", "mission district", "golden gate", "sfo", "oakland", "san jose"],
+      "bounds": {"south": 37.65, "north": 37.9, "west": -122.55, "east": -122.3},
+      "providers": ["Waymo", "Uber", "Lyft", "CurbTaxi"],
+      "quote_names": ["Waymo One (Autonomous Robotaxi)", "UberX San Francisco", "Uber Black San Francisco", "Lyft SF", "Curb Taxi (TLC)"],
+      "intercity": false
+    },
+    "London": {
+      "country_code": "GB",
+      "state_aliases": ["greater london", "england"],
+      "city_aliases": ["london", "piccadilly circus", "tower bridge", "heathrow", "gatwick", "westminster"],
+      "bounds": {"south": 51.25, "north": 51.75, "west": -0.55, "east": 0.35},
+      "providers": ["TfLBlackCab", "FreeNow", "Bolt", "Uber"],
+      "quote_names": ["TfL Licensed Black Cab", "FreeNow London", "Bolt London", "UberX London"],
+      "intercity": false
+    },
+    "Dubai": {
+      "country_code": "AE",
+      "state_aliases": ["dubai"],
+      "city_aliases": ["dubai", "burj khalifa", "dubai marina", "deira", "jumeirah", "palm jumeirah"],
+      "bounds": {"south": 24.8, "north": 25.4, "west": 54.9, "east": 55.6},
+      "providers": ["DubaiTaxi", "Careem"],
+      "quote_names": ["Dubai Taxi (DTC / RTA)", "Hala Taxi (via Careem)", "Careem Comfort"],
+      "intercity": false
+    },
+    "Singapore": {
+      "country_code": "SG",
+      "state_aliases": ["singapore"],
+      "city_aliases": ["singapore", "marina bay", "changi", "orchard", "jurong", "sentosa"],
+      "bounds": {"south": 1.15, "north": 1.48, "west": 103.6, "east": 104.1},
+      "providers": ["CDGZig", "Grab"],
+      "quote_names": ["ComfortDelGro (CDG Zig Taxi)", "GrabCar Singapore"],
+      "intercity": false
+    },
+    "Ho Chi Minh City": {
+      "country_code": "VN",
+      "state_aliases": ["ho chi minh city"],
+      "city_aliases": ["ho chi minh city", "district 1", "saigon", "tan son nhat"],
+      "bounds": {"south": 10.65, "north": 10.95, "west": 106.4, "east": 106.9},
+      "providers": ["XanhSM", "Grab"],
+      "quote_names": ["Xanh SM Electric Taxi (VinFast)", "GrabCar Vietnam", "GrabBike Vietnam"],
+      "intercity": false
+    }
+  }
+}

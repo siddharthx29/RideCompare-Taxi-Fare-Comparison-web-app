@@ -90,8 +90,10 @@ class QuoteOrchestrator:
         drop_lng: float,
         city: str,
         surge_multiplier: float = 1.0,
-        toll_charge: float = 0.0
+        toll_charge: float = 0.0,
+        allowed_adapters: Optional[List[str]] = None
     ) -> List[QuoteObject]:
+        allowed = set(allowed_adapters or [])
         tasks = [
             asyncio.wait_for(
                 adapter.get_quotes(
@@ -109,7 +111,8 @@ class QuoteOrchestrator:
                 ),
                 timeout=adapter.timeout_seconds
             )
-            for adapter in self.adapters if adapter.is_available()
+            for adapter in self.adapters
+            if adapter.is_available() and adapter.name in allowed
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)

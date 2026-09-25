@@ -11,17 +11,21 @@ logger = logging.getLogger(__name__)
 
 DATABASE_URL = settings.DATABASE_URL
 
-# Attempt Postgres connection first; fall back to local SQLite if unavailable
-try:
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
-    logger.info("Connected to primary database: PostgreSQL")
-except Exception as err:
-    logger.warning("PostgreSQL connection failed (%s). Falling back to local SQLite.", err)
-    sqlite_path = APP_DIR / "ridecompare.db"
-    DATABASE_URL = f"sqlite:///{sqlite_path}"
+if DATABASE_URL.startswith("sqlite:"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    try:
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Connected to configured database.")
+    except Exception as err:
+        if settings.ENVIRONMENT.lower() in {"production", "prod"}:
+            raise RuntimeError("Configured database is unavailable in production.") from err
+        logger.warning("Configured database connection failed (%s). Falling back to local SQLite.", err)
+        sqlite_path = APP_DIR / "ridecompare.db"
+        DATABASE_URL = f"sqlite:///{sqlite_path}"
+        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

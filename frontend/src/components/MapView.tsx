@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { RouteGeometry } from '../types/ride';
 
 interface MapViewProps {
   sourceCoords: [number, number] | null;
   destCoords: [number, number] | null;
-  routeGeometry: any | null; // GeoJSON from OSRM
+  routeGeometry: RouteGeometry | null;
   distanceKm?: number;
   durationMins?: number;
 }
@@ -113,9 +114,9 @@ export const MapView: React.FC<MapViewProps> = ({
     if (routeGeometry) {
       // routeGeometry.coordinates is in GeoJSON format: array of [lng, lat]
       // Leaflet expects coordinates in [lat, lng] format
-      const leafletCoords = routeGeometry.coordinates.map((coord: [number, number]) => [
-        coord[1],
-        coord[0]
+      const leafletCoords: L.LatLngExpression[] = routeGeometry.coordinates.map(([longitude, latitude]) => [
+        latitude,
+        longitude
       ]);
 
       const polyline = L.polyline(leafletCoords, {

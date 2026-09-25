@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 class QuoteObject:
     provider: str
     vehicle_type: str
-    actual_fare: float
+    actual_fare: Optional[float] = None
     fare_min: Optional[float] = None
     fare_max: Optional[float] = None
     currency: str = "INR"
@@ -20,7 +20,9 @@ class QuoteObject:
     availability: bool = True
     retrieved_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     expires_at: str = field(default_factory=lambda: (datetime.now(timezone.utc) + timedelta(seconds=60)).isoformat())
-    source: str = "permitted_tariff"
+    source: str = "live_provider_api"
+    is_live: bool = True
+    live_available: bool = True
     base_fare: float = 0.0
     distance_fare: float = 0.0
     duration_fare: float = 0.0
@@ -54,6 +56,10 @@ class QuoteObject:
             "durationMinutes": self.duration_minutes,
             "surgeMultiplier": self.surge_multiplier,
             "availability": self.availability,
+            "is_live": self.is_live,
+            "isLive": self.is_live,
+            "live_available": self.live_available,
+            "liveAvailable": self.live_available,
             "retrieved_at": self.retrieved_at,
             "expires_at": self.expires_at,
             "source": self.source,

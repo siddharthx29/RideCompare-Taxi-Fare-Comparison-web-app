@@ -1,4 +1,5 @@
 import logging
+import json
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query, Depends, HTTPException, BackgroundTasks
@@ -20,6 +21,8 @@ class RoutePostPayload(BaseModel):
     drop: List[float] = Field(..., description="[lat, lng] for drop location")
     pickupName: Optional[str] = "Pickup Location"
     dropName: Optional[str] = "Drop Location"
+    pickupAddress: Optional[Dict[str, Any]] = None
+    dropAddress: Optional[Dict[str, Any]] = None
 
 
 class FareComparePayload(BaseModel):
@@ -31,6 +34,8 @@ class FareComparePayload(BaseModel):
     drop_lng: float
     distance_km: Optional[float] = None
     duration_min: Optional[float] = None
+    pickup_address: Optional[Dict[str, Any]] = None
+    drop_address: Optional[Dict[str, Any]] = None
 
 
 class RedirectPayload(BaseModel):
@@ -40,6 +45,59 @@ class RedirectPayload(BaseModel):
     pickup: Optional[str] = ""
     drop: Optional[str] = ""
     city: Optional[str] = "Bangalore"
+
+
+PUBLIC_PROVIDER_FIELDS = (
+    "provider", "vehicleType", "distanceKm", "etaMinutes", "actualFare", "estimatedFare", "currency",
+    "currencySymbol", "surgeMultiplier", "baseFare", "distanceFare", "durationFare",
+    "platformFee", "tollEstimate", "costPerKm", "costPerMin", "appDeepLink", "webLink",
+    "isCheapest", "isFastest", "isMostEfficient", "isBestValue", "isStale", "quoteAgeSeconds", "retrieved_at",
+    "isGovernmentBacked", "categoryTag", "regulatoryBody", "zeroSurge",
+    # Live vs ML separation
+    "isLive", "is_live", "liveAvailable", "live_available", "source",
+    # ML Intelligence fields
+    "predictedFare", "predictedFareMin", "predictedFareMax", "typicalFareRange",
+    "predictionDiff", "predictionDiffPct", "demandLevel", "priceTrend", "priceAnomaly",
+    "anomalyReason", "mlInsight", "clusterId", "clusterLabel", "confidence",
+    "confidenceScore", "confidenceLevel", "smartScore", "scoreBreakdown"
+)
+
+
+def _public_comparison(comparison: Dict[str, Any]) -> Dict[str, Any]:
+    public_fields = (
+        "distanceKm", "durationMins", "detectedCity", "state", "country", "currency",
+        "currencySymbol", "isServiceable", "message", "regionalNotice", "surgeRuleName",
+        "straightLineDistance", "detourDistance", "pricingRegime", "fareSpread",
+        "spreadPercentage", "providers", "recommendations", "insights", "routeHash"
+    )
+    result = {key: comparison[key] for key in public_fields if key in comparison}
+    result["providers"] = [
+        {
+            **{key: provider[key] for key in PUBLIC_PROVIDER_FIELDS if key in provider},
+            "actualFare": provider.get("actualFare"),
+            "estimatedFare": provider.get("actualFare") if provider.get("liveAvailable", True) and provider.get("actualFare") is not None else provider.get("predictedFare", 0),
+            "isLive": provider.get("isLive", provider.get("is_live", True)),
+            "liveAvailable": provider.get("liveAvailable", provider.get("live_available", True)),
+            "isStale": provider.get("is_stale", provider.get("isStale", False)),
+            "quoteAgeSeconds": provider.get("quote_age_seconds", provider.get("quoteAgeSeconds", 0.0)),
+            "priceHistory": {
+                "fares": provider.get("volatility", {}).get("recent_history", []),
+                "trend": provider.get("volatility", {}).get("price_trend", provider.get("priceTrend", "STABLE")),
+            },
+        }
+        for provider in comparison.get("providers", [])
+    ]
+    return result
+
+
+def _parse_address_context(value: Optional[str]) -> Optional[Dict[str, Any]]:
+    if not value:
+        return None
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, dict) else None
+    except (TypeError, ValueError):
+        return None
 
 
 def log_historical_observations(
@@ -57,6 +115,9 @@ def log_historical_observations(
     try:
         route_hash = comparison.get("routeHash") or quote_orchestrator.generate_route_hash(lat1, lon1, lat2, lon2)
         for p in comparison.get("providers", []):
+            fare_val = p.get("actualFare") or p.get("actual_fare")
+            if fare_val is None or float(fare_val) <= 0:
+                continue
             rec = HistoricalFare(
                 provider=p["provider"],
                 vehicle_type=p["vehicleType"],
@@ -68,7 +129,7 @@ def log_historical_observations(
                 dest_lng=lon2,
                 distance_km=distance_km,
                 duration_min=duration_min,
-                actual_fare=p["actualFare"],
+                actual_fare=float(fare_val),
                 base_fare=p["baseFare"],
                 surge_multiplier=p["surgeMultiplier"],
                 platform_fee=p["platformFee"],
@@ -125,7 +186,9 @@ async def _process_route_calculation(
     source_label: str,
     dest_label: str,
     db: Session,
-    background_tasks: Optional[BackgroundTasks] = None
+    background_tasks: Optional[BackgroundTasks] = None,
+    pickup_address: Optional[Dict[str, Any]] = None,
+    drop_address: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     distance_km = 0.0
     duration_mins = 0.0
@@ -176,7 +239,9 @@ async def _process_route_calculation(
         end_lon=lon2,
         end_lat=lat2,
         osrm_success=osrm_success,
-        db=db
+        db=db,
+        pickup_address=pickup_address,
+        drop_address=drop_address
     )
 
     fares = [p["actualFare"] for p in comparison["providers"]]
@@ -207,11 +272,14 @@ async def _process_route_calculation(
             distance_km, duration_mins
         )
 
+    public_comparison = _public_comparison(comparison)
     return {
         "success": True,
         "searchId": search_rec.id,
         "geometry": geometry,
-        "comparison": comparison,
+        "comparison": public_comparison,
+        "isServiceable": public_comparison.get("isServiceable", False),
+        "message": public_comparison.get("message", ""),
         "route": {
             "distance_km": round(distance_km, 1),
             "duration_min": round(duration_mins, 1),
@@ -223,23 +291,18 @@ async def _process_route_calculation(
             {
                 "provider": p["provider"],
                 "ride_type": p["vehicleType"],
-                "fare": p["actualFare"],
-                "estimatedFare": p["actualFare"],
+                "fare": p.get("actualFare"),
+                "estimatedFare": p.get("estimatedFare", p.get("actualFare")),
+                "is_live": p.get("isLive", True),
+                "predicted_fare": p.get("predictedFare"),
+                "typical_fare_range": p.get("typicalFareRange"),
                 "eta_minutes": p["etaMinutes"],
-                "ml_predicted_fare": p.get("predictedFare", p["actualFare"]),
-                "prediction_delta": p.get("predictionDiff", 0),
-                "pricing_regime": comparison.get("pricingRegime", "Standard"),
-                "confidence_score": p.get("confidenceScore", 90.0),
-                "smart_score": p.get("smartScore", 85.0),
-                "is_anomaly": p.get("isAnomaly", False),
-                "anomaly_reason": p.get("anomalyReason", ""),
-                "booking_url": p.get("webLink", "https://m.uber.com"),
+                "booking_url": p.get("webLink", ""),
                 "retrieved_at": p.get("retrieved_at", datetime.utcnow().isoformat()),
-                "quote_age_seconds": p.get("quote_age_seconds", 0.0),
-                "is_stale": p.get("is_stale", False),
-                "volatility": p.get("volatility", {})
+                "quote_age_seconds": p.get("quoteAgeSeconds", p.get("quote_age_seconds", 0.0)),
+                "is_stale": p.get("isStale", False)
             }
-            for p in comparison.get("providers", [])
+            for p in public_comparison.get("providers", [])
         ]
     }
 
@@ -250,6 +313,8 @@ async def get_route_and_comparison_get(
     end: str = Query(..., description="lng,lat format"),
     sourceName: Optional[str] = Query(None),
     destName: Optional[str] = Query(None),
+    sourceAddress: Optional[str] = Query(None),
+    destAddress: Optional[str] = Query(None),
     background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
@@ -266,7 +331,9 @@ async def get_route_and_comparison_get(
         source_label=sourceName or "Source Location",
         dest_label=destName or "Destination Location",
         db=db,
-        background_tasks=background_tasks
+        background_tasks=background_tasks,
+        pickup_address=_parse_address_context(sourceAddress),
+        drop_address=_parse_address_context(destAddress)
     )
 
 
@@ -284,7 +351,9 @@ async def get_route_and_comparison_post(
         source_label=payload.pickupName or "Pickup Location",
         dest_label=payload.dropName or "Drop Location",
         db=db,
-        background_tasks=background_tasks
+        background_tasks=background_tasks,
+        pickup_address=payload.pickupAddress,
+        drop_address=payload.dropAddress
     )
 
 
@@ -310,12 +379,17 @@ async def compare_fares_endpoint(
         start_lat=payload.pickup_lat,
         end_lon=payload.drop_lng,
         end_lat=payload.drop_lat,
-        db=db
+        db=db,
+        pickup_address=payload.pickup_address,
+        drop_address=payload.drop_address
     )
+    public_comparison = _public_comparison(comparison)
 
     return {
         "success": True,
-        "comparison": comparison,
+        "comparison": public_comparison,
+        "isServiceable": public_comparison.get("isServiceable", False),
+        "message": public_comparison.get("message", ""),
         "fares": [
             {
                 "provider": p["provider"],
@@ -323,13 +397,9 @@ async def compare_fares_endpoint(
                 "fare": p["actualFare"],
                 "estimatedFare": p["actualFare"],
                 "eta_minutes": p["etaMinutes"],
-                "ml_predicted_fare": p.get("predictedFare", p["actualFare"]),
-                "confidence_score": p.get("confidenceScore", 90.0),
-                "smart_score": p.get("smartScore", 85.0),
-                "is_anomaly": p.get("isAnomaly", False),
-                "booking_url": p.get("webLink", "https://m.uber.com")
+                "booking_url": p.get("webLink", "")
             }
-            for p in comparison.get("providers", [])
+            for p in public_comparison.get("providers", [])
         ]
     }
 

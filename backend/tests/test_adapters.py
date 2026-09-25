@@ -123,7 +123,10 @@ def test_detect_city_coordinates_and_keywords():
     assert serviceable is True
 
     # Keywords matching Mumbai
-    city, serviceable = detect_city(source="Bandra Kurla Complex", destination="Marine Drive")
+    city, serviceable = detect_city(
+        source="Bandra Kurla Complex, Mumbai", destination="Marine Drive, Mumbai",
+        start_lat=19.0688, start_lon=72.8704, end_lat=18.9432, end_lon=72.8230
+    )
     assert city == "Mumbai"
     assert serviceable is True
 
