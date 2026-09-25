@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -24,11 +25,20 @@ from backend.app.routers import geocode, route, analytics, ml_endpoints
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("smart-fare-backend")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
 app = FastAPI(
-    title="Smart Taxi Fare Comparison & ML Intelligence API",
+    title="Smart Taxi Fare Comparison API",
+    description="Multi-provider real-time fare aggregation with ML price intelligence and anomaly detection.",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 
@@ -42,37 +52,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-app.add_middleware(SecurityHeadersMiddleware)
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5000",
-    "http://127.0.0.1:5000",
-]
-if settings.CORS_ORIGINS:
-    for o in settings.CORS_ORIGINS.split(","):
-        o_clean = o.strip()
-        if o_clean and o_clean not in origins:
-            origins.append(o_clean)
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if "*" not in origins else ["*"],
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.on_event("startup")
-async def on_startup():
-    init_db()
-
-
-@app.get("/health", tags=["system"])
+@app.get("/health", tags=["System"])
 async def health_check():
     db_healthy = check_db_health()
     models_dir = ROOT_DIR / "ml" / "models" / "saved"
@@ -92,6 +84,7 @@ async def health_check():
     }
 
 
+# Include API Routers
 app.include_router(geocode.router, prefix="/api")
 app.include_router(geocode.router)
 app.include_router(route.router, prefix="/api")
@@ -100,6 +93,7 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(analytics.router)
 app.include_router(ml_endpoints.router)
 
+# Serve built frontend in production if available
 DIST_DIR = ROOT_DIR / "frontend" / "dist"
 
 if DIST_DIR.exists():
@@ -111,15 +105,15 @@ if DIST_DIR.exists():
     async def serve_spa(full_path: str):
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
-        
+
         file_path = DIST_DIR / full_path
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
-        
+
         index_file = DIST_DIR / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
-        
+
         raise HTTPException(status_code=404, detail="Page not found")
 
 

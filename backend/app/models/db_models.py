@@ -74,3 +74,30 @@ class HistoricalFare(Base):
     cluster_label = Column(String(50), nullable=True)
     is_anomaly = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FareSnapshot(Base):
+    __tablename__ = 'fare_snapshots'
+
+    id = Column(Integer, primary_key=True, index=True)
+    provider = Column(String(50), nullable=False, index=True)
+    route_hash = Column(String(64), nullable=False, index=True)
+    vehicle_type = Column(String(30), nullable=False, index=True)
+    fare = Column(Float, nullable=False)
+    fare_min = Column(Float, nullable=True)
+    fare_max = Column(Float, nullable=True)
+    eta_minutes = Column(Integer, nullable=False)
+    distance_km = Column(Float, nullable=False)
+    duration_minutes = Column(Float, nullable=False)
+    surge_multiplier = Column(Float, default=1.0)
+    traffic_condition = Column(String(30), default='Normal')
+    quote_age_seconds = Column(Float, default=0.0)
+    is_anomaly = Column(Boolean, default=False)
+    cluster_id = Column(Integer, nullable=True)
+    cluster_label = Column(String(50), nullable=True)
+    predicted_fare = Column(Float, nullable=True)
+    confidence_score = Column(Float, default=90.0)
+    smart_score = Column(Float, default=85.0)
+    source = Column(String(50), default='permitted_tariff')
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+

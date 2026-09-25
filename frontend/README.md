@@ -1,96 +1,67 @@
 # RideCompare Frontend UI 🚖
 
-This is the frontend single-page application (SPA) for **RideCompare**—the smart cab fare aggregator and route planner. It is built using React 19, TypeScript, Vite, Tailwind CSS v4, and Leaflet Maps, offering a modern, dark-mode optimized, fully responsive user interface.
+The frontend application for **RideCompare** — an intelligent multi-provider taxi fare aggregator and route planner. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, and **Leaflet Maps**, offering an interactive, dark-mode optimized, and responsive user experience.
 
 ---
 
-## 🛠 Tech Stack & UI Libraries
+## Tech Stack
 
 - **Framework:** React 19
 - **Build Tool:** Vite
-- **Styling:** Tailwind CSS v4 (configured via `@tailwindcss/vite` plugin)
-- **Maps Integration:** Leaflet Maps (`leaflet` & `@types/leaflet`)
+- **Styling:** Tailwind CSS
+- **Maps:** Leaflet & OpenStreetMap tiles
 - **Icons:** Lucide React
 - **Language:** TypeScript
 
 ---
 
-## 📦 Component Structure
+## Component Structure
 
 ```text
 frontend/src/
 ├── components/
-│   ├── AnalyticsDashboard.tsx # Renders aggregated usage metrics & chart layouts
-│   ├── MapView.tsx            # Renders Leaflet Map with route polyline, start & end markers
-│   ├── Navbar.tsx             # Responsive header with dark/light mode toggle & views switch
-│   ├── RideComparison.tsx     # Comparison grids featuring cheapest/fastest badges and booking deep-links
-│   └── SearchPanel.tsx        # Autocomplete search fields fetching address names via geocoding
-├── App.tsx                    # Main state manager, layout container, and PWA logic
-├── App.css                    # UI theme variables, custom scrollbars, and animations
-├── index.css                  # Tailwinds directives and standard base styles
-└── main.tsx                   # React DOM render entry point
+│   ├── AnalyticsDashboard.tsx # Usage metrics, 7-day search trends & ML model hub
+│   ├── MapView.tsx            # Leaflet Map with interactive route polyline & markers
+│   ├── Navbar.tsx             # Responsive header with dark/light mode toggle
+│   ├── PriceHistoryGraph.tsx  # Sparkline visualization of price volatility
+│   ├── RideComparison.tsx     # Provider comparison cards, ML insights & deep links
+│   └── SearchPanel.tsx        # Autocomplete search with Nominatim geocoding
+├── types/
+│   └── ride.ts                # TypeScript domain models & interfaces
+├── utils/
+│   └── api.ts                 # API client wrapper
+├── App.tsx                    # Main state manager & view orchestrator
+├── App.css                    # Theme variables & glassmorphism styling
+├── index.css                  # Tailwind directives & global rules
+└── main.tsx                   # React root mount
 ```
 
 ---
 
-## ⚡ Main Features
+## Main Features
 
-1. **Address Autocomplete (Geocoding):** Instantly search and lookup locations using OpenStreetMap's Nominatim geocoding engine (proxied through the backend server).
-2. **Interactive Route Mapping:** Visualizes routing geometry using custom Leaflet paths. Pins are placed at pickup and drop locations. If OSRM fails, straight-line Haversine fallback paths are rendered.
-3. **Advanced Fares Comparison:** Groups results by Cheapest, Fastest, and Best Overall (calculated with a multi-metric scoring engine on the backend).
-4. **Mobile Navigation Dock:** Provides app-like, responsive navigation for tablets and mobile devices.
-5. **Progressive Web App (PWA) Ready:** Prompts mobile and desktop users to install RideCompare on their home screen for native-like access.
-6. **Analytics Admin Panel:** Aggregates database search logs to visualize search volume trends, popular pickup/destination combinations, and click-through market share for Ola, Uber, and Rapido.
+1. **Address Autocomplete (Geocoding):** Instant location lookups using OpenStreetMap Nominatim.
+2. **Interactive Route Mapping:** Visualizes OSRM routing paths with pickup and drop markers.
+3. **Multi-Provider Fare Breakdown:** Side-by-side comparison across Uber, Ola, Rapido, and Local Taxi with itemized base fares, distance fees, time rates, and platform fees.
+4. **ML Expected Fare Baseline:** Displays Gradient Boosting regression predictions and Isolation Forest anomaly flags for price transparency.
+5. **Real-time Price Volatility:** Historical sparkline graphs showing recent price movements per corridor.
+6. **Progressive Web App (PWA) Ready:** Installable on mobile and desktop devices.
+7. **Intelligence & Analytics Hub:** Comprehensive dashboard with ML validation metrics, K-Means pricing clusters, and user booking ledger.
 
 ---
 
-## 🚀 Available Scripts
-
-Run these commands from the `frontend/` directory:
+## Available Scripts
 
 ```bash
 # Install dependencies
 npm install
 
-# Run the client in development mode (Vite hot-reloading)
+# Start Vite dev server
 npm run dev
 
-# Lint files for TypeScript and React rules
-npm run lint
-
-# Build production bundles
+# Build production bundle
 npm run build
 
-# Preview the compiled production build locally
+# Preview production build
 npm run preview
 ```
-
----
-
-## 🎨 Design Tokens & Custom CSS
-
-RideCompare uses vanilla CSS variables inside `src/App.css` to manage theme transitions seamlessly:
-
-```css
-:root {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --border-color: #e2e8f0;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(226, 232, 240, 0.6);
-}
-
-.dark {
-  --bg-primary: #09090b;
-  --bg-secondary: #121214;
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --border-color: #27272a;
-  --glass-bg: rgba(18, 18, 20, 0.75);
-  --glass-border: rgba(39, 39, 42, 0.6);
-}
-```
-
-Interactive elements leverage custom glassmorphism styles (`.glass-panel`) for a modern, floating interface look.

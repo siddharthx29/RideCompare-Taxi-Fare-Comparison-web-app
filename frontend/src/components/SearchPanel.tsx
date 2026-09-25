@@ -2,11 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Locate, ArrowUpDown, Search, Loader2, AlertCircle } from 'lucide-react';
 import { apiFetch } from '../utils/api';
 
-interface LocationInfo {
-  label: string;
-  lat: number;
-  lng: number;
-}
+import type { LocationInfo } from '../types/ride';
 
 interface SearchPanelProps {
   selectedSource: LocationInfo | null;
@@ -20,13 +16,17 @@ interface SearchPanelProps {
 const DEFAULT_LANDMARKS: LocationInfo[] = [
   { label: "Connaught Place, New Delhi, Delhi, India", lat: 28.6328, lng: 77.2197 },
   { label: "Indira Gandhi International Airport, New Delhi, Delhi, India", lat: 28.5562, lng: 77.1000 },
-  { label: "Sector 18, Noida, Uttar Pradesh, India", lat: 28.5355, lng: 77.3910 },
-  { label: "Cyber Hub, DLF Phase 2, Gurugram, Haryana, India", lat: 28.4952, lng: 77.0894 },
-  { label: "Indiranagar, Bengaluru, Karnataka, India", lat: 12.971891, lng: 77.641151 },
-  { label: "Koramangala, Bengaluru, Karnataka, India", lat: 12.935192, lng: 77.624480 },
-  { label: "Kempegowda International Airport, Bengaluru, Karnataka, India", lat: 13.1986, lng: 77.7066 },
   { label: "Bandra Kurla Complex, Mumbai, Maharashtra, India", lat: 19.0688, lng: 72.8704 },
   { label: "Marine Drive, Mumbai, Maharashtra, India", lat: 18.9432, lng: 72.8230 },
+  { label: "Indiranagar, Bengaluru, Karnataka, India", lat: 12.971891, lng: 77.641151 },
+  { label: "Kempegowda International Airport, Bengaluru, Karnataka, India", lat: 13.1986, lng: 77.7066 },
+  { label: "Panaji, North Goa, Goa, India", lat: 15.4989, lng: 73.8278 },
+  { label: "Baga Beach, North Goa, Goa, India", lat: 15.5553, lng: 73.7517 },
+  { label: "Manohar International Airport (Mopa), Goa, India", lat: 15.7533, lng: 73.8690 },
+  { label: "Park Street, Kolkata, West Bengal, India", lat: 22.5505, lng: 88.3527 },
+  { label: "Howrah Railway Station, Kolkata, West Bengal, India", lat: 22.5857, lng: 88.3426 },
+  { label: "MG Road, Kochi, Ernakulam, Kerala, India", lat: 9.9723, lng: 76.2784 },
+  { label: "Cochin International Airport (CIAL), Kochi, Kerala, India", lat: 10.1518, lng: 76.3930 },
   { label: "Marina Beach, Chennai, Tamil Nadu, India", lat: 13.0500, lng: 80.2824 },
   { label: "Hitech City, Hyderabad, Telangana, India", lat: 17.4435, lng: 78.3772 }
 ];

@@ -1,26 +1,61 @@
-from typing import Optional, List
+import logging
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query, Depends, HTTPException, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 import httpx
 
 from backend.app.database import get_db, SessionLocal
-from backend.app.models.db_models import Search, HistoricalFare
-from backend.app.services.pricing import calculate_fares_and_scores, calculate_haversine_distance
+from backend.app.models.db_models import Search, HistoricalFare, FareSnapshot, Analytics
+from backend.app.services.pricing import calculate_fares_and_scores, calculate_haversine_distance, quote_orchestrator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Routing"])
 
 
 class RoutePostPayload(BaseModel):
-    pickup: List[float]
-    drop: List[float]
+    pickup: List[float] = Field(..., description="[lat, lng] for pickup location")
+    drop: List[float] = Field(..., description="[lat, lng] for drop location")
     pickupName: Optional[str] = "Pickup Location"
     dropName: Optional[str] = "Drop Location"
 
 
-def log_historical_observations(comparison: dict, source: str, dest: str, lat1: float, lon1: float, lat2: float, lon2: float, distance_km: float, duration_min: float):
+class FareComparePayload(BaseModel):
+    pickup: str
+    drop: str
+    pickup_lat: float
+    pickup_lng: float
+    drop_lat: float
+    drop_lng: float
+    distance_km: Optional[float] = None
+    duration_min: Optional[float] = None
+
+
+class RedirectPayload(BaseModel):
+    provider: str
+    ride_type: Optional[str] = "Standard"
+    fare: float = 0.0
+    pickup: Optional[str] = ""
+    drop: Optional[str] = ""
+    city: Optional[str] = "Bangalore"
+
+
+def log_historical_observations(
+    comparison: dict,
+    source: str,
+    dest: str,
+    lat1: float,
+    lon1: float,
+    lat2: float,
+    lon2: float,
+    distance_km: float,
+    duration_min: float
+) -> None:
     db = SessionLocal()
     try:
+        route_hash = comparison.get("routeHash") or quote_orchestrator.generate_route_hash(lat1, lon1, lat2, lon2)
         for p in comparison.get("providers", []):
             rec = HistoricalFare(
                 provider=p["provider"],
@@ -49,19 +84,49 @@ def log_historical_observations(comparison: dict, source: str, dest: str, lat1: 
                 is_anomaly=p.get("isAnomaly", False)
             )
             db.add(rec)
+
+            snap = FareSnapshot(
+                provider=p["provider"],
+                route_hash=route_hash,
+                vehicle_type=p["vehicleType"],
+                fare=p["actualFare"],
+                fare_min=p.get("fare_min", round(p["actualFare"] * 0.95)),
+                fare_max=p.get("fare_max", round(p["actualFare"] * 1.05)),
+                eta_minutes=p["etaMinutes"],
+                distance_km=distance_km,
+                duration_minutes=duration_min,
+                surge_multiplier=p["surgeMultiplier"],
+                traffic_condition="Heavy" if p["surgeMultiplier"] > 1.3 else "Normal",
+                quote_age_seconds=p.get("quote_age_seconds", 0.0),
+                is_anomaly=p.get("isAnomaly", False),
+                cluster_id=p.get("clusterId", 0),
+                cluster_label=p.get("clusterLabel", "Standard"),
+                predicted_fare=p.get("predictedFare", p["actualFare"]),
+                confidence_score=p.get("confidenceScore", 90.0),
+                smart_score=p.get("smartScore", 85.0),
+                source=p.get("source", "permitted_tariff"),
+                timestamp=datetime.utcnow()
+            )
+            db.add(snap)
+
         db.commit()
-    except Exception:
+    except Exception as err:
+        logger.error("Failed persisting background historical observations: %s", err)
         db.rollback()
     finally:
         db.close()
 
 
 async def _process_route_calculation(
-    lon1: float, lat1: float, lon2: float, lat2: float,
-    source_label: str, dest_label: str,
+    lon1: float,
+    lat1: float,
+    lon2: float,
+    lat2: float,
+    source_label: str,
+    dest_label: str,
     db: Session,
     background_tasks: Optional[BackgroundTasks] = None
-):
+) -> Dict[str, Any]:
     distance_km = 0.0
     duration_mins = 0.0
     geometry = None
@@ -79,8 +144,8 @@ async def _process_route_calculation(
                     duration_mins = route["duration"] / 60.0
                     geometry = route["geometry"]
                     osrm_success = True
-    except Exception:
-        pass
+    except Exception as err:
+        logger.debug("OSRM routing service unavailable (%s). Using Haversine estimation.", err)
 
     if not osrm_success:
         straight_dist = calculate_haversine_distance(lat1, lon1, lat2, lon2)
@@ -94,6 +159,13 @@ async def _process_route_calculation(
             ]
         }
 
+    # Restrict to realistic intra-city / inter-city taxi distances
+    if distance_km > 300.0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Route distance ({round(distance_km, 1)} km) exceeds the 300 km threshold for on-demand taxi fare comparison."
+        )
+
     comparison = calculate_fares_and_scores(
         distance_km=distance_km,
         duration_mins=duration_mins,
@@ -103,13 +175,12 @@ async def _process_route_calculation(
         start_lat=lat1,
         end_lon=lon2,
         end_lat=lat2,
-        osrm_success=osrm_success
+        osrm_success=osrm_success,
+        db=db
     )
 
     fares = [p["actualFare"] for p in comparison["providers"]]
-    max_fare = max(fares) if fares else 0
-    min_fare = min(fares) if fares else 0
-    potential_savings = max_fare - min_fare
+    potential_savings = (max(fares) - min(fares)) if fares else 0.0
 
     search_rec = Search(
         source=source_label,
@@ -162,7 +233,11 @@ async def _process_route_calculation(
                 "smart_score": p.get("smartScore", 85.0),
                 "is_anomaly": p.get("isAnomaly", False),
                 "anomaly_reason": p.get("anomalyReason", ""),
-                "booking_url": p.get("webLink", "https://m.uber.com")
+                "booking_url": p.get("webLink", "https://m.uber.com"),
+                "retrieved_at": p.get("retrieved_at", datetime.utcnow().isoformat()),
+                "quote_age_seconds": p.get("quote_age_seconds", 0.0),
+                "is_stale": p.get("is_stale", False),
+                "volatility": p.get("volatility", {})
             }
             for p in comparison.get("providers", [])
         ]
@@ -171,8 +246,8 @@ async def _process_route_calculation(
 
 @router.get("/route")
 async def get_route_and_comparison_get(
-    start: str = Query(...),
-    end: str = Query(...),
+    start: str = Query(..., description="lng,lat format"),
+    end: str = Query(..., description="lng,lat format"),
     sourceName: Optional[str] = Query(None),
     destName: Optional[str] = Query(None),
     background_tasks: BackgroundTasks = None,
@@ -211,3 +286,85 @@ async def get_route_and_comparison_post(
         db=db,
         background_tasks=background_tasks
     )
+
+
+@router.post("/fare/compare")
+async def compare_fares_endpoint(
+    payload: FareComparePayload,
+    db: Session = Depends(get_db)
+):
+    dist_km = payload.distance_km
+    dur_min = payload.duration_min
+
+    if dist_km is None or dur_min is None:
+        straight = calculate_haversine_distance(payload.pickup_lat, payload.pickup_lng, payload.drop_lat, payload.drop_lng)
+        dist_km = max(0.5, straight * 1.25)
+        dur_min = (dist_km / 25.0) * 60.0
+
+    comparison = calculate_fares_and_scores(
+        distance_km=dist_km,
+        duration_mins=dur_min,
+        source=payload.pickup,
+        destination=payload.drop,
+        start_lon=payload.pickup_lng,
+        start_lat=payload.pickup_lat,
+        end_lon=payload.drop_lng,
+        end_lat=payload.drop_lat,
+        db=db
+    )
+
+    return {
+        "success": True,
+        "comparison": comparison,
+        "fares": [
+            {
+                "provider": p["provider"],
+                "ride_type": p["vehicleType"],
+                "fare": p["actualFare"],
+                "estimatedFare": p["actualFare"],
+                "eta_minutes": p["etaMinutes"],
+                "ml_predicted_fare": p.get("predictedFare", p["actualFare"]),
+                "confidence_score": p.get("confidenceScore", 90.0),
+                "smart_score": p.get("smartScore", 85.0),
+                "is_anomaly": p.get("isAnomaly", False),
+                "booking_url": p.get("webLink", "https://m.uber.com")
+            }
+            for p in comparison.get("providers", [])
+        ]
+    }
+
+
+@router.post("/redirect")
+async def log_provider_redirect(
+    payload: RedirectPayload,
+    db: Session = Depends(get_db)
+):
+    try:
+        analytics_entry = Analytics(
+            provider=payload.provider,
+            clicks=1,
+            redirects=1,
+            fare=payload.fare,
+            created_at=datetime.utcnow()
+        )
+        db.add(analytics_entry)
+        db.commit()
+    except Exception as err:
+        logger.warning("Failed recording analytics click: %s", err)
+        db.rollback()
+
+    provider_clean = payload.provider.lower()
+    if "uber" in provider_clean:
+        redirect_url = "https://m.uber.com"
+    elif "ola" in provider_clean:
+        redirect_url = "https://book.olacabs.com"
+    elif "rapido" in provider_clean:
+        redirect_url = "https://rapido.bike"
+    else:
+        redirect_url = "https://www.google.com/search?q=taxi+near+me"
+
+    return {
+        "success": True,
+        "redirect_url": redirect_url,
+        "message": f"Redirecting to {payload.provider}"
+    }

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.models.db_models import Search, Analytics
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Analytics"])
 
@@ -67,6 +70,7 @@ async def record_booking_redirect(payload: RedirectPayload, db: Session = Depend
             "provider": payload.provider
         }
     except Exception as err:
+        logger.error("Failed recording booking redirect: %s", err)
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to record booking redirect: {str(err)}")
 
@@ -78,23 +82,34 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
         avg_savings_val = db.query(func.coalesce(func.avg(Search.savings), 0.0)).scalar()
         avg_savings = round(float(avg_savings_val))
 
-        popular_routes_rows = db.query(
-            Search.source,
-            Search.destination,
-            func.count(Search.id).label("count")
-        ).group_by(Search.source, Search.destination).order_by(func.count(Search.id).desc()).limit(5).all()
+        popular_routes_rows = (
+            db.query(
+                Search.source,
+                Search.destination,
+                func.count(Search.id).label("count")
+            )
+            .group_by(Search.source, Search.destination)
+            .order_by(func.count(Search.id).desc())
+            .limit(5)
+            .all()
+        )
 
         popular_routes = [
             {"source": r.source, "destination": r.destination, "count": int(r.count)}
             for r in popular_routes_rows
         ]
 
-        provider_shares_rows = db.query(
-            Analytics.provider,
-            func.sum(Analytics.clicks).label("clicks"),
-            func.sum(Analytics.redirects).label("redirects"),
-            func.sum(Analytics.fare).label("total_fare")
-        ).group_by(Analytics.provider).order_by(func.sum(Analytics.clicks).desc()).all()
+        provider_shares_rows = (
+            db.query(
+                Analytics.provider,
+                func.sum(Analytics.clicks).label("clicks"),
+                func.sum(Analytics.redirects).label("redirects"),
+                func.sum(Analytics.fare).label("total_fare")
+            )
+            .group_by(Analytics.provider)
+            .order_by(func.sum(Analytics.clicks).desc())
+            .all()
+        )
 
         provider_shares = [
             {
@@ -112,22 +127,28 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
             day_date = (now - timedelta(days=i)).date()
             day_start = datetime.combine(day_date, datetime.min.time())
             day_end = datetime.combine(day_date, datetime.max.time())
-            
-            day_count = db.query(Search).filter(
-                Search.created_at >= day_start,
-                Search.created_at <= day_end
-            ).count()
+
+            day_count = (
+                db.query(Search)
+                .filter(Search.created_at >= day_start, Search.created_at <= day_end)
+                .count()
+            )
 
             daily_trends.append({
                 "date": day_date.strftime("%Y-%m-%d"),
                 "count": day_count
             })
 
-        cheapest_rows = db.query(
-            Search.cheapest_provider.label("provider"),
-            func.count(Search.id).label("times_cheapest"),
-            func.count(case((Search.selected_provider == Search.cheapest_provider, 1))).label("times_selected")
-        ).filter(Search.cheapest_provider != None).group_by(Search.cheapest_provider).all()
+        cheapest_rows = (
+            db.query(
+                Search.cheapest_provider.label("provider"),
+                func.count(Search.id).label("times_cheapest"),
+                func.count(case((Search.selected_provider == Search.cheapest_provider, 1))).label("times_selected")
+            )
+            .filter(Search.cheapest_provider != None)
+            .group_by(Search.cheapest_provider)
+            .all()
+        )
 
         cheapest_provider_selections = [
             {
@@ -139,11 +160,12 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
         ]
 
         total_with_sel = db.query(Search).filter(Search.selected_provider != None).count()
-        cheapest_selections = db.query(Search).filter(
-            Search.selected_provider != None,
-            Search.selected_provider == Search.cheapest_provider
-        ).count()
-        
+        cheapest_selections = (
+            db.query(Search)
+            .filter(Search.selected_provider != None, Search.selected_provider == Search.cheapest_provider)
+            .count()
+        )
+
         selection_rate = round((cheapest_selections / total_with_sel) * 100) if total_with_sel > 0 else 0
 
         return {
@@ -159,4 +181,5 @@ async def get_aggregated_analytics(db: Session = Depends(get_db)):
             "cheapestSelectionRate": selection_rate
         }
     except Exception as err:
+        logger.error("Failed retrieving analytics summary: %s", err)
         raise HTTPException(status_code=500, detail=f"Failed to retrieve analytics: {str(err)}")

@@ -1,7 +1,7 @@
 {
   "model_type": "Gradient Boosting Regressor",
   "r2_score": 0.9803,
-  "mae": 20.67,
+  "mae": 20.66,
   "rmse": 34.3,
   "mape_percent": 5.96,
   "silhouette_score": 0.3323,

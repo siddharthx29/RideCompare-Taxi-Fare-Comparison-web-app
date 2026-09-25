@@ -20,9 +20,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Branding Logo */}
       <div className="flex items-center cursor-pointer select-none" onClick={onLogoClick}>
         <img 
-          src="/logo.png" 
+          src={darkMode ? "/logo.png" : "/logo-light.png"} 
           alt="RideCompare Logo" 
-          className="h-16 md:h-24 object-contain hover:scale-[1.05] transition-transform" 
+          className="h-10 md:h-12 w-auto object-contain hover:scale-[1.03] transition-all duration-200 drop-shadow-sm" 
         />
       </div>
 

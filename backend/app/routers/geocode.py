@@ -1,13 +1,16 @@
 import time
+import logging
 import urllib.parse
 from typing import Dict, Any, List
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query
 import httpx
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Geocoding"])
 
 _cache: Dict[str, Dict[str, Any]] = {}
-CACHE_TTL = 600
+CACHE_TTL_SECONDS = 600
 
 FALLBACK_LANDMARKS = [
     {"display_name": "Connaught Place, New Delhi, Delhi, India", "lat": "28.6328", "lon": "77.2197", "displayName": "Connaught Place, New Delhi, Delhi, India", "lng": "77.2197"},
@@ -31,7 +34,7 @@ async def geocode_query(q: str = Query(..., min_length=1)):
 
     if normalized_q in _cache:
         cached = _cache[normalized_q]
-        if now - cached["timestamp"] < CACHE_TTL:
+        if now - cached["timestamp"] < CACHE_TTL_SECONDS:
             return cached["data"]
 
     url = f"https://nominatim.openstreetmap.org/search?format=json&q={urllib.parse.quote(q)}&addressdetails=1&limit=5&accept-language=en"
@@ -54,8 +57,8 @@ async def geocode_query(q: str = Query(..., min_length=1)):
                     ]
                     _cache[normalized_q] = {"data": formatted, "timestamp": now}
                     return formatted
-    except Exception:
-        pass
+    except Exception as err:
+        logger.debug("Nominatim geocoding lookup error (%s). Falling back to known landmarks.", err)
 
     matches = [
         item for item in FALLBACK_LANDMARKS

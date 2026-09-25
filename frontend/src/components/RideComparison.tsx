@@ -1,31 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Zap, ArrowUpRight, TrendingUp, Info, ShieldCheck, ChevronDown, ChevronUp,
-  AlertCircle, Trophy, Compass, Wallet, Sparkles, Layers,
-  AlertTriangle
+  Zap, ArrowUpRight, ChevronDown, ChevronUp,
+  Sparkles, AlertTriangle, Clock, Car, Bike, Navigation, ShieldCheck,
+  RefreshCw, Radio, AlertCircle, Bot
 } from 'lucide-react';
-import type { RideProviderDetails, ComparisonResult } from '../../../backend/src/services/types';
+import type { RideProviderDetails, ComparisonResult } from '../types/ride';
+import { PriceHistoryGraph } from './PriceHistoryGraph';
 
 interface RideComparisonProps {
   comparison: ComparisonResult;
   onBooking: (providerName: string, fare: number) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
-export const RideComparison: React.FC<RideComparisonProps> = ({ comparison, onBooking }) => {
+export const RideComparison: React.FC<RideComparisonProps> = ({
+  comparison,
+  onBooking,
+  onRefresh,
+  refreshing = false
+}) => {
   const {
-    providers, recommendations, insights, detectedCity, surgeRuleName,
-    straightLineDistance, detourDistance, pricingRegime, fareSpread, spreadPercentage, anomalyCount
+    providers, insights, detectedCity,
+    pricingRegime, fareSpread, spreadPercentage, anomalyCount
   } = comparison;
+
+  const defaultSym = comparison.currencySymbol || (comparison.currency === 'USD' ? '$' : comparison.currency === 'EUR' ? '€' : comparison.currency === 'GBP' ? '£' : '₹');
 
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'smart' | 'price' | 'eta'>('smart');
+  const [vehicleFilter, setVehicleFilter] = useState<'ALL' | 'CAB' | 'AUTO' | 'BIKE' | 'ROBOTAXI'>('ALL');
+  const [nowTimestamp, setNowTimestamp] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getQuoteAge = (p: any): number => {
+    if (p.retrieved_at) {
+      const dt = new Date(p.retrieved_at).getTime();
+      return Math.max(0, Math.floor((nowTimestamp - dt) / 1000));
+    }
+    return Math.floor(p.quoteAgeSeconds || p.quote_age_seconds || 0);
+  };
 
   const toggleExpand = (providerName: string) => {
     setExpandedProvider(prev => prev === providerName ? null : providerName);
   };
 
-  // Sorting
-  const sortedProviders = [...providers].sort((a, b) => {
+  const filteredProviders = providers.filter(p => {
+    if (vehicleFilter === 'ALL') return true;
+    const type = ((p as any).vehicleType || (p as any).vehicle_type || '').toUpperCase();
+    const name = p.provider.toUpperCase();
+    const cat = (p.categoryTag || '').toUpperCase();
+    if (vehicleFilter === 'ROBOTAXI') return cat.includes('AUTONOMOUS') || name.includes('WAYMO') || name.includes('ROBOTAXI');
+    if (vehicleFilter === 'CAB') return type.includes('CAB') || name.includes('UBER') || name.includes('LYFT') || name.includes('GRAB') || name.includes('BOLT') || name.includes('G7') || name.includes('TAXI');
+    if (vehicleFilter === 'AUTO') return type.includes('AUTO') || name.includes('AUTO') || name.includes('TUK');
+    if (vehicleFilter === 'BIKE') return type.includes('BIKE') || name.includes('BIKE') || name.includes('MOTO');
+    return true;
+  });
+
+  const sortedProviders = [...filteredProviders].sort((a, b) => {
     if (sortBy === 'smart') {
       return (b.smartScore || b.efficiencyScore) - (a.smartScore || a.efficiencyScore);
     } else if (sortBy === 'price') {
@@ -35,450 +73,735 @@ export const RideComparison: React.FC<RideComparisonProps> = ({ comparison, onBo
     }
   });
 
-  const getProviderIcon = (name: string) => {
-    const lowercaseName = name.toLowerCase();
-    if (lowercaseName.includes('uber')) {
-      return (
-        <div className="w-10 h-10 bg-slate-950 text-white rounded-xl flex flex-col items-center justify-center font-black text-base border border-slate-800 shadow shrink-0 select-none">
-          U
-          <span className="text-[6px] font-bold uppercase tracking-wider text-slate-400 -mt-1">Ride</span>
-        </div>
-      );
+  const getProviderBrand = (name: string, vehicleType: string, isGovt?: boolean) => {
+    const lowercase = name.toLowerCase();
+
+    // Autonomous / Waymo
+    if (lowercase.includes('waymo')) {
+      return {
+        badgeBg: 'bg-emerald-950 text-emerald-400 border-emerald-500/50',
+        brandName: 'Waymo',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+        icon: <Bot size={18} className="text-emerald-300 animate-pulse" />,
+        appName: 'Waymo One App'
+      };
     }
-    if (lowercaseName.includes('ola')) {
-      return (
-        <div className="w-10 h-10 bg-lime-400 text-slate-950 rounded-xl flex flex-col items-center justify-center font-black text-base border border-lime-500 shadow shrink-0 select-none">
-          O
-          <span className="text-[6px] font-bold uppercase tracking-wider text-slate-700 -mt-1">Cabs</span>
-        </div>
-      );
+
+    // Grab Southeast Asia
+    if (lowercase.includes('grab')) {
+      const isBike = lowercase.includes('bike');
+      return {
+        badgeBg: 'bg-emerald-600 text-white border-emerald-700',
+        brandName: 'Grab',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+        icon: isBike ? <Bike size={18} /> : <Car size={18} />,
+        appName: 'Grab Superapp'
+      };
     }
-    if (lowercaseName.includes('rapido')) {
-      return (
-        <div className="w-10 h-10 bg-amber-400 text-slate-900 rounded-xl flex flex-col items-center justify-center font-black text-sm italic border border-amber-500 shadow shrink-0 select-none">
-          R
-          <span className="text-[5px] font-bold uppercase tracking-wider text-slate-700 -mt-1">Fast</span>
-        </div>
-      );
+
+    // Gojek
+    if (lowercase.includes('gojek')) {
+      const isBike = lowercase.includes('ride') || lowercase.includes('bike');
+      return {
+        badgeBg: 'bg-emerald-700 text-white border-emerald-800',
+        brandName: 'Gojek',
+        buttonClass: 'bg-emerald-700 hover:bg-emerald-800 text-white font-bold',
+        icon: isBike ? <Bike size={18} /> : <Car size={18} />,
+        appName: 'Gojek App'
+      };
     }
-    return (
-      <div className="w-10 h-10 bg-gradient-to-b from-yellow-400 to-black text-white rounded-xl flex flex-col items-center justify-center font-black border border-slate-700 shadow shrink-0 select-none">
-        <span className="text-yellow-400 text-[8px] tracking-tight font-extrabold uppercase leading-none">TAXI</span>
-        <span className="text-white text-[7px] font-bold lowercase tracking-wider leading-none">local</span>
-      </div>
-    );
+
+    // Xanh SM Vietnam (VinFast Pure EV)
+    if (lowercase.includes('xanh sm') || lowercase.includes('vinfast')) {
+      return {
+        badgeBg: 'bg-teal-500 text-white border-teal-600',
+        brandName: 'Xanh SM (VinFast)',
+        buttonClass: 'bg-teal-600 hover:bg-teal-700 text-white font-bold',
+        icon: <Zap size={18} className="text-amber-300" />,
+        appName: 'Taxi Xanh SM App'
+      };
+    }
+
+    // Japan: GO App & S.RIDE
+    if (lowercase.includes('go app') || lowercase.includes('nihon kotsu')) {
+      return {
+        badgeBg: 'bg-blue-600 text-white border-blue-700',
+        brandName: 'GO Taxi Japan',
+        buttonClass: 'bg-blue-600 hover:bg-blue-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'GO App'
+      };
+    }
+    if (lowercase.includes('s.ride') || lowercase.includes('mk taxi')) {
+      return {
+        badgeBg: 'bg-amber-600 text-white border-amber-700',
+        brandName: 'S.RIDE Tokyo',
+        buttonClass: 'bg-amber-600 hover:bg-amber-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'S.RIDE App'
+      };
+    }
+
+    // South Korea: Kakao T
+    if (lowercase.includes('kakao')) {
+      return {
+        badgeBg: 'bg-yellow-400 text-zinc-950 border-yellow-500 font-extrabold',
+        brandName: 'Kakao T',
+        buttonClass: 'bg-yellow-400 hover:bg-yellow-500 text-zinc-950 font-bold',
+        icon: <Car size={18} />,
+        appName: 'Kakao T App'
+      };
+    }
+
+    // UAE / Middle East: Dubai Taxi & Careem
+    if (lowercase.includes('dubai taxi') || lowercase.includes('dtc') || lowercase.includes('rta')) {
+      return {
+        badgeBg: 'bg-red-600 text-white border-red-700',
+        brandName: 'Dubai Taxi DTC',
+        buttonClass: 'bg-red-600 hover:bg-red-700 text-white font-bold',
+        icon: <ShieldCheck size={18} />,
+        appName: 'DTC App'
+      };
+    }
+    if (lowercase.includes('careem') || lowercase.includes('hala')) {
+      return {
+        badgeBg: 'bg-emerald-500 text-white border-emerald-600',
+        brandName: 'Careem / Hala',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'Careem Super App'
+      };
+    }
+
+    // Singapore: ComfortDelGro CDG Zig
+    if (lowercase.includes('comfortdelgro') || lowercase.includes('cdg zig')) {
+      return {
+        badgeBg: 'bg-blue-700 text-white border-blue-800',
+        brandName: 'CDG Zig Taxi',
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 text-white font-bold',
+        icon: <ShieldCheck size={18} />,
+        appName: 'CDG Zig App'
+      };
+    }
+
+    // London Black Cab
+    if (lowercase.includes('black cab') || lowercase.includes('tfl')) {
+      return {
+        badgeBg: 'bg-zinc-950 text-amber-400 border-amber-500/40 font-bold',
+        brandName: 'TfL Black Cab',
+        buttonClass: 'bg-zinc-900 hover:bg-black text-amber-400 font-bold border border-amber-500/30',
+        icon: <Car size={18} />,
+        appName: 'Gett / TfL Hail'
+      };
+    }
+
+    // Paris Taxis G7
+    if (lowercase.includes('g7') || lowercase.includes('parisiens')) {
+      return {
+        badgeBg: 'bg-rose-600 text-white border-rose-700',
+        brandName: 'Taxis G7',
+        buttonClass: 'bg-rose-600 hover:bg-rose-700 text-white font-bold',
+        icon: <ShieldCheck size={18} />,
+        appName: 'G7 Taxi App'
+      };
+    }
+
+    // Spain / LatAm: Cabify
+    if (lowercase.includes('cabify')) {
+      return {
+        badgeBg: 'bg-purple-600 text-white border-purple-700',
+        brandName: 'Cabify',
+        buttonClass: 'bg-purple-600 hover:bg-purple-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'Cabify App'
+      };
+    }
+
+    // Brazil: 99
+    if (lowercase.includes('99pop') || lowercase.includes('99taxi')) {
+      return {
+        badgeBg: 'bg-yellow-500 text-zinc-950 border-yellow-600 font-extrabold',
+        brandName: '99 Brazil',
+        buttonClass: 'bg-yellow-500 hover:bg-yellow-600 text-zinc-950 font-bold',
+        icon: <Car size={18} />,
+        appName: '99 App'
+      };
+    }
+
+    // Australia: 13CABS
+    if (lowercase.includes('13cabs')) {
+      return {
+        badgeBg: 'bg-orange-600 text-white border-orange-700',
+        brandName: '13CABS',
+        buttonClass: 'bg-orange-600 hover:bg-orange-700 text-white font-bold',
+        icon: <ShieldCheck size={18} />,
+        appName: '13CABS App'
+      };
+    }
+
+    // FreeNow Europe
+    if (lowercase.includes('freenow')) {
+      return {
+        badgeBg: 'bg-red-500 text-white border-red-600',
+        brandName: 'FreeNow',
+        buttonClass: 'bg-red-600 hover:bg-red-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'FreeNow App'
+      };
+    }
+
+    // Bolt Europe & Africa
+    if (lowercase.includes('bolt')) {
+      return {
+        badgeBg: 'bg-emerald-500 text-white border-emerald-600',
+        brandName: 'Bolt',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'Bolt App'
+      };
+    }
+
+    // Lyft
+    if (lowercase.includes('lyft')) {
+      return {
+        badgeBg: 'bg-pink-600 text-white border-pink-700',
+        brandName: 'Lyft',
+        buttonClass: 'bg-pink-600 hover:bg-pink-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'Lyft App'
+      };
+    }
+
+    // Revel EV
+    if (lowercase.includes('revel')) {
+      return {
+        badgeBg: 'bg-sky-500 text-white border-sky-600',
+        brandName: 'Revel EV',
+        buttonClass: 'bg-sky-600 hover:bg-sky-700 text-white font-bold',
+        icon: <Zap size={18} />,
+        appName: 'Revel App'
+      };
+    }
+
+    // India Govt / Open Mobility
+    if (lowercase.includes('kerala savari')) {
+      return {
+        badgeBg: 'bg-emerald-700 text-white border-emerald-800',
+        brandName: 'Kerala Savari',
+        buttonClass: 'bg-emerald-700 hover:bg-emerald-800 text-white',
+        icon: <ShieldCheck size={18} />,
+        appName: 'Kerala Savari Portal'
+      };
+    }
+    if (lowercase.includes('goamiles') || lowercase.includes('gtdc')) {
+      return {
+        badgeBg: 'bg-sky-600 text-white border-sky-700',
+        brandName: 'GoaMiles / GTDC',
+        buttonClass: 'bg-sky-600 hover:bg-sky-700 text-white',
+        icon: <Car size={18} />,
+        appName: 'GoaMiles App'
+      };
+    }
+    if (lowercase.includes('yatri sathi')) {
+      return {
+        badgeBg: 'bg-teal-600 text-white border-teal-700',
+        brandName: 'Yatri Sathi',
+        buttonClass: 'bg-teal-600 hover:bg-teal-700 text-white',
+        icon: <Navigation size={18} />,
+        appName: 'Yatri Sathi App'
+      };
+    }
+    if (lowercase.includes('namma yatri') || lowercase.includes('mana yatri')) {
+      return {
+        badgeBg: 'bg-amber-500 text-zinc-950 border-amber-600 font-bold',
+        brandName: lowercase.includes('mana') ? 'Mana Yatri' : 'Namma Yatri',
+        buttonClass: 'bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold',
+        icon: <Navigation size={18} />,
+        appName: 'Open Mobility App'
+      };
+    }
+    if (lowercase.includes('red taxi') || lowercase.includes('fast track')) {
+      return {
+        badgeBg: 'bg-red-600 text-white border-red-700',
+        brandName: lowercase.includes('red') ? 'Red Taxi' : 'Fast Track',
+        buttonClass: 'bg-red-600 hover:bg-red-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'Taxi Booking'
+      };
+    }
+    if (lowercase.includes('kaali peeli') || lowercase.includes('cool cab') || lowercase.includes('yellow taxi') || lowercase.includes('medallion') || lowercase.includes('metered')) {
+      return {
+        badgeBg: 'bg-yellow-500 text-zinc-950 border-yellow-600 font-bold',
+        brandName: 'Metered Taxi',
+        buttonClass: 'bg-zinc-800 hover:bg-zinc-900 text-yellow-400 font-bold border border-yellow-500/30',
+        icon: <Car size={18} />,
+        appName: 'Meter Taxi Stand'
+      };
+    }
+    if (lowercase.includes('uber')) {
+      return {
+        badgeBg: 'bg-black text-white border-zinc-800',
+        brandName: 'Uber',
+        buttonClass: 'bg-black hover:bg-zinc-800 text-white dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-bold',
+        icon: <Car size={18} />,
+        appName: 'Uber App'
+      };
+    }
+    if (lowercase.includes('ola')) {
+      return {
+        badgeBg: 'bg-emerald-500 text-white border-emerald-600',
+        brandName: 'Ola',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'Ola App'
+      };
+    }
+    if (lowercase.includes('rapido')) {
+      const isAuto = vehicleType.toLowerCase().includes('auto') || lowercase.includes('auto');
+      return {
+        badgeBg: 'bg-amber-400 text-zinc-950 border-amber-500',
+        brandName: 'Rapido',
+        buttonClass: 'bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold',
+        icon: isAuto ? <Navigation size={18} /> : <Bike size={18} />,
+        appName: 'Rapido App'
+      };
+    }
+    if (isGovt) {
+      return {
+        badgeBg: 'bg-emerald-600 text-white border-emerald-700',
+        brandName: 'State Regulated',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+        icon: <ShieldCheck size={18} />,
+        appName: 'Official Transit'
+      };
+    }
+    return {
+      badgeBg: 'bg-indigo-600 text-white border-indigo-700',
+      brandName: 'Transit Fleet',
+      buttonClass: 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold',
+      icon: <Car size={18} />,
+      appName: 'Direct Booking'
+    };
   };
 
-  const handleBook = (p: RideProviderDetails) => {
+  const handleBook = (p: RideProviderDetails, e: React.MouseEvent) => {
+    e.stopPropagation();
     onBooking(p.provider, p.actualFare || p.estimatedFare);
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const destinationUrl = isMobile ? p.appDeepLink : p.webLink;
-    window.open(destinationUrl, '_blank', 'noopener,noreferrer');
+    const destinationUrl = isMobile && p.appDeepLink ? p.appDeepLink : p.webLink;
+    if (destinationUrl) {
+      window.open(destinationUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
-  const recommendedProvider = providers.find(p => p.provider === recommendations.mostEfficient) || providers[0];
   const cheapestProvider = providers.find(p => p.isCheapest) || providers[0];
+  const activeSym = cheapestProvider?.currencySymbol || defaultSym;
+  const hasRobotaxi = providers.some(p => (p.categoryTag || '').includes('Autonomous') || p.provider.includes('Waymo'));
 
   return (
-    <div className="space-y-6">
-
-      {/* 1. SMART INSIGHT BANNER */}
-      <div className="p-5 bg-gradient-to-r from-indigo-900/90 via-indigo-950 to-slate-900 text-white rounded-2xl border border-indigo-500/30 shadow-xl shadow-indigo-950/20 relative overflow-hidden">
-        <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-indigo-500/10 rounded-full filter blur-2xl pointer-events-none" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
-                <Sparkles size={11} className="text-amber-300" /> ML Fare Intelligence
-              </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                <Layers size={10} /> {pricingRegime || 'Standard Pricing'}
-              </span>
-            </div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2 pt-1">
-              <span>{cheapestProvider?.provider} has the lowest current fare</span>
-              <span className="text-amber-400 font-extrabold">₹{cheapestProvider?.actualFare || cheapestProvider?.estimatedFare}</span>
-            </h3>
-            <p className="text-xs text-indigo-200/80 font-medium">
-              Save up to <strong className="text-emerald-400">₹{fareSpread || 0} ({spreadPercentage || 0}%)</strong> across available options in {detectedCity}. Top ranked option: <strong className="text-white">{recommendedProvider?.provider}</strong> ({recommendedProvider?.smartScore || recommendedProvider?.efficiencyScore}/100 smart score).
-            </p>
+    <div className="space-y-4">
+      <div className="p-4 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl border border-indigo-900/50 shadow-md">
+        <div className="flex items-center justify-between gap-2 pb-2 border-b border-indigo-800/40">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+              <Radio size={11} className="text-emerald-400 animate-pulse" />
+              Live Quotes Connected
+            </span>
+            <span className="text-[11px] font-semibold text-indigo-200 hidden sm:inline">
+              {detectedCity || 'Transit Zone'} {comparison.country ? `(${comparison.country})` : ''} • {comparison.distanceKm.toFixed(1)} km ({comparison.durationMins} mins)
+            </span>
           </div>
 
-          {anomalyCount > 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/20 border border-amber-500/40 rounded-xl text-amber-200 text-xs font-bold animate-pulse">
-              <AlertTriangle size={16} className="text-amber-400 shrink-0" />
-              <span>{anomalyCount} Unusual Fare Spike Detected</span>
+          <div className="flex items-center gap-2">
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+                title="Re-evaluate live provider quotes"
+              >
+                <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+                <span>{refreshing ? 'Refreshing...' : 'Re-evaluate'}</span>
+              </button>
+            )}
+
+            {pricingRegime && (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-white/10 text-indigo-100 border border-white/10">
+                {pricingRegime}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-3 flex items-end justify-between">
+          <div>
+            <span className="text-[11px] font-medium text-slate-400 block">Lowest Fresh Quote</span>
+            <div className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
+              <span>{cheapestProvider?.provider}</span>
+              <span className="text-emerald-400 font-extrabold text-lg">
+                {activeSym}{cheapestProvider?.actualFare || cheapestProvider?.estimatedFare}
+              </span>
+            </div>
+          </div>
+
+          {fareSpread > 0 && (
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Fare Variance</span>
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-700/50 px-2 py-0.5 rounded-md inline-block mt-0.5">
+                Save up to {activeSym}{fareSpread} ({spreadPercentage}%)
+              </span>
             </div>
           )}
         </div>
-      </div>
 
-      {/* 2. Route Metrics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-sm">
-        <div className="space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] tracking-wider block">Road Distance</span>
-          <h4 className="text-sm font-black text-[var(--text-primary)] flex items-center gap-1">
-            <Compass size={14} className="text-indigo-500" />
-            {comparison.distanceKm.toFixed(1)} km
-          </h4>
-        </div>
-        <div className="space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] tracking-wider block">Detour Distance</span>
-          <h4 className="text-sm font-black text-[var(--text-primary)] flex items-center gap-1" title={`Direct straight-line distance is ${straightLineDistance.toFixed(1)} km`}>
-            <TrendingUp size={14} className="text-amber-500" />
-            {detourDistance.toFixed(1)} km
-          </h4>
-        </div>
-        <div className="space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] tracking-wider block">Fare Spread</span>
-          <h4 className="text-sm font-black text-[var(--text-primary)] flex items-center gap-1">
-            <Wallet size={14} className="text-emerald-500" />
-            ₹{fareSpread || 0} variance
-          </h4>
-        </div>
-        <div className="space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-[var(--text-secondary)] tracking-wider block">Active Surge</span>
-          <h4 className="text-sm font-black text-[var(--text-primary)] flex items-center gap-1">
-            <Zap size={14} className={surgeRuleName !== 'Standard' ? 'text-amber-500 animate-pulse' : 'text-slate-400'} />
-            {surgeRuleName !== 'Standard' ? surgeRuleName : 'None'}
-          </h4>
-        </div>
-      </div>
-
-      {/* 3. Ranked Comparison Table */}
-      <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
-        {/* Toolbar */}
-        <div className="px-5 py-4 border-b border-[var(--border-color)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[var(--bg-primary)]/20">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-extrabold text-sm text-[var(--text-primary)]">Real-Time Fare Comparison & ML Intelligence</h3>
-              <span className="px-2 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                Transparent ML Scoring
-              </span>
-            </div>
-            <p className="text-[10px] text-[var(--text-secondary)] font-medium">
-              Comparing live provider quotes with ML expected estimates and anomaly boundaries.
-            </p>
+        {anomalyCount > 0 && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-amber-500/15 border border-amber-500/30 rounded-lg text-amber-200 text-xs font-semibold">
+            <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+            <span>Unusual surge pricing detected on some providers in this area</span>
           </div>
+        )}
+      </div>
 
-          {/* Sorting controls */}
-          <div className="flex bg-[var(--bg-primary)] border border-[var(--border-color)] p-1 rounded-xl text-[10px] font-bold text-[var(--text-secondary)] self-stretch sm:self-auto justify-center">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex bg-[var(--bg-secondary)] border border-[var(--border-color)] p-1 rounded-xl text-xs font-semibold text-[var(--text-secondary)] flex-wrap gap-1">
+          <button
+            onClick={() => setVehicleFilter('ALL')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${vehicleFilter === 'ALL' ? 'bg-indigo-600 text-white shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setVehicleFilter('CAB')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${vehicleFilter === 'CAB' ? 'bg-indigo-600 text-white shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+          >
+            <Car size={13} /> Cabs
+          </button>
+          <button
+            onClick={() => setVehicleFilter('AUTO')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${vehicleFilter === 'AUTO' ? 'bg-indigo-600 text-white shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+          >
+            <Navigation size={13} /> Autos / TukTuk
+          </button>
+          <button
+            onClick={() => setVehicleFilter('BIKE')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${vehicleFilter === 'BIKE' ? 'bg-indigo-600 text-white shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+          >
+            <Bike size={13} /> Bikes
+          </button>
+          {hasRobotaxi && (
+            <button
+              onClick={() => setVehicleFilter('ROBOTAXI')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${vehicleFilter === 'ROBOTAXI' ? 'bg-emerald-600 text-white shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+            >
+              <Bot size={13} /> Robotaxi
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)] font-medium">
+          <span className="text-[11px] mr-1">Sort:</span>
+          <div className="flex bg-[var(--bg-secondary)] border border-[var(--border-color)] p-0.5 rounded-lg">
             <button
               onClick={() => setSortBy('smart')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${sortBy === 'smart' ? 'bg-[var(--bg-secondary)] text-indigo-600 dark:text-indigo-400 shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${sortBy === 'smart' ? 'bg-[var(--bg-primary)] text-indigo-600 dark:text-indigo-400 font-bold shadow-xs' : 'hover:text-[var(--text-primary)]'}`}
             >
-              Smart Rank
+              Smart Score
             </button>
             <button
               onClick={() => setSortBy('price')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${sortBy === 'price' ? 'bg-[var(--bg-secondary)] text-indigo-600 dark:text-indigo-400 shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${sortBy === 'price' ? 'bg-[var(--bg-primary)] text-indigo-600 dark:text-indigo-400 font-bold shadow-xs' : 'hover:text-[var(--text-primary)]'}`}
             >
-              Cheapest
+              Price
             </button>
             <button
               onClick={() => setSortBy('eta')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${sortBy === 'eta' ? 'bg-[var(--bg-secondary)] text-indigo-600 dark:text-indigo-400 shadow-sm' : 'hover:text-[var(--text-primary)]'}`}
+              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${sortBy === 'eta' ? 'bg-[var(--bg-primary)] text-indigo-600 dark:text-indigo-400 font-bold shadow-xs' : 'hover:text-[var(--text-primary)]'}`}
             >
-              Fastest ETA
+              ETA
             </button>
           </div>
         </div>
-
-        {/* Comparison Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[720px]">
-            <thead>
-              <tr className="border-b border-[var(--border-color)] text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider bg-[var(--bg-primary)]/40">
-                <th className="py-3.5 pl-5 w-16 text-center">Rank</th>
-                <th className="py-3.5">Provider & Type</th>
-                <th className="py-3.5">Actual Provider Fare</th>
-                <th className="py-3.5">ML Estimated Fare</th>
-                <th className="py-3.5">Prediction Delta</th>
-                <th className="py-3.5">ETA & Confidence</th>
-                <th className="py-3.5 text-center">Smart Score</th>
-                <th className="py-3.5 pr-5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-color)] font-medium text-[var(--text-primary)]">
-              {sortedProviders.map((p, idx) => {
-                const rank = idx + 1;
-                const isExpanded = expandedProvider === p.provider;
-                const actualFare = p.actualFare || p.estimatedFare;
-                const predFare = p.predictedFare || actualFare;
-                const diff = p.predictionDiff !== undefined ? p.predictionDiff : (actualFare - predFare);
-                const confScore = p.confidenceScore || 90;
-
-                // Highlight Badge
-                let rowBadge = null;
-                if (p.isCheapest) {
-                  rowBadge = <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold bg-yellow-400 text-slate-950 border border-yellow-500">💰 Cheapest</span>;
-                } else if (p.isFastest) {
-                  rowBadge = <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold bg-blue-500 text-white border border-blue-600">⚡ Fastest</span>;
-                } else if (p.isBestValue) {
-                  rowBadge = <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold bg-indigo-600 text-white border border-indigo-700">🏆 Best Choice</span>;
-                }
-
-                return (
-                  <React.Fragment key={p.provider}>
-                    <tr className={`hover:bg-[var(--bg-primary)]/30 transition-all ${p.isBestValue ? 'bg-indigo-500/5 dark:bg-indigo-950/20' : ''}`}>
-                      {/* Rank Column */}
-                      <td className="py-4 pl-5 text-center font-black text-sm">
-                        {p.isBestValue ? (
-                          <div className="flex justify-center text-indigo-500"><Trophy size={16} /></div>
-                        ) : (
-                          `#${rank}`
-                        )}
-                      </td>
-
-                      {/* Provider Column */}
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          {getProviderIcon(p.provider)}
-                          <div className="flex flex-col">
-                            <span className="font-black text-sm flex items-center gap-1.5">
-                              {p.provider}
-                              {p.isAnomaly && (
-                                <span className="px-1.5 py-0.5 rounded text-[7px] font-bold bg-amber-500 text-slate-950 border border-amber-600 flex items-center gap-0.5" title={p.anomalyReason}>
-                                  <AlertTriangle size={8} /> Anomaly
-                                </span>
-                              )}
-                            </span>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[var(--text-secondary)] font-bold">
-                              <span className="uppercase tracking-wider">{p.vehicleType}</span>
-                              <span>•</span>
-                              <span>{p.clusterLabel || 'Standard'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Actual Provider Fare */}
-                      <td className="py-4">
-                        <div className="flex flex-col">
-                          <span className="text-[var(--text-primary)] font-black text-base flex items-baseline gap-1">
-                            ₹{actualFare}
-                            <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-1 py-0.2 rounded border border-emerald-300 dark:border-emerald-800">
-                              Actual
-                            </span>
-                          </span>
-                          <span className="text-[8px] text-[var(--text-secondary)] font-bold">
-                            ₹{p.costPerKm}/km • ₹{p.costPerMin}/min
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* ML Estimated Fare */}
-                      <td className="py-4">
-                        <div className="flex flex-col">
-                          <span className="text-indigo-600 dark:text-indigo-400 font-extrabold text-sm flex items-baseline gap-1">
-                            ₹{predFare}
-                            <span className="text-[8px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/60 px-1 py-0.2 rounded border border-indigo-300 dark:border-indigo-800">
-                              ML Estimate
-                            </span>
-                          </span>
-                          <span className="text-[8px] text-[var(--text-secondary)] font-medium">
-                            Gradient Boosting Regressor
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Prediction Delta */}
-                      <td className="py-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold ${
-                          Math.abs(diff) < 15
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                            : diff > 0
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
-                        }`}>
-                          {diff >= 0 ? `+₹${diff}` : `-₹${Math.abs(diff)}`}
-                          <span className="text-[8px] opacity-80">({p.predictionDiffPct || 0}%)</span>
-                        </span>
-                      </td>
-
-                      {/* ETA & Confidence */}
-                      <td className="py-4">
-                        <div className="flex flex-col">
-                          <strong className="text-[var(--text-primary)] font-extrabold text-xs">
-                            {p.etaMinutes} mins
-                          </strong>
-                          <span className="text-[9px] font-bold text-slate-500 flex items-center gap-1">
-                            <ShieldCheck size={10} className={confScore >= 80 ? 'text-emerald-500' : 'text-amber-500'} />
-                            Confidence: {confScore}% ({p.confidenceLevel || p.confidence})
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Smart Score */}
-                      <td className="py-4 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className={`text-sm font-black ${p.isBestValue ? 'text-indigo-600 dark:text-indigo-400' : 'text-[var(--text-primary)]'}`}>
-                            {p.smartScore || p.efficiencyScore}
-                            <span className="text-[9px] text-[var(--text-secondary)]">/100</span>
-                          </span>
-                          {rowBadge && <div className="mt-1">{rowBadge}</div>}
-                        </div>
-                      </td>
-
-                      {/* Action */}
-                      <td className="py-4 pr-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => toggleExpand(p.provider)}
-                            className="p-1.5 hover:bg-[var(--bg-primary)] border border-transparent hover:border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg transition-colors cursor-pointer"
-                            title="Fare breakdown & ML details"
-                          >
-                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                          </button>
-                          <button
-                            onClick={() => handleBook(p)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 font-bold text-xs tracking-wide rounded-xl shadow-sm transition-all hover:scale-102 cursor-pointer ${
-                              p.isBestValue
-                                ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
-                                : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white'
-                            }`}
-                          >
-                            <span>Book</span>
-                            <ArrowUpRight size={12} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* Expandable Breakdown Drawer */}
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={8} className="bg-[var(--bg-primary)]/70 p-5 border-b border-[var(--border-color)] animate-fade-in">
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-semibold text-[var(--text-secondary)]">
-                            
-                            {/* Fare Breakdown */}
-                            <div className="space-y-1.5 p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl">
-                              <span className="text-[8px] uppercase font-extrabold tracking-wider block text-indigo-600 dark:text-indigo-400">
-                                🧾 Fare Decomposition
-                              </span>
-                              <div className="space-y-1 text-[11px]">
-                                <div className="flex justify-between">
-                                  <span>Base Fare:</span>
-                                  <strong className="text-[var(--text-primary)]">₹{p.baseFare}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Distance Rate:</span>
-                                  <strong className="text-[var(--text-primary)]">₹{p.distanceFare}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Time Duration:</span>
-                                  <strong className="text-[var(--text-primary)]">₹{p.durationFare}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Platform Fee:</span>
-                                  <strong className="text-[var(--text-primary)]">₹{p.platformFee}</strong>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Volatilities & Toll */}
-                            <div className="space-y-1.5 p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl">
-                              <span className="text-[8px] uppercase font-extrabold tracking-wider block text-amber-600 dark:text-amber-400">
-                                ⚡ Demand & Toll Factors
-                              </span>
-                              <div className="space-y-1 text-[11px]">
-                                <div className="flex justify-between">
-                                  <span>Surge Multiplier:</span>
-                                  <strong className="text-[var(--text-primary)]">{p.surgeMultiplier > 1.0 ? `${p.surgeMultiplier}x` : '1.0x (Standard)'}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Airport Toll:</span>
-                                  <strong className="text-[var(--text-primary)]">{p.tollEstimate > 0 ? `₹${p.tollEstimate}` : 'None'}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Cost per Km:</span>
-                                  <strong className="text-[var(--text-primary)]">₹{p.costPerKm}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Cost per Min:</span>
-                                  <strong className="text-[var(--text-primary)]">₹{p.costPerMin}</strong>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* ML Diagnostic */}
-                            <div className="space-y-1.5 p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl">
-                              <span className="text-[8px] uppercase font-extrabold tracking-wider block text-emerald-600 dark:text-emerald-400">
-                                🧠 ML Pricing Intelligence
-                              </span>
-                              <div className="space-y-1 text-[11px]">
-                                <div className="flex justify-between">
-                                  <span>Discovered Regime:</span>
-                                  <strong className="text-[var(--text-primary)]">{p.clusterLabel || 'Standard'}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>ML Expected Fare:</span>
-                                  <strong className="text-indigo-600 dark:text-indigo-400">₹{predFare}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Anomaly Status:</span>
-                                  <strong className={p.isAnomaly ? 'text-amber-500' : 'text-emerald-500'}>
-                                    {p.isAnomaly ? 'Flagged Outlier' : 'Standard Envelope'}
-                                  </strong>
-                                </div>
-                                {p.isAnomaly && (
-                                  <p className="text-[9px] text-amber-600 dark:text-amber-400 pt-1 leading-tight">
-                                    {p.anomalyReason}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Transparent Score Breakdown */}
-                            <div className="space-y-1.5 p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl">
-                              <span className="text-[8px] uppercase font-extrabold tracking-wider block text-purple-600 dark:text-purple-400">
-                                ⚖️ Multi-Factor Score (100)
-                              </span>
-                              <div className="space-y-1 text-[11px]">
-                                <div className="flex justify-between">
-                                  <span>Price Score (40%):</span>
-                                  <strong className="text-[var(--text-primary)]">{p.scoreBreakdown?.priceScore || Math.round(p.efficiencyScore * 0.4)}/40</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>ETA Score (30%):</span>
-                                  <strong className="text-[var(--text-primary)]">{p.scoreBreakdown?.etaScore || Math.round(p.efficiencyScore * 0.3)}/30</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Confidence (15%):</span>
-                                  <strong className="text-[var(--text-primary)]">{p.scoreBreakdown?.confidenceScore || 14}/15</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Reliability (15%):</span>
-                                  <strong className="text-[var(--text-primary)]">{p.scoreBreakdown?.reliabilityScore || 14}/15</strong>
-                                </div>
-                              </div>
-                            </div>
-
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       </div>
 
-      {/* 4. AI Travel Advisory Insights */}
+      {/* Regional Regulatory Compliance Notice */}
+      {comparison.regionalNotice && (
+        <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl flex items-start gap-3 text-xs text-indigo-200">
+          <ShieldCheck size={18} className="text-indigo-400 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="font-bold text-indigo-300 block">
+              Regional Regulatory Compliance ({detectedCity}{comparison.state ? `, ${comparison.state}` : ''})
+            </span>
+            <p className="text-[11px] text-indigo-200/90 leading-relaxed font-normal">
+              {comparison.regionalNotice}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2.5">
+        {sortedProviders.map((p) => {
+          const isExpanded = expandedProvider === p.provider;
+          const actualFare = p.actualFare || p.estimatedFare;
+          const predFare = typeof p.predictedFare === 'number' ? p.predictedFare : actualFare;
+          const diff = p.predictionDiff !== undefined ? p.predictionDiff : (actualFare - predFare);
+          const brand = getProviderBrand(p.provider, (p as any).vehicleType || (p as any).vehicle_type || '', p.isGovernmentBacked);
+          const score = p.smartScore || p.efficiencyScore || 85;
+          const age = getQuoteAge(p);
+          const isStale = age > 15;
+          const sym = p.currencySymbol || defaultSym;
+
+          return (
+            <div
+              key={p.provider}
+              onClick={() => toggleExpand(p.provider)}
+              className={`bg-[var(--bg-secondary)] border rounded-2xl transition-all cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md ${
+                p.isBestValue
+                  ? 'border-indigo-500/50 shadow-sm bg-indigo-50/20 dark:bg-indigo-950/15'
+                  : 'border-[var(--border-color)]'
+              }`}
+            >
+              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs shrink-0 ${brand.badgeBg}`}>
+                    {brand.icon}
+                  </div>
+
+                  <div className="truncate space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-extrabold text-sm text-[var(--text-primary)] truncate">
+                        {p.provider}
+                      </h4>
+                      {p.categoryTag === 'Autonomous Robotaxi' && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-700 text-white border border-emerald-800 flex items-center gap-0.5">
+                          🤖 Autonomous Robotaxi
+                        </span>
+                      )}
+                      {p.categoryTag === '100% Pure Electric Fleet' && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-teal-600 text-white border border-teal-700 flex items-center gap-0.5">
+                          ⚡ 100% EV
+                        </span>
+                      )}
+                      {p.isGovernmentBacked && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-600 text-white border border-emerald-700 flex items-center gap-0.5">
+                          🏛 Govt-Backed
+                        </span>
+                      )}
+                      {p.categoryTag === 'Open Mobility' && !p.isGovernmentBacked && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-600 text-white border border-blue-700 flex items-center gap-0.5">
+                          🌐 Open Mobility
+                        </span>
+                      )}
+                      {p.categoryTag === 'State-Regulated' && !p.isGovernmentBacked && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-slate-700 text-amber-300 border border-slate-600 flex items-center gap-0.5">
+                          🛡 State-Regulated
+                        </span>
+                      )}
+                      {p.zeroSurge && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center gap-0.5">
+                          ⚡ Zero Surge
+                        </span>
+                      )}
+                      {p.isCheapest && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-400 text-slate-950 border border-amber-500">
+                          💰 Cheapest
+                        </span>
+                      )}
+                      {p.isFastest && !p.isCheapest && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-500 text-white border border-blue-600">
+                          ⚡ Fastest
+                        </span>
+                      )}
+                      {p.isAnomaly && (
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/30 flex items-center gap-0.5">
+                          <AlertTriangle size={9} /> Surge Outlier
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] font-medium flex-wrap">
+                      <span className="flex items-center gap-1 font-semibold text-[var(--text-primary)]">
+                        <Clock size={12} className="text-slate-400" />
+                        {p.etaMinutes} mins
+                      </span>
+                      <span>•</span>
+                      <span className="font-semibold text-[var(--text-primary)]">
+                        {sym}{p.costPerKm}/km • {sym}{p.costPerMin}/min
+                      </span>
+                      {p.surgeMultiplier > 1.0 && !p.zeroSurge && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-500 font-bold flex items-center gap-0.5">
+                            <Zap size={11} /> {p.surgeMultiplier}x
+                          </span>
+                        </>
+                      )}
+                      {p.regulatoryBody && (
+                        <>
+                          <span>•</span>
+                          <span className="text-emerald-500 dark:text-emerald-400 font-semibold text-[10px]">
+                            {p.regulatoryBody}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+                      <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                        ML Est: {sym}{typeof predFare === 'number' ? predFare.toFixed(2) : predFare}
+                      </span>
+                      <span>•</span>
+                      <span className={`font-semibold ${diff < 0 ? 'text-emerald-600 dark:text-emerald-400' : diff > 0 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                        {diff >= 0 ? `+${sym}${Math.abs(diff).toFixed(2)}` : `-${sym}${Math.abs(diff).toFixed(2)}`} ({p.predictionDiffPct || 0}%)
+                      </span>
+                      <span>•</span>
+                      <span className={`text-[10px] font-medium ${isStale ? 'text-amber-500 font-bold' : 'text-slate-400'}`}>
+                        {isStale ? `Stale quote (${age}s ago)` : `Updated ${age}s ago`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
+                  <div className="text-left sm:text-right">
+                    <div className="text-xl font-black text-[var(--text-primary)] flex items-baseline sm:justify-end gap-1">
+                      {sym}{actualFare}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-secondary)] font-semibold flex items-center sm:justify-end gap-1">
+                      <span>Score:</span>
+                      <strong className="text-indigo-600 dark:text-indigo-400">
+                        {typeof score === 'number' && score % 1 !== 0 ? score.toFixed(1) : score}/100
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => handleBook(p, e)}
+                      className={`flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
+                      title={`Open ${brand.appName} with prefilled pickup & destination`}
+                    >
+                      <span>Book</span>
+                      <ArrowUpRight size={13} />
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand(p.provider);
+                      }}
+                      className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-lg cursor-pointer"
+                      title="View exact fare breakdown & ML details"
+                    >
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {isExpanded && (
+                <div className="px-4 pb-4 pt-1 border-t border-[var(--border-color)] bg-[var(--bg-primary)]/40 rounded-b-2xl animate-fade-in text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+                    <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        Exact Fare Breakdown
+                      </span>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Base Fare:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{sym}{p.baseFare}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Distance Rate:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{sym}{p.distanceFare}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Time Rate:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{sym}{p.durationFare}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium border-t border-[var(--border-color)] pt-1">
+                        <span className="text-[var(--text-secondary)]">Platform Fee:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{sym}{p.platformFee}</span>
+                      </div>
+                      {p.tollEstimate > 0 && (
+                        <div className="flex justify-between text-xs font-medium">
+                          <span className="text-[var(--text-secondary)]">Toll / Airport Surcharge:</span>
+                          <span className="text-[var(--text-primary)] font-semibold">{sym}{p.tollEstimate}</span>
+                        </div>
+                      )}
+                      {p.regulatoryBody && (
+                        <div className="border-t border-[var(--border-color)] pt-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                          Regulatory Authority: {p.regulatoryBody}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-indigo-500 dark:text-indigo-400 block">
+                        ML Fare Intelligence
+                      </span>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Model Estimate:</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                          {sym}{typeof predFare === 'number' ? predFare.toFixed(2) : predFare}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Confidence:</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                          <ShieldCheck size={12} />
+                          {p.confidenceScore ? `${p.confidenceScore.toFixed(1)}%` : '98.4%'} ({p.confidenceLevel || p.confidence || 'High'})
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Pricing Regime:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{p.clusterLabel || 'Standard'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium border-t border-[var(--border-color)] pt-1">
+                        <span className="text-[var(--text-secondary)]">Anomaly Status:</span>
+                        <span className={p.isAnomaly ? 'text-amber-500 font-bold' : 'text-emerald-500 font-semibold'}>
+                          {p.isAnomaly ? 'Flagged Outlier' : 'Standard Envelope'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-purple-500 dark:text-purple-400 block">
+                        Smart Score: {typeof score === 'number' && score % 1 !== 0 ? score.toFixed(1) : score}/100
+                      </span>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Price Weight (40%):</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{p.scoreBreakdown?.priceScore || Math.round(Number(score) * 0.4)}/40</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">ETA Weight (30%):</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{p.scoreBreakdown?.etaScore || Math.round(Number(score) * 0.3)}/30</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Reliability (30%):</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{p.scoreBreakdown?.reliabilityScore ? p.scoreBreakdown.reliabilityScore + p.scoreBreakdown.confidenceScore : 28}/30</span>
+                      </div>
+                      <div className="border-t border-[var(--border-color)] pt-1 text-[10px] text-slate-400">
+                        {p.categoryTag ? `Category: ${p.categoryTag}` : 'Direct connection to provider.'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <PriceHistoryGraph providers={sortedProviders} routeHash={(comparison as any).routeHash} />
+
       {insights && insights.length > 0 && (
-        <div className="p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl space-y-2">
-          <h4 className="text-[10px] uppercase font-bold text-indigo-900 dark:text-indigo-300 tracking-wider flex items-center gap-1.5">
-            <Sparkles size={12} className="text-amber-500" /> AI Route Insights & Advisory
-          </h4>
-          <ul className="space-y-1.5">
+        <div className="p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl space-y-2 text-xs">
+          <h5 className="font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+            <Sparkles size={14} className="text-amber-500" /> Route Intelligence Insights
+          </h5>
+          <ul className="space-y-1 text-[var(--text-secondary)] font-medium">
             {insights.map((insight, idx) => (
-              <li key={idx} className="flex gap-2 items-start text-xs font-semibold text-[var(--text-primary)]">
-                <span className="p-0.5 bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded mt-0.5 shrink-0">
-                  <Info size={11} />
-                </span>
+              <li key={idx} className="flex gap-2 items-start">
+                <span className="text-indigo-500 mt-0.5">•</span>
                 <span>{insight}</span>
               </li>
             ))}
@@ -486,14 +809,12 @@ export const RideComparison: React.FC<RideComparisonProps> = ({ comparison, onBo
         </div>
       )}
 
-      {/* 5. Academic & Integrity Disclaimer */}
-      <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex gap-3 items-start text-xs font-semibold text-[var(--text-secondary)] italic">
-        <AlertCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-        <span>
-          Data Integrity Notice: "Actual Provider Fare" represents the ground-truth provider quote. "ML Estimated Fare" is generated by supervised regression for analytical comparison. K-Means clustering is utilized for unsupervised pricing pattern discovery.
+      <div className="p-3 bg-[var(--bg-secondary)]/70 border border-[var(--border-color)] rounded-xl flex items-start sm:items-center gap-2.5 text-[11px] text-[var(--text-secondary)]">
+        <AlertCircle size={15} className="text-indigo-500 shrink-0 mt-0.5 sm:mt-0" />
+        <span className="leading-relaxed">
+          <strong>Note:</strong> Real-time estimates contribute to transparent fare comparison. Actual fares on live provider apps may differ based on dynamic demand, instant driver supply, and live traffic conditions.
         </span>
       </div>
-
     </div>
   );
 };

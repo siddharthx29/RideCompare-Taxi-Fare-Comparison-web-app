@@ -1,6 +1,6 @@
 {
-  "version": "v20260920.2117",
-  "last_trained": "2026-09-20T21:17:47.380269",
+  "version": "v20260921.0346",
+  "last_trained": "2026-09-21T03:46:31.363049",
   "total_training_records": 12000,
   "optimal_k_clusters": 3,
   "silhouette_score": 0.3323,
@@ -53,20 +53,20 @@
   },
   "regression_model": "Gradient Boosting Regressor",
   "regression_metrics": {
-    "mae": 20.67,
+    "mae": 20.66,
     "rmse": 34.3,
     "mape": 5.96,
     "r2": 0.9803
   },
   "regression_comparison": {
     "random_forest": {
-      "mae": 23.51,
-      "rmse": 42.21,
+      "mae": 23.5,
+      "rmse": 42.11,
       "mape": 6.41,
-      "r2": 0.9702
+      "r2": 0.9703
     },
     "gradient_boosting": {
-      "mae": 20.67,
+      "mae": 20.66,
       "rmse": 34.3,
       "mape": 5.96,
       "r2": 0.9803

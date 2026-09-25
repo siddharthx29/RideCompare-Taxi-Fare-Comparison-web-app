@@ -1,0 +1,430 @@
+{
+  "dynamicPricing": {
+    "morningPeak": {
+      "startHour": 7,
+      "endHour": 10,
+      "multiplier": 1.4
+    },
+    "eveningPeak": {
+      "startHour": 17,
+      "endHour": 21,
+      "multiplier": 1.5
+    },
+    "nightCharges": {
+      "startHour": 23,
+      "endHour": 5,
+      "multiplier": 1.25
+    }
+  },
+  "defaultCity": "Bangalore",
+  "supportedRegions": [
+    "Bangalore", "Delhi NCR", "Mumbai", "Kolkata", "Goa", "Chennai", "Hyderabad", "Kochi", "Pune", "Ahmedabad", "Jaipur", "Coimbatore",
+    "New York", "San Francisco", "Los Angeles", "Chicago", "Austin", "Toronto", "Montreal",
+    "London", "Manchester", "Edinburgh", "Dublin", "Paris", "Berlin", "Munich", "Madrid", "Barcelona", "Rome", "Milan", "Amsterdam", "Zurich", "Stockholm",
+    "Dubai", "Abu Dhabi", "Riyadh", "Doha", "Cairo",
+    "Singapore", "Tokyo", "Osaka", "Seoul", "Bangkok", "Ho Chi Minh City", "Hanoi", "Jakarta", "Kuala Lumpur", "Manila", "Hong Kong", "Shanghai",
+    "Sydney", "Melbourne", "Auckland",
+    "São Paulo", "Rio de Janeiro", "Mexico City", "Bogota",
+    "Johannesburg", "Cape Town", "Nairobi", "Lagos"
+  ],
+  "cities": {
+    "Bangalore": {
+      "state": "Karnataka, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "kempegowda", "kia", "devenahalli"], "charge": 120 },
+      "regionalNotice": "Open Mobility and KSTDC State Tourism registered meters operate alongside commercial app fleets.",
+      "providers": {
+        "Namma Yatri Auto": { "baseFare": 30, "perKmRate": 15.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Auto", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "Open Mobility", "regulatoryBody": "ARDU / Open Mobility Network", "zeroSurge": true },
+        "Namma Yatri Cab": { "baseFare": 60, "perKmRate": 16.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "Open Mobility", "regulatoryBody": "ARDU / Open Mobility Network", "zeroSurge": true },
+        "KSTDC Airport Taxi": { "baseFare": 100, "perKmRate": 18.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Karnataka State Tourism Dev Corp (KSTDC)", "zeroSurge": true },
+        "Uber Go": { "baseFare": 50, "perKmRate": 14.0, "perMinRate": 2.0, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Premier": { "baseFare": 70, "perKmRate": 18.0, "perMinRate": 2.5, "platformFee": 20, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Bike": { "baseFare": 15, "perKmRate": 7.0, "perMinRate": 1.0, "platformFee": 5, "vehicleType": "Bike", "etaMultiplier": 0.8, "rating": 4.4, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 28, "perKmRate": 10.0, "perMinRate": 1.5, "platformFee": 10, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 48, "perKmRate": 14.5, "perMinRate": 2.2, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Prime": { "baseFare": 65, "perKmRate": 17.5, "perMinRate": 2.4, "platformFee": 18, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Local Taxi": { "baseFare": 60, "perKmRate": 16.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.3, "rating": 3.5, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Karnataka Transport Dept" }
+      }
+    },
+    "Kochi": {
+      "state": "Kerala, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "cochin", "cial", "nedumbassery"], "charge": 80 },
+      "regionalNotice": "Kerala Savari operates as India's first state-government-owned online taxi service with 100% zero surge pricing.",
+      "providers": {
+        "Kerala Savari Auto": { "baseFare": 25, "perKmRate": 12.0, "perMinRate": 0.0, "platformFee": 2, "vehicleType": "Auto", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Govt of Kerala Labour Department", "zeroSurge": true },
+        "Kerala Savari Cab": { "baseFare": 40, "perKmRate": 14.0, "perMinRate": 0.0, "platformFee": 5, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Govt of Kerala Labour Department", "zeroSurge": true },
+        "Uber Go": { "baseFare": 45, "perKmRate": 13.0, "perMinRate": 1.8, "platformFee": 10, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Premier": { "baseFare": 65, "perKmRate": 16.5, "perMinRate": 2.2, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Bike": { "baseFare": 12, "perKmRate": 6.5, "perMinRate": 0.8, "platformFee": 4, "vehicleType": "Bike", "etaMultiplier": 0.8, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 25, "perKmRate": 9.0, "perMinRate": 1.2, "platformFee": 8, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 42, "perKmRate": 13.5, "perMinRate": 2.0, "platformFee": 10, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.1, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Goa": {
+      "state": "Goa, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "dabolim", "mopa", "manohar"], "charge": 100 },
+      "regionalNotice": "Private app fleets (Uber/Ola/Rapido) are prohibited in Goa under state transport policy. GoaMiles and GTDC verified tourist cabs provide authorized service.",
+      "providers": {
+        "GoaMiles Hatchback": { "baseFare": 80, "perKmRate": 22.0, "perMinRate": 1.5, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Goa Tourism Development Corp (GTDC)", "zeroSurge": false },
+        "GoaMiles Sedan": { "baseFare": 110, "perKmRate": 25.0, "perMinRate": 2.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Goa Tourism Development Corp (GTDC)", "zeroSurge": false },
+        "GTDC Tourist Taxi": { "baseFare": 150, "perKmRate": 26.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.1, "rating": 4.2, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Goa Transport Dept & GTDC", "zeroSurge": true }
+      }
+    },
+    "Kolkata": {
+      "state": "West Bengal, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "dum dum", "nsb"], "charge": 90 },
+      "regionalNotice": "Yatri Sathi is the official Open Mobility initiative by the Government of West Bengal operating at regulated zero-surge rates.",
+      "providers": {
+        "Yatri Sathi Meter Taxi": { "baseFare": 30, "perKmRate": 15.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Govt of West Bengal IT & Electronics Dept", "zeroSurge": true },
+        "Kolkata Yellow Taxi": { "baseFare": 30, "perKmRate": 15.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.1, "rating": 3.8, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "West Bengal Transport Dept", "zeroSurge": true },
+        "Uber Go": { "baseFare": 45, "perKmRate": 13.5, "perMinRate": 1.9, "platformFee": 12, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Premier": { "baseFare": 65, "perKmRate": 17.5, "perMinRate": 2.4, "platformFee": 18, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Bike": { "baseFare": 12, "perKmRate": 6.8, "perMinRate": 0.9, "platformFee": 4, "vehicleType": "Bike", "etaMultiplier": 0.8, "rating": 4.4, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 25, "perKmRate": 9.5, "perMinRate": 1.3, "platformFee": 8, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 44, "perKmRate": 13.8, "perMinRate": 2.0, "platformFee": 12, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Mumbai": {
+      "state": "Maharashtra, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "mumbai", "csia", "sahar", "santacruz", "bandra-worli"], "charge": 85 },
+      "regionalNotice": "Maharashtra RTO strictly regulates Kaali Peeli metered cabs and autos. Bike taxis are restricted under state transport guidelines.",
+      "providers": {
+        "Mumbai Kaali Peeli": { "baseFare": 28, "perKmRate": 18.66, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.1, "rating": 4.1, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Maharashtra RTO & Taximen's Union", "zeroSurge": true },
+        "Mumbai Cool Cab": { "baseFare": 33, "perKmRate": 23.33, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.3, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Maharashtra RTO", "zeroSurge": true },
+        "Mumbai Metered Auto": { "baseFare": 23, "perKmRate": 15.33, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Maharashtra RTO", "zeroSurge": true },
+        "Uber Go": { "baseFare": 60, "perKmRate": 16.0, "perMinRate": 2.4, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Premier": { "baseFare": 80, "perKmRate": 21.0, "perMinRate": 3.0, "platformFee": 20, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 30, "perKmRate": 11.5, "perMinRate": 1.6, "platformFee": 10, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 58, "perKmRate": 16.5, "perMinRate": 2.5, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Prime": { "baseFare": 78, "perKmRate": 20.5, "perMinRate": 2.8, "platformFee": 18, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Delhi NCR": {
+      "state": "Delhi NCR, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "delhi", "igi", "palam", "dnd"], "charge": 150 },
+      "regionalNotice": "Delhi Transport Department regulates metered non-AC and AC taxi tariffs with standardized night surcharges.",
+      "providers": {
+        "Delhi Metered Taxi": { "baseFare": 40, "perKmRate": 17.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.1, "rating": 4.0, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Delhi Transport Dept (GNCTD)", "zeroSurge": true },
+        "Delhi Metered Auto": { "baseFare": 30, "perKmRate": 11.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Auto", "etaMultiplier": 1.0, "rating": 4.2, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Delhi Transport Dept (GNCTD)", "zeroSurge": true },
+        "Uber Go": { "baseFare": 55, "perKmRate": 15.0, "perMinRate": 2.2, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Premier": { "baseFare": 75, "perKmRate": 19.0, "perMinRate": 2.8, "platformFee": 20, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Bike": { "baseFare": 15, "perKmRate": 7.5, "perMinRate": 1.0, "platformFee": 5, "vehicleType": "Bike", "etaMultiplier": 0.8, "rating": 4.4, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 28, "perKmRate": 10.5, "perMinRate": 1.5, "platformFee": 10, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 52, "perKmRate": 15.2, "perMinRate": 2.3, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Prime": { "baseFare": 72, "perKmRate": 18.8, "perMinRate": 2.6, "platformFee": 18, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Chennai": {
+      "state": "Tamil Nadu, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "chennai", "meenambakkam", "omr"], "charge": 100 },
+      "regionalNotice": "Tamil Nadu State Transport Department regulates metered auto and licensed tourist taxi networks including Fast Track.",
+      "providers": {
+        "Fast Track Taxi": { "baseFare": 70, "perKmRate": 16.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.4, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "TN Tourist Taxi Association", "zeroSurge": true },
+        "Chennai Metered Auto": { "baseFare": 25, "perKmRate": 12.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Auto", "etaMultiplier": 1.0, "rating": 4.3, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Tamil Nadu Transport Dept", "zeroSurge": true },
+        "Uber Go": { "baseFare": 52, "perKmRate": 14.5, "perMinRate": 2.1, "platformFee": 12, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Premier": { "baseFare": 72, "perKmRate": 18.5, "perMinRate": 2.6, "platformFee": 18, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Bike": { "baseFare": 14, "perKmRate": 7.2, "perMinRate": 0.9, "platformFee": 5, "vehicleType": "Bike", "etaMultiplier": 0.8, "rating": 4.4, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 27, "perKmRate": 10.2, "perMinRate": 1.4, "platformFee": 9, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 50, "perKmRate": 14.8, "perMinRate": 2.3, "platformFee": 12, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Hyderabad": {
+      "state": "Telangana, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "hyderabad", "rgia", "shamshabad", "orr"], "charge": 110 },
+      "regionalNotice": "Telangana Road Transport Authority regulates official pre-paid airport and city taxi queues.",
+      "providers": {
+        "Mana Yatri Auto": { "baseFare": 25, "perKmRate": 12.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Auto", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "Open Mobility", "regulatoryBody": "Open Mobility Network Telangana", "zeroSurge": true },
+        "Hyderabad Prepaid Taxi": { "baseFare": 80, "perKmRate": 16.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.4, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Telangana RTA & Police Passenger Safety", "zeroSurge": true },
+        "Uber Go": { "baseFare": 48, "perKmRate": 13.5, "perMinRate": 1.9, "platformFee": 12, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Premier": { "baseFare": 68, "perKmRate": 17.5, "perMinRate": 2.4, "platformFee": 18, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 26, "perKmRate": 9.5, "perMinRate": 1.3, "platformFee": 9, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 46, "perKmRate": 14.0, "perMinRate": 2.1, "platformFee": 12, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.1, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Coimbatore": {
+      "state": "Tamil Nadu, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "peelamedu"], "charge": 60 },
+      "regionalNotice": "Red Taxi and Fast Track are the premier regional taxi networks in Western Tamil Nadu.",
+      "providers": {
+        "Red Taxi Mini": { "baseFare": 50, "perKmRate": 14.0, "perMinRate": 1.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Regional Pioneer", "regulatoryBody": "TN Tourist Association", "zeroSurge": true },
+        "Red Taxi Sedan": { "baseFare": 75, "perKmRate": 16.5, "perMinRate": 1.2, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.9, "isGovernmentBacked": false, "categoryTag": "Regional Pioneer", "regulatoryBody": "TN Tourist Association", "zeroSurge": true },
+        "Fast Track Taxi": { "baseFare": 65, "perKmRate": 15.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.4, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "zeroSurge": true },
+        "Uber Go": { "baseFare": 45, "perKmRate": 13.0, "perMinRate": 1.8, "platformFee": 10, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Pune": {
+      "state": "Maharashtra, India",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "toll": { "airportKeywords": ["airport", "lohegaon"], "charge": 70 },
+      "regionalNotice": "Pune Auto Rickshaws operate on regulated RTO meter rates alongside Uber, Ola, and Rapido.",
+      "providers": {
+        "Pune Metered Auto": { "baseFare": 25, "perKmRate": 15.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Auto", "etaMultiplier": 1.0, "rating": 4.3, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Pune RTO", "zeroSurge": true },
+        "Uber Go": { "baseFare": 50, "perKmRate": 14.0, "perMinRate": 2.0, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Rapido Auto": { "baseFare": 28, "perKmRate": 10.0, "perMinRate": 1.4, "platformFee": 8, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Ola Mini": { "baseFare": 48, "perKmRate": 14.5, "perMinRate": 2.2, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "New York": {
+      "state": "New York, United States",
+      "country": "United States",
+      "currency": "USD",
+      "currencySymbol": "$",
+      "toll": { "airportKeywords": ["jfk", "kennedy", "laguardia", "lga", "newark", "ewr", "tunnel", "bridge"], "charge": 15.0 },
+      "regionalNotice": "NYC Yellow Cabs operate under regulated Taxi and Limousine Commission (TLC) flat flag-drop and meter rates without surge pricing.",
+      "providers": {
+        "NYC Yellow Medallion Cab": { "baseFare": 3.00, "perKmRate": 1.55, "perMinRate": 0.70, "platformFee": 2.50, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "NYC Taxi & Limousine Commission (TLC)", "zeroSurge": true },
+        "Revel EV (NYC)": { "baseFare": 3.50, "perKmRate": 1.60, "perMinRate": 0.40, "platformFee": 2.00, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "100% Electric Fleet", "zeroSurge": false },
+        "Curb Taxi (TLC)": { "baseFare": 3.00, "perKmRate": 1.55, "perMinRate": 0.70, "platformFee": 2.00, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "NYC TLC", "zeroSurge": true },
+        "UberX NYC": { "baseFare": 4.50, "perKmRate": 1.90, "perMinRate": 0.45, "platformFee": 3.00, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Lyft NYC": { "baseFare": 4.00, "perKmRate": 1.85, "perMinRate": 0.42, "platformFee": 2.75, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "San Francisco": {
+      "state": "California, United States",
+      "country": "United States",
+      "currency": "USD",
+      "currencySymbol": "$",
+      "toll": { "airportKeywords": ["sfo", "san francisco airport", "bay bridge", "golden gate"], "charge": 7.0 },
+      "regionalNotice": "San Francisco is the global hub for Autonomous Robotaxis (Waymo One) operating fully driverless commercial fleets.",
+      "providers": {
+        "Waymo One (Autonomous Robotaxi)": { "baseFare": 5.00, "perKmRate": 1.80, "perMinRate": 0.50, "platformFee": 1.50, "vehicleType": "Cab", "etaMultiplier": 0.85, "rating": 4.9, "isGovernmentBacked": false, "categoryTag": "Autonomous Robotaxi", "regulatoryBody": "CPUC & California DMV Approved", "zeroSurge": true },
+        "UberX SF": { "baseFare": 3.50, "perKmRate": 1.70, "perMinRate": 0.40, "platformFee": 2.50, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Lyft SF": { "baseFare": 3.40, "perKmRate": 1.65, "perMinRate": 0.38, "platformFee": 2.25, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Flywheel SF Taxi": { "baseFare": 3.50, "perKmRate": 1.85, "perMinRate": 0.65, "platformFee": 0.0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.3, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "SFMTA Regulated Cabs", "zeroSurge": true }
+      }
+    },
+    "London": {
+      "state": "Greater London, United Kingdom",
+      "country": "United Kingdom",
+      "currency": "GBP",
+      "currencySymbol": "£",
+      "toll": { "airportKeywords": ["heathrow", "gatwick", "stansted", "luton", "london city", "congestion charge"], "charge": 5.0 },
+      "regionalNotice": "London Hackney Carriages (Black Cabs) operate on strict Transport for London (TfL) metered tariffs with bus lane access and zero algorithmic surge.",
+      "providers": {
+        "TfL Licensed Black Cab": { "baseFare": 4.40, "perKmRate": 2.80, "perMinRate": 0.50, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.85, "rating": 4.9, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Transport for London (TfL)", "zeroSurge": true },
+        "FreeNow Black Cab": { "baseFare": 4.40, "perKmRate": 2.80, "perMinRate": 0.50, "platformFee": 2.0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Transport for London (TfL)", "zeroSurge": true },
+        "Bolt London": { "baseFare": 3.50, "perKmRate": 1.45, "perMinRate": 0.22, "platformFee": 1.5, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "UberX London": { "baseFare": 3.50, "perKmRate": 1.55, "perMinRate": 0.25, "platformFee": 2.0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Paris": {
+      "state": "Île-de-France, France",
+      "country": "France",
+      "currency": "EUR",
+      "currencySymbol": "€",
+      "toll": { "airportKeywords": ["cdg", "charles de gaulle", "orly", "roissy"], "charge": 10.0 },
+      "regionalNotice": "Taxis G7 operate under Paris Préfecture de Police regulations with fixed airport caps and zero surge, alongside licensed VTC operators.",
+      "providers": {
+        "Taxis Parisiens (G7)": { "baseFare": 3.00, "perKmRate": 1.45, "perMinRate": 0.60, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Paris Préfecture de Police", "zeroSurge": true },
+        "Bolt Paris": { "baseFare": 2.50, "perKmRate": 1.25, "perMinRate": 0.35, "platformFee": 1.50, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "UberX Paris": { "baseFare": 2.80, "perKmRate": 1.35, "perMinRate": 0.40, "platformFee": 2.00, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Heetch Paris": { "baseFare": 2.50, "perKmRate": 1.20, "perMinRate": 0.35, "platformFee": 1.20, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.4, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Berlin": {
+      "state": "Berlin, Germany",
+      "country": "Germany",
+      "currency": "EUR",
+      "currencySymbol": "€",
+      "toll": { "airportKeywords": ["ber", "brandenburg airport"], "charge": 5.0 },
+      "regionalNotice": "Berlin Taxi tariffs are set by Berlin Senate Department for Mobility with strict legal fare meters.",
+      "providers": {
+        "Taxi Berlin (Official Meter)": { "baseFare": 4.30, "perKmRate": 2.50, "perMinRate": 0.60, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Berlin Senate Dept of Mobility", "zeroSurge": true },
+        "FreeNow Berlin": { "baseFare": 3.50, "perKmRate": 1.60, "perMinRate": 0.30, "platformFee": 1.50, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Bolt Berlin": { "baseFare": 3.00, "perKmRate": 1.40, "perMinRate": 0.25, "platformFee": 1.20, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "UberX Berlin": { "baseFare": 3.20, "perKmRate": 1.50, "perMinRate": 0.28, "platformFee": 1.50, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Madrid": {
+      "state": "Community of Madrid, Spain",
+      "country": "Spain",
+      "currency": "EUR",
+      "currencySymbol": "€",
+      "toll": { "airportKeywords": ["barajas", "madrid airport", "adolfo suarez"], "charge": 5.50 },
+      "regionalNotice": "Cabify is Spain's premier homegrown ride-hail platform operating alongside official Radio Taxi Madrid.",
+      "providers": {
+        "Cabify Madrid": { "baseFare": 3.50, "perKmRate": 1.30, "perMinRate": 0.25, "platformFee": 1.00, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Market Leader", "regulatoryBody": "VTC Spain", "zeroSurge": false },
+        "Radio Taxi Madrid (Official)": { "baseFare": 3.15, "perKmRate": 1.35, "perMinRate": 0.40, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Ayuntamiento de Madrid", "zeroSurge": true },
+        "FreeNow Madrid": { "baseFare": 3.15, "perKmRate": 1.35, "perMinRate": 0.40, "platformFee": 1.20, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "zeroSurge": true },
+        "UberX Madrid": { "baseFare": 3.00, "perKmRate": 1.25, "perMinRate": 0.22, "platformFee": 1.50, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Rome": {
+      "state": "Lazio, Italy",
+      "country": "Italy",
+      "currency": "EUR",
+      "currencySymbol": "€",
+      "toll": { "airportKeywords": ["fiumicino", "ciampino", "roma airport"], "charge": 8.0 },
+      "regionalNotice": "Italian law requires licensed municipal white taxis (via itTaxi & FreeNow). Private peer ridehail is restricted.",
+      "providers": {
+        "itTaxi Roma (Official Taxi)": { "baseFare": 3.50, "perKmRate": 1.50, "perMinRate": 0.45, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Roma Capitale Taxi Department", "zeroSurge": true },
+        "FreeNow Taxi Roma": { "baseFare": 3.50, "perKmRate": 1.50, "perMinRate": 0.45, "platformFee": 1.50, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "zeroSurge": true },
+        "Uber Black Roma": { "baseFare": 8.00, "perKmRate": 2.50, "perMinRate": 0.60, "platformFee": 3.00, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "NCC Premium Fleet" }
+      }
+    },
+    "Dubai": {
+      "state": "Dubai, United Arab Emirates",
+      "country": "United Arab Emirates",
+      "currency": "AED",
+      "currencySymbol": "AED ",
+      "toll": { "airportKeywords": ["dxb", "airport", "al maktoum", "salik"], "charge": 25.0 },
+      "regionalNotice": "Dubai Taxi Company (DTC) and Hala operate under strict Roads and Transport Authority (RTA) metered pricing.",
+      "providers": {
+        "Dubai Taxi (DTC / RTA)": { "baseFare": 12.0, "perKmRate": 2.21, "perMinRate": 0.50, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Dubai Roads & Transport Authority (RTA)", "zeroSurge": true },
+        "Hala Taxi (via Careem)": { "baseFare": 12.0, "perKmRate": 2.21, "perMinRate": 0.50, "platformFee": 3.0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Dubai Roads & Transport Authority (RTA)", "zeroSurge": true },
+        "Careem Comfort": { "baseFare": 15.0, "perKmRate": 2.90, "perMinRate": 0.65, "platformFee": 5.0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Select Dubai": { "baseFare": 16.0, "perKmRate": 3.10, "perMinRate": 0.70, "platformFee": 5.0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Singapore": {
+      "state": "Central, Singapore",
+      "country": "Singapore",
+      "currency": "SGD",
+      "currencySymbol": "S$",
+      "toll": { "airportKeywords": ["changi", "airport", "erp", "jewel"], "charge": 5.0 },
+      "regionalNotice": "ComfortDelGro operates under Land Transport Authority (LTA) regulated meter rates. Grab, Gojek, and TADA provide upfront dynamic ride-hail.",
+      "providers": {
+        "ComfortDelGro (CDG Zig Taxi)": { "baseFare": 4.40, "perKmRate": 0.65, "perMinRate": 0.40, "platformFee": 0.50, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "Land Transport Authority (LTA) Singapore", "zeroSurge": true },
+        "GrabCar Singapore": { "baseFare": 3.80, "perKmRate": 0.75, "perMinRate": 0.35, "platformFee": 1.00, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Market Leader" },
+        "Gojek Singapore": { "baseFare": 3.60, "perKmRate": 0.70, "perMinRate": 0.35, "platformFee": 1.00, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "TADA Singapore": { "baseFare": 3.70, "perKmRate": 0.68, "perMinRate": 0.30, "platformFee": 0.50, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Open Mobility", "regulatoryBody": "Zero Commission Mobility" }
+      }
+    },
+    "Tokyo": {
+      "state": "Kanto, Japan",
+      "country": "Japan",
+      "currency": "JPY",
+      "currencySymbol": "¥",
+      "toll": { "airportKeywords": ["haneda", "narita", "expressway", "shutoko"], "charge": 1200 },
+      "regionalNotice": "Under Japan's Road Transport Act, all cabs (via GO, S.RIDE, Uber) are licensed commercial green-plate taxis with MLIT-regulated metered rates.",
+      "providers": {
+        "GO App (Tokyo Nihon Kotsu)": { "baseFare": 500, "perKmRate": 400.0, "perMinRate": 45.0, "platformFee": 100, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.9, "isGovernmentBacked": true, "categoryTag": "Market Leader #1", "regulatoryBody": "Ministry of Land, Infrastructure & Transport (MLIT)", "zeroSurge": true },
+        "S.RIDE Tokyo Taxi": { "baseFare": 500, "perKmRate": 400.0, "perMinRate": 45.0, "platformFee": 100, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Tokyo Taxi Association & MLIT", "zeroSurge": true },
+        "MK Taxi Tokyo": { "baseFare": 550, "perKmRate": 420.0, "perMinRate": 50.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.9, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "zeroSurge": true },
+        "Uber Taxi Tokyo": { "baseFare": 500, "perKmRate": 410.0, "perMinRate": 45.0, "platformFee": 150, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Seoul": {
+      "state": "Seoul Capital Area, South Korea",
+      "country": "South Korea",
+      "currency": "KRW",
+      "currencySymbol": "₩",
+      "toll": { "airportKeywords": ["incheon", "gimpo", "expressway"], "charge": 6600 },
+      "regionalNotice": "Kakao T commands 95%+ market share across South Korea under Ministry of Land, Infrastructure and Transport tariffs.",
+      "providers": {
+        "Kakao T (Standard Taxi)": { "baseFare": 4800, "perKmRate": 1000.0, "perMinRate": 250.0, "platformFee": 1000, "vehicleType": "Cab", "etaMultiplier": 0.85, "rating": 4.9, "isGovernmentBacked": true, "categoryTag": "National Standard #1", "regulatoryBody": "Ministry of Land, Infrastructure & Transport", "zeroSurge": true },
+        "UT (Uber + TMap Taxi)": { "baseFare": 4800, "perKmRate": 1000.0, "perMinRate": 250.0, "platformFee": 1000, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator", "zeroSurge": true },
+        "Tada Korea (VTC)": { "baseFare": 5500, "perKmRate": 1200.0, "perMinRate": 300.0, "platformFee": 1500, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Premium Fleet" }
+      }
+    },
+    "Ho Chi Minh City": {
+      "state": "Southeast, Vietnam",
+      "country": "Vietnam",
+      "currency": "VND",
+      "currencySymbol": "₫",
+      "toll": { "airportKeywords": ["tan son nhat", "airport"], "charge": 15000 },
+      "regionalNotice": "Xanh SM is Vietnam's revolutionary 100% pure electric VinFast taxi fleet with fixed transparent tariffs and zero traffic surcharges.",
+      "providers": {
+        "Xanh SM Electric Taxi (VinFast)": { "baseFare": 20000, "perKmRate": 14500.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.9, "isGovernmentBacked": false, "categoryTag": "100% Pure Electric Fleet", "regulatoryBody": "GSM VinFast Green Mobility", "zeroSurge": true },
+        "GrabCar Vietnam": { "baseFare": 22000, "perKmRate": 13500.0, "perMinRate": 500.0, "platformFee": 3000, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Market Leader" },
+        "GrabBike Vietnam": { "baseFare": 12500, "perKmRate": 4300.0, "perMinRate": 300.0, "platformFee": 2000, "vehicleType": "Bike", "etaMultiplier": 0.80, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Mai Linh Taxi": { "baseFare": 20000, "perKmRate": 15000.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.4, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "zeroSurge": true }
+      }
+    },
+    "Bangkok": {
+      "state": "Central Thailand, Thailand",
+      "country": "Thailand",
+      "currency": "THB",
+      "currencySymbol": "฿",
+      "toll": { "airportKeywords": ["suvarnabhumi", "don mueang", "expressway", "tollway"], "charge": 75 },
+      "regionalNotice": "Department of Land Transport regulates Bangkok meter taxis alongside Grab, LINE MAN Taxi, and Bolt.",
+      "providers": {
+        "Bangkok Meter Taxi": { "baseFare": 35, "perKmRate": 6.5, "perMinRate": 3.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.2, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Department of Land Transport Thailand", "zeroSurge": true },
+        "GrabCar Bangkok": { "baseFare": 45, "perKmRate": 8.0, "perMinRate": 3.0, "platformFee": 20, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Market Leader" },
+        "Bolt Bangkok": { "baseFare": 40, "perKmRate": 7.0, "perMinRate": 2.5, "platformFee": 10, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "CABB VIP Taxi": { "baseFare": 80, "perKmRate": 12.0, "perMinRate": 4.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "VIP London Cab Fleet" }
+      }
+    },
+    "Jakarta": {
+      "state": "DKI Jakarta, Indonesia",
+      "country": "Indonesia",
+      "currency": "IDR",
+      "currencySymbol": "Rp ",
+      "toll": { "airportKeywords": ["soekarno hatta", "cengkareng", "halim", "tol"], "charge": 18000 },
+      "regionalNotice": "Bluebird Taxi is Indonesia's legendary trusted metered taxi, operating alongside Gojek and Grab.",
+      "providers": {
+        "Bluebird Taxi (Official)": { "baseFare": 8500, "perKmRate": 5000.0, "perMinRate": 500.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.9, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Dishub DKI Jakarta", "zeroSurge": true },
+        "Gojek (GoCar)": { "baseFare": 12000, "perKmRate": 4800.0, "perMinRate": 400.0, "platformFee": 2000, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "National Champion" },
+        "Gojek (GoRide Motorbike)": { "baseFare": 8000, "perKmRate": 2500.0, "perMinRate": 200.0, "platformFee": 1000, "vehicleType": "Bike", "etaMultiplier": 0.75, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "National Champion" },
+        "GrabCar Jakarta": { "baseFare": 12500, "perKmRate": 4900.0, "perMinRate": 400.0, "platformFee": 2000, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Market Leader" }
+      }
+    },
+    "Sydney": {
+      "state": "New South Wales, Australia",
+      "country": "Australia",
+      "currency": "AUD",
+      "currencySymbol": "A$",
+      "toll": { "airportKeywords": ["kingsford smith", "sydney airport", "harbour bridge", "cross city tunnel"], "charge": 8.50 },
+      "regionalNotice": "13CABS operates on NSW Point to Point Transport Commission regulated meters, competing with rideshare operators Uber and DiDi.",
+      "providers": {
+        "13CABS Sydney": { "baseFare": 4.20, "perKmRate": 2.35, "perMinRate": 0.95, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "NSW Point to Point Transport Commission", "zeroSurge": true },
+        "UberX Sydney": { "baseFare": 3.80, "perKmRate": 1.65, "perMinRate": 0.45, "platformFee": 2.50, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "DiDi Express Sydney": { "baseFare": 3.40, "perKmRate": 1.50, "perMinRate": 0.40, "platformFee": 2.00, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "São Paulo": {
+      "state": "São Paulo, Brazil",
+      "country": "Brazil",
+      "currency": "BRL",
+      "currencySymbol": "R$",
+      "toll": { "airportKeywords": ["guarulhos", "gru", "congonhas", "rodoanel"], "charge": 12.0 },
+      "regionalNotice": "99 (99Pop / 99Taxi) is Brazil's largest homegrown mobility app, competing directly with Uber Brazil.",
+      "providers": {
+        "99Pop São Paulo": { "baseFare": 4.50, "perKmRate": 1.80, "perMinRate": 0.35, "platformFee": 1.50, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.8, "isGovernmentBacked": false, "categoryTag": "Market Leader #1 Brazil", "zeroSurge": false },
+        "99Taxi (Metered Cab)": { "baseFare": 5.50, "perKmRate": 2.75, "perMinRate": 0.60, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "SPTrans / DTP São Paulo", "zeroSurge": true },
+        "UberX São Paulo": { "baseFare": 4.80, "perKmRate": 1.90, "perMinRate": 0.38, "platformFee": 1.80, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    },
+    "Toronto": {
+      "state": "Ontario, Canada",
+      "country": "Canada",
+      "currency": "CAD",
+      "currencySymbol": "C$",
+      "toll": { "airportKeywords": ["pearson", "yyz", "billy bishop", "407 etr"], "charge": 16.0 },
+      "regionalNotice": "Beck Taxi is Toronto's iconic fleet operating under City of Toronto Municipal Licensing and Standards tariffs.",
+      "providers": {
+        "Beck Taxi Toronto": { "baseFare": 4.25, "perKmRate": 1.75, "perMinRate": 0.55, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 0.90, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "Govt-Backed", "regulatoryBody": "City of Toronto Municipal Licensing", "zeroSurge": true },
+        "UberX Toronto": { "baseFare": 3.75, "perKmRate": 1.45, "perMinRate": 0.30, "platformFee": 2.50, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Lyft Toronto": { "baseFare": 3.60, "perKmRate": 1.40, "perMinRate": 0.28, "platformFee": 2.25, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+      }
+    }
+  }
+}
