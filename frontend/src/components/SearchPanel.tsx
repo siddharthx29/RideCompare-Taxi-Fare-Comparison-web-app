@@ -104,6 +104,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 
     setLoading(true);
     setError(null);
+    let data: GeocodeResult[] = [];
     try {
       const params = new URLSearchParams({ q: trimmedVal });
       if (context) params.set('context', context);
@@ -112,23 +113,41 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         params.set('near_lon', String(nearby.lng));
       }
       const response = await apiFetch(`/api/geocode?${params.toString()}`, { signal });
-      const data = await response.json() as GeocodeResult[];
-      if (signal.aborted) return;
-      suggestionCache.set(cacheKey, data);
-      if (!data || data.length === 0) {
-        setError('No exact location found. Try adding the city or nearby landmark.');
-        setSuggests([]);
-      } else {
-        setSuggests(data.slice(0, 5));
-        setError(null);
-      }
+      data = (await response.json()) as GeocodeResult[];
     } catch {
-      if (!signal.aborted) {
-        setSuggests([]);
-        setError('Location search is temporarily unavailable. Please try again.');
+      // Direct browser fallback to OpenStreetMap Nominatim
+      try {
+        const directUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(trimmedVal)}&format=jsonv2&addressdetails=1&limit=5`;
+        const directRes = await fetch(directUrl, { signal });
+        if (directRes.ok) {
+          const raw = (await directRes.json()) as Array<{
+            display_name: string;
+            lat: string;
+            lon: string;
+            address?: Record<string, string>;
+          }>;
+          data = raw.map((item) => ({
+            displayName: item.display_name,
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            address: item.address || {}
+          }));
+        }
+      } catch {
+        data = [];
       }
     } finally {
-      if (!signal.aborted) setLoading(false);
+      if (!signal.aborted) {
+        setLoading(false);
+        if (data.length > 0) {
+          suggestionCache.set(cacheKey, data);
+          setSuggests(data.slice(0, 5));
+          setError(null);
+        } else {
+          setSuggests([]);
+          setError(null);
+        }
+      }
     }
   };
 
