@@ -10,6 +10,8 @@ from backend.app.models.db_models import Base, User, Search, Analytics
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = settings.DATABASE_URL
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 if DATABASE_URL.startswith("sqlite:"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -18,11 +20,10 @@ else:
         engine = create_engine(DATABASE_URL, pool_pre_ping=True)
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        logger.info("Connected to configured database.")
+        logger.info("Successfully connected to configured PostgreSQL database.")
     except Exception as err:
-        if settings.ENVIRONMENT.lower() in {"production", "prod"}:
-            raise RuntimeError("Configured database is unavailable in production.") from err
-        logger.warning("Configured database connection failed (%s). Falling back to local SQLite.", err)
+        logger.error("Failed to connect to configured PostgreSQL database: %s", err)
+        logger.warning("Falling back to local SQLite database so the application stays operational.")
         sqlite_path = APP_DIR / "ridecompare.db"
         DATABASE_URL = f"sqlite:///{sqlite_path}"
         engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
