@@ -1,8 +1,5 @@
-# Frontend build artifacts are served from frontend/dist
-# Ignore node_modules, source files, and development caches
-frontend/node_modules
-frontend/src
-frontend/public
+# Ignore node_modules and build caches (Vercel installs dependencies automatically)
+frontend/node_modules/
 node_modules/
 
 # Local Python environments & caches
@@ -16,7 +13,7 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Documentation and project reports (reduces bundle by >50MB)
+# Heavy documentation, generated reports, and scripts (saves >50MB)
 *.pdf
 *.docx
 report_assets/
