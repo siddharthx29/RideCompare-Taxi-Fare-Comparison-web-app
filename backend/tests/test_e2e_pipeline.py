@@ -1,17 +1,22 @@
-import urllib.request
-import urllib.parse
 import json
+import pytest
+from fastapi.testclient import TestClient
+from backend.app.main import app
+
+client = TestClient(app)
 
 def test_full_pipeline():
     # 1. Geocode Lulu Mall
-    with urllib.request.urlopen("http://127.0.0.1:5000/api/geocode?q=Lulu+Mall") as r:
-        lulu_list = json.loads(r.read().decode())
+    r = client.get("/api/geocode?q=Lulu+Mall")
+    assert r.status_code == 200
+    lulu_list = r.json()
     assert len(lulu_list) > 0, "No results for Lulu Mall"
     lulu = lulu_list[0]
 
     # 2. Geocode Cochin Airport
-    with urllib.request.urlopen("http://127.0.0.1:5000/api/geocode?q=Cochin+Airport") as r:
-        airport_list = json.loads(r.read().decode())
+    r2 = client.get("/api/geocode?q=Cochin+Airport")
+    assert r2.status_code == 200
+    airport_list = r2.json()
     assert len(airport_list) > 0, "No results for Cochin Airport"
     airport = airport_list[0]
 
@@ -19,17 +24,18 @@ def test_full_pipeline():
     print("Destination:", airport["displayName"], f"({airport['lat']}, {airport['lng']})")
 
     # 3. Query route
-    params = urllib.parse.urlencode({
+    params = {
         "start": f"{lulu['lng']},{lulu['lat']}",
         "end": f"{airport['lng']},{airport['lat']}",
         "sourceName": lulu["displayName"],
         "destName": airport["displayName"],
         "sourceAddress": json.dumps(lulu["address"]),
         "destAddress": json.dumps(airport["address"])
-    })
+    }
 
-    with urllib.request.urlopen(f"http://127.0.0.1:5000/api/route?{params}") as r:
-        route_res = json.loads(r.read().decode())
+    r3 = client.get("/api/route", params=params)
+    assert r3.status_code == 200
+    route_res = r3.json()
 
     print("Is Serviceable:", route_res.get("isServiceable"))
     print("Detected City:", route_res.get("comparison", {}).get("detectedCity"))
@@ -39,6 +45,10 @@ def test_full_pipeline():
     print(f"Total Provider Quotes: {len(providers)}")
     for p in providers:
         print(f"  - {p['provider']}: {p.get('currencySymbol', '₹')}{p.get('actualFare')} (ETA: {p.get('etaMinutes')}m)")
+
+    assert route_res.get("success") is True
+    assert route_res.get("isServiceable") is True
+    assert len(providers) >= 3
 
 if __name__ == "__main__":
     test_full_pipeline()

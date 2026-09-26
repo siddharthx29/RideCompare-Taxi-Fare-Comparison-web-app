@@ -173,7 +173,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       </form>
 
       <p className="mt-3 text-center text-[10px] text-[var(--text-secondary)]">
-        Search powered by Geoapify &amp; OpenStreetMap contributors •{' '}
+        Search powered by Photon &amp; OpenStreetMap contributors •{' '}
         <a
           className="underline hover:text-indigo-500 transition-colors"
           href="https://www.openstreetmap.org/copyright"

@@ -80,6 +80,7 @@ async def health_check():
 
 # Include API Routers
 app.include_router(geocode.router, prefix="/api")
+app.include_router(geocode.router)
 app.include_router(route.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(ml_endpoints.router)

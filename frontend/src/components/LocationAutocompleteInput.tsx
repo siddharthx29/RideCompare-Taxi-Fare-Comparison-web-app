@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Locate, Loader2, AlertCircle, Building2, Plane, Train, GraduationCap, ShoppingBag } from 'lucide-react';
 import type { LocationInfo } from '../types/ride';
-import { searchLocations, type GeocodeResult } from '../utils/locationService';
+import { searchLocations, reverseGeocodeLocation, type GeocodeResult } from '../utils/locationService';
 
 interface LocationAutocompleteInputProps {
   label: string;
@@ -82,7 +82,7 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
           setLoading(false);
           setSuggestions(results);
           if (results.length === 0) {
-            setErrorMsg('No places found. Try a nearby landmark, area, or city.');
+            setErrorMsg('No matching locations found. Try entering a nearby landmark, street, or area.');
           } else {
             setErrorMsg(null);
           }
@@ -91,7 +91,7 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
         if (!controller.signal.aborted) {
           setLoading(false);
           setSuggestions([]);
-          setErrorMsg('No places found. Try a nearby landmark, area, or city.');
+          setErrorMsg('No matching locations found. Try entering a nearby landmark, street, or area.');
         }
       }
     }, 300);
@@ -102,9 +102,9 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
     };
   }, [value, selectedLocation, nearbyLocation]);
 
-  const handleSelect = (item: GeocodeResult) => {
-    const lat = Number(item.lat);
-    const lng = Number(item.lng ?? item.lon);
+  const handleSelect = async (item: GeocodeResult) => {
+    const lat = Number(item.latitude ?? item.lat);
+    const lng = Number(item.longitude ?? item.lng ?? item.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
     const chosenLabel = item.displayName || item.display_name || item.primaryText || item.name || 'Selected Location';
@@ -126,6 +126,26 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
     setShowOverlay(false);
     setErrorMsg(null);
     if (onClearError) onClearError();
+
+    // Asynchronously retrieve deeper street address if house_number or road is missing
+    if (!item.address?.road || !item.address?.postcode) {
+      try {
+        const rev = await reverseGeocodeLocation(lat, lng);
+        if (rev && rev.address && Object.keys(rev.address).length > 0) {
+          const enrichedAddress: Record<string, string> = { ...(item.address || {}), ...(rev.address || {}) };
+          onSelectLocation({
+            ...loc,
+            address: enrichedAddress,
+            locality: rev.secondaryText || loc.locality,
+            city: enrichedAddress.city || enrichedAddress.town || loc.city,
+            state: enrichedAddress.state || loc.state,
+            country: enrichedAddress.country || loc.country,
+          });
+        }
+      } catch {
+        // Retain initial selection
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

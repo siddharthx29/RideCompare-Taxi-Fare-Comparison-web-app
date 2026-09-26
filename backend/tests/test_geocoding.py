@@ -150,6 +150,7 @@ def test_geocode_endpoint_caching():
 
 
 def test_geocode_geoapify_mocked_response(monkeypatch):
+    monkeypatch.setattr(settings, "GEOCODING_PROVIDER", "geoapify")
     monkeypatch.setattr(settings, "GEOAPIFY_API_KEY", "test_mock_api_key_123")
 
     mock_geo_resp = {

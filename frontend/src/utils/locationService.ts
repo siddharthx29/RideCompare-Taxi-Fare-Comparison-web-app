@@ -1,21 +1,28 @@
 import { apiFetch } from './api';
 import type { LocationInfo } from '../types/ride';
 
+export type GeocodeAddress = Record<string, string>;
+
 export interface GeocodeResult {
+  id?: number | string;
   name?: string;
   primaryText?: string;
   secondaryText?: string;
   displayName?: string;
   display_name?: string;
+  latitude?: number;
+  longitude?: number;
   lat: string | number;
   lng?: string | number;
   lon?: string | number;
   category?: string;
   address?: Record<string, string>;
   source?: string;
+  provider?: string;
+  importance?: number;
 }
 
-const CACHE_TTL_MS = 20 * 60 * 1000; // 20 minutes
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes in-memory cache
 const clientCache = new Map<string, { timestamp: number; data: GeocodeResult[] }>();
 
 /**
@@ -47,7 +54,7 @@ export const formatPlaceDisplay = (
   rawName: string,
   rawSecondary?: string,
   rawDisplay?: string,
-  address?: Record<string, string>
+  address?: GeocodeAddress
 ): { primaryText: string; secondaryText: string; displayName: string } => {
   let primary = (rawName || '').trim();
   if (!primary && rawDisplay) {
@@ -60,15 +67,17 @@ export const formatPlaceDisplay = (
   let secondary = (rawSecondary || '').trim();
   if (!secondary && address) {
     const parts = [
+      address.road,
       address.suburb || address.neighbourhood || address.quarter,
       address.city || address.town || address.municipality || address.village,
+      address.district,
       address.state
-    ].filter(Boolean);
+    ].filter(Boolean) as string[];
 
     // Remove duplicates or components that already match primary name
     const normPrimary = normalizeQuery(primary);
     const uniqueParts = parts.filter(p => !normPrimary.includes(normalizeQuery(p)));
-    secondary = uniqueParts.join(', ');
+    secondary = uniqueParts.slice(0, 3).join(', ');
   }
 
   const displayName = secondary ? `${primary}, ${secondary}` : primary;
@@ -76,7 +85,8 @@ export const formatPlaceDisplay = (
 };
 
 /**
- * Queries location autocomplete with Geoapify primary, OSM fallback, and instant client caching.
+ * Queries location autocomplete via backend location service:
+ * Photon primary -> Cache -> Fallbacks with local client caching.
  */
 export async function searchLocations(
   query: string,
@@ -103,7 +113,7 @@ export async function searchLocations(
 
   let results: GeocodeResult[] = [];
 
-  // 2. Primary: Query RideCompare backend (proxies to Geoapify with Nominatim fallback)
+  // 2. Primary: Query RideCompare backend location service
   try {
     const params = new URLSearchParams({ q: trimmed, limit: '8' });
     if (context) params.set('context', context);
@@ -112,11 +122,25 @@ export async function searchLocations(
       params.set('near_lon', String(nearbyLocation.lng));
     }
 
-    const response = await apiFetch(`/api/geocode?${params.toString()}`, { signal });
+    // Try dedicated /api/location/search endpoint first
+    let response = await apiFetch(`/api/location/search?${params.toString()}`, { signal });
+    if (!response.ok) {
+      // Fallback to /api/geocode endpoint
+      response = await apiFetch(`/api/geocode?${params.toString()}`, { signal });
+    }
+
     if (response.ok) {
-      const data = (await response.json()) as GeocodeResult[];
-      if (Array.isArray(data) && data.length > 0) {
-        results = data.map((item) => {
+      const rawData = await response.json();
+      const rawList: GeocodeResult[] = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.results)
+        ? rawData.results
+        : [];
+
+      if (rawList.length > 0) {
+        results = rawList.map((item) => {
+          const lat = Number(item.latitude ?? item.lat);
+          const lng = Number(item.longitude ?? item.lng ?? item.lon);
           const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
             item.primaryText || item.name || '',
             item.secondaryText,
@@ -129,9 +153,11 @@ export async function searchLocations(
             secondaryText,
             displayName,
             display_name: displayName,
-            lat: Number(item.lat),
-            lng: Number(item.lng ?? item.lon),
-            lon: Number(item.lon ?? item.lng)
+            latitude: lat,
+            longitude: lng,
+            lat,
+            lng,
+            lon: lng
           };
         });
       }
@@ -164,15 +190,19 @@ export async function searchLocations(
             item.display_name,
             item.address
           );
+          const lat = parseFloat(item.lat);
+          const lng = parseFloat(item.lon);
           return {
             name: primaryText,
             primaryText,
             secondaryText,
             displayName,
             display_name: displayName,
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon),
-            lon: parseFloat(item.lon),
+            latitude: lat,
+            longitude: lng,
+            lat,
+            lng,
+            lon: lng,
             category: item.type,
             address: item.address || {},
             source: 'browser_fallback'
@@ -193,7 +223,7 @@ export async function searchLocations(
 }
 
 /**
- * Reverse geocodes coordinates to a human-readable location
+ * Reverse geocodes coordinates to a detailed human-readable local address
  */
 export async function reverseGeocodeLocation(
   lat: number,
@@ -207,12 +237,34 @@ export async function reverseGeocodeLocation(
   }
 
   try {
-    const response = await apiFetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`, { signal });
+    let response = await apiFetch(`/api/location/reverse?lat=${lat}&lon=${lon}`, { signal });
+    if (!response.ok) {
+      response = await apiFetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`, { signal });
+    }
+
     if (response.ok) {
       const data = (await response.json()) as GeocodeResult;
       if (data && (data.displayName || data.display_name || data.name)) {
-        clientCache.set(cacheKey, { timestamp: Date.now(), data: [data] });
-        return data;
+        const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
+          data.primaryText || data.name || '',
+          data.secondaryText,
+          data.displayName || data.display_name,
+          data.address
+        );
+        const enriched: GeocodeResult = {
+          ...data,
+          primaryText,
+          secondaryText,
+          displayName,
+          display_name: displayName,
+          latitude: lat,
+          longitude: lon,
+          lat,
+          lng: lon,
+          lon
+        };
+        clientCache.set(cacheKey, { timestamp: Date.now(), data: [enriched] });
+        return enriched;
       }
     }
   } catch {
@@ -234,6 +286,8 @@ export async function reverseGeocodeLocation(
           secondaryText,
           displayName,
           display_name: displayName,
+          latitude: lat,
+          longitude: lon,
           lat,
           lng: lon,
           lon,
@@ -254,6 +308,8 @@ export async function reverseGeocodeLocation(
     primaryText: fallbackLabel,
     displayName: fallbackLabel,
     display_name: fallbackLabel,
+    latitude: lat,
+    longitude: lon,
     lat,
     lng: lon,
     lon,

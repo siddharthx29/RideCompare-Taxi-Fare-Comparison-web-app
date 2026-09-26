@@ -23,7 +23,14 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
     ADMIN_KEY: str = os.getenv("ADMIN_KEY", "")
     GEOAPIFY_API_KEY: str = os.getenv("GEOAPIFY_API_KEY", "")
-    GEOCODING_PROVIDER: str = os.getenv("GEOCODING_PROVIDER", "geoapify")
+    GEOCODING_PROVIDER: str = os.getenv("GEOCODING_PROVIDER", "photon")
+    PHOTON_BASE_URL: str = os.getenv("PHOTON_BASE_URL", "https://photon.komoot.io").rstrip("/")
+    NOMINATIM_BASE_URL: str = os.getenv("NOMINATIM_BASE_URL", os.getenv("GEOCODING_BASE_URL", "https://nominatim.openstreetmap.org")).rstrip("/")
+    GEOCODING_USER_AGENT: str = os.getenv(
+        "GEOCODING_USER_AGENT",
+        "RideCompare/2.5 (https://ridecompare.world; contact: support@ridecompare.world)"
+    )
+    LOCATION_CACHE_TTL_DAYS: int = int(os.getenv("LOCATION_CACHE_TTL_DAYS", "14"))
 
     @property
     def allowed_origins_list(self) -> List[str]:

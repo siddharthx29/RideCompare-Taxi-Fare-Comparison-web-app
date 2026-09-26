@@ -101,3 +101,29 @@ class FareSnapshot(Base):
     source = Column(String(50), default='permitted_tariff')
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
 
+
+class Location(Base):
+    __tablename__ = 'locations'
+
+    id = Column(Integer, primary_key=True, index=True)
+    normalized_query = Column(String(255), index=True, nullable=False)
+    place_name = Column(String(255), nullable=False)
+    display_name = Column(Text, nullable=False)
+    latitude = Column(Float, nullable=False, index=True)
+    longitude = Column(Float, nullable=False, index=True)
+    house_number = Column(String(100), nullable=True)
+    road = Column(String(255), nullable=True)
+    neighbourhood = Column(String(255), nullable=True)
+    suburb = Column(String(255), nullable=True)
+    city = Column(String(255), nullable=True)
+    district = Column(String(255), nullable=True)
+    state = Column(String(255), nullable=True)
+    postcode = Column(String(50), nullable=True)
+    country = Column(String(100), default='India')
+    provider = Column(String(50), default='photon')
+    provider_place_id = Column(String(100), index=True, nullable=True)
+    search_count = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_verified_at = Column(DateTime, default=datetime.utcnow)
+
