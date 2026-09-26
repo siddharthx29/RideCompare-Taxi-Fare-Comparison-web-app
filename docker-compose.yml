@@ -28,6 +28,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ridecompare}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}@db:5432/${POSTGRES_DB:-ridecompare}
       ENVIRONMENT: production
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

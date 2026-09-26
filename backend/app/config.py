@@ -22,6 +22,8 @@ class Settings(BaseSettings):
         return self.ENVIRONMENT
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
     ADMIN_KEY: str = os.getenv("ADMIN_KEY", "")
+    GEOAPIFY_API_KEY: str = os.getenv("GEOAPIFY_API_KEY", "")
+    GEOCODING_PROVIDER: str = os.getenv("GEOCODING_PROVIDER", "geoapify")
 
     @property
     def allowed_origins_list(self) -> List[str]:

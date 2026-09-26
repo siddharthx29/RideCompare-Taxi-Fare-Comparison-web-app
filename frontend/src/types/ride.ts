@@ -5,6 +5,11 @@ export interface LocationInfo {
   lat: number;
   lng: number;
   address?: Record<string, string>;
+  placeName?: string;
+  locality?: string;
+  city?: string;
+  state?: string;
+  country?: string;
 }
 
 export interface RouteGeometry {
