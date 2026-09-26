@@ -115,7 +115,7 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
             setErrorMsg(
               isLocal
                 ? 'Backend server unreachable. Please make sure the FastAPI server is running on port 5000.'
-                : 'Cloud backend unreachable. The Render free-tier instance may be sleeping or has exceeded monthly limits.'
+                : 'Backend API unreachable. Please check your connection or disable Vercel Deployment Protection (SSO) in Settings.'
             );
           } else {
             setErrorMsg('Unable to find this location. Try entering a nearby landmark, street, or city.');

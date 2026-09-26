@@ -1,4 +1,3 @@
-const DEFAULT_RENDER_URL = 'https://taxi-fare-comparison-web-app.onrender.com';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -70,13 +69,6 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
       }
     }
 
-    // In production on Vercel: if relative path returns 404 (e.g. vercel.json rewrite pending),
-    // fallback directly to the Render backend over HTTPS
-    if (!isLocalHost() && response.status === 404 && primaryUrl.startsWith('/')) {
-      const renderFallback = await tryFetch(`${DEFAULT_RENDER_URL}${cleanEndpoint}`, options);
-      if (renderFallback) return renderFallback;
-    }
-
     throw new Error(getErrorMessage(payload, response.status));
   } catch (error: unknown) {
     // 2. Fallback handling when network fetch fails
@@ -86,10 +78,6 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
       if (localRes) return localRes;
       const localhostRes = await tryFetch(`http://localhost:5000${cleanEndpoint}`, options, 5000);
       if (localhostRes) return localhostRes;
-    } else {
-      // Remote production fallback (Vercel -> Render)
-      const renderFallback = await tryFetch(`${DEFAULT_RENDER_URL}${cleanEndpoint}`, options);
-      if (renderFallback) return renderFallback;
     }
 
     let finalError = error instanceof Error ? error : new Error('Unknown API request failure.');
@@ -103,8 +91,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
       } else {
         finalError = new Error(
           'Network Connection Error: Unable to reach the backend API server. ' +
-          'If the backend is hosted on Render (free tier), the server may be spinning up from sleep mode (takes ~30–50 seconds). ' +
-          'Please wait a few seconds and try your search again.'
+          'If deployed on Vercel, please ensure Deployment Protection (SSO) is disabled in Project Settings.'
         );
       }
     }

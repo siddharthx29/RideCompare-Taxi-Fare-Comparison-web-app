@@ -40,6 +40,226 @@ const suggestCache = new Map<string, { timestamp: number; data: MapboxSuggestion
 const retrieveCache = new Map<string, { timestamp: number; data: LocationInfo }>();
 const reverseCache = new Map<string, { timestamp: number; data: LocationInfo }>();
 
+const CLIENT_CATALOG: MapboxSuggestion[] = [
+  {
+    mapbox_id: 'cat:lulu_kochi',
+    name: 'LuLu International Shopping Mall',
+    primaryText: 'LuLu International Shopping Mall',
+    secondaryText: 'Edappally, Kochi, Kerala',
+    displayName: 'LuLu International Shopping Mall, Edappally, Kochi, Kerala',
+    place_formatted: 'Edappally, Kochi, Kerala',
+    full_address: '34/1000, Old NH 47, Edappally, Kochi, Kerala 682024',
+    latitude: 10.0284,
+    longitude: 76.3074,
+    city: 'Kochi',
+    district: 'Ernakulam',
+    state: 'Kerala',
+    postcode: '682024',
+    country: 'India',
+    address: { road: 'Old NH 47', suburb: 'Edappally', city: 'Kochi', state: 'Kerala', country: 'India' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:kalamassery',
+    name: 'Kalamassery',
+    primaryText: 'Kalamassery',
+    secondaryText: 'Kochi, Kerala, India',
+    displayName: 'Kalamassery, Kochi, Kerala, India',
+    place_formatted: 'Kochi, Kerala, India',
+    full_address: 'Kalamassery, Kochi, Ernakulam, Kerala 682033',
+    latitude: 10.0545,
+    longitude: 76.3190,
+    city: 'Kochi',
+    district: 'Ernakulam',
+    state: 'Kerala',
+    postcode: '682033',
+    country: 'India',
+    address: { suburb: 'Kalamassery', city: 'Kochi', district: 'Ernakulam', state: 'Kerala', country: 'India' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:aluva_metro',
+    name: 'Aluva Metro Station',
+    primaryText: 'Aluva Metro Station',
+    secondaryText: 'Aluva, Ernakulam, Kerala',
+    displayName: 'Aluva Metro Station, Aluva, Ernakulam, Kerala',
+    place_formatted: 'Aluva, Ernakulam, Kerala',
+    full_address: 'Aluva Metro Station, Aluva, Ernakulam, Kerala 683101',
+    latitude: 10.1098,
+    longitude: 76.3533,
+    city: 'Kochi',
+    district: 'Ernakulam',
+    state: 'Kerala',
+    country: 'India',
+    address: { suburb: 'Aluva', city: 'Kochi', state: 'Kerala', country: 'India' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:kochi_airport',
+    name: 'Cochin International Airport',
+    primaryText: 'Cochin International Airport',
+    secondaryText: 'Nedumbassery, Kerala',
+    displayName: 'Cochin International Airport, Nedumbassery, Kerala',
+    place_formatted: 'Nedumbassery, Kerala',
+    full_address: 'Airport Road, Nedumbassery, Kerala 683111',
+    latitude: 10.1556,
+    longitude: 76.3906,
+    city: 'Nedumbassery',
+    district: 'Ernakulam',
+    state: 'Kerala',
+    country: 'India',
+    address: { road: 'Airport Road', suburb: 'Nedumbassery', city: 'Kochi', state: 'Kerala', country: 'India' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:ernakulam_south',
+    name: 'Ernakulam Junction Railway Station',
+    primaryText: 'Ernakulam Junction Railway Station',
+    secondaryText: 'Ernakulam South, Kochi, Kerala',
+    displayName: 'Ernakulam Junction Railway Station, Ernakulam South, Kochi, Kerala',
+    place_formatted: 'Ernakulam South, Kochi, Kerala',
+    full_address: 'Station Road, Ernakulam South, Kochi, Kerala 682016',
+    latitude: 9.9706,
+    longitude: 76.2907,
+    city: 'Kochi',
+    district: 'Ernakulam',
+    state: 'Kerala',
+    country: 'India',
+    address: { road: 'Station Road', suburb: 'Ernakulam South', city: 'Kochi', state: 'Kerala', country: 'India' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:marine_drive',
+    name: 'Marine Drive Kochi',
+    primaryText: 'Marine Drive',
+    secondaryText: 'Kochi, Kerala, India',
+    displayName: 'Marine Drive, Kochi, Kerala, India',
+    place_formatted: 'Kochi, Kerala, India',
+    full_address: 'Marine Drive, Ernakulam, Kochi, Kerala 682031',
+    latitude: 9.9816,
+    longitude: 76.2763,
+    city: 'Kochi',
+    state: 'Kerala',
+    country: 'India',
+    address: { suburb: 'Marine Drive', city: 'Kochi', state: 'Kerala', country: 'India' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:times_square',
+    name: 'Times Square',
+    primaryText: 'Times Square',
+    secondaryText: 'Manhattan, New York, United States',
+    displayName: 'Times Square, Manhattan, New York, United States',
+    place_formatted: 'Manhattan, New York, United States',
+    full_address: 'Broadway & 7th Ave, New York, NY 10036',
+    latitude: 40.7580,
+    longitude: -73.9855,
+    city: 'New York',
+    state: 'New York',
+    country: 'United States',
+    address: { road: 'Broadway', city: 'New York', state: 'New York', country: 'United States' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:burj_khalifa',
+    name: 'Burj Khalifa',
+    primaryText: 'Burj Khalifa',
+    secondaryText: 'Downtown Dubai, Dubai, United Arab Emirates',
+    displayName: 'Burj Khalifa, Downtown Dubai, Dubai, United Arab Emirates',
+    place_formatted: 'Downtown Dubai, Dubai, United Arab Emirates',
+    full_address: '1 Sheikh Mohammed bin Rashid Blvd, Downtown Dubai, Dubai',
+    latitude: 25.1972,
+    longitude: 55.2744,
+    city: 'Dubai',
+    state: 'Dubai',
+    country: 'United Arab Emirates',
+    address: { road: '1 Sheikh Mohammed bin Rashid Blvd', city: 'Dubai', country: 'United Arab Emirates' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:london_bridge',
+    name: 'London Bridge',
+    primaryText: 'London Bridge',
+    secondaryText: 'London, Greater London, United Kingdom',
+    displayName: 'London Bridge, London, Greater London, United Kingdom',
+    place_formatted: 'London, Greater London, United Kingdom',
+    full_address: 'London Bridge, London SE1 9RA',
+    latitude: 51.5079,
+    longitude: -0.0877,
+    city: 'London',
+    state: 'Greater London',
+    country: 'United Kingdom',
+    address: { road: 'London Bridge', city: 'London', country: 'United Kingdom' },
+    provider: 'mapbox'
+  },
+  {
+    mapbox_id: 'cat:shibuya',
+    name: 'Shibuya Station',
+    primaryText: 'Shibuya Station',
+    secondaryText: 'Shibuya, Tokyo, Japan',
+    displayName: 'Shibuya Station, Shibuya, Tokyo, Japan',
+    place_formatted: 'Shibuya, Tokyo, Japan',
+    full_address: 'Shibuya, Tokyo 150-0002',
+    latitude: 35.6580,
+    longitude: 139.7016,
+    city: 'Tokyo',
+    state: 'Tokyo',
+    country: 'Japan',
+    address: { suburb: 'Shibuya', city: 'Tokyo', country: 'Japan' },
+    provider: 'mapbox'
+  }
+];
+
+async function searchPhotonDirect(query: string, signal?: AbortSignal): Promise<MapboxSuggestion[]> {
+  try {
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`, { signal });
+    if (res.ok) {
+      const data = await res.json();
+      const features = Array.isArray(data?.features) ? data.features : [];
+      return features.map((f: { geometry?: { coordinates?: number[] }; properties?: Record<string, string> }) => {
+        const coords = f.geometry?.coordinates || [0, 0];
+        const props = f.properties || {};
+        const primary = (props.name || props.street || props.city || 'Location').trim();
+        const secParts = [props.street, props.suburb || props.district, props.city || props.town, props.state, props.country].filter(Boolean);
+        const secondary = secParts.slice(0, 3).join(', ');
+        const display = secondary ? `${primary}, ${secondary}` : primary;
+        return {
+          mapbox_id: `photon:${props.osm_type || 'p'}:${props.osm_id || Math.random()}`,
+          name: primary,
+          primaryText: primary,
+          secondaryText: secondary,
+          displayName: display,
+          display_name: display,
+          place_formatted: secondary,
+          full_address: display,
+          latitude: coords[1],
+          longitude: coords[0],
+          lat: coords[1],
+          lng: coords[0],
+          lon: coords[0],
+          city: props.city || props.town || '',
+          district: props.district || '',
+          state: props.state || '',
+          country: props.country || '',
+          postcode: props.postcode || '',
+          address: {
+            road: props.street || '',
+            suburb: props.suburb || '',
+            city: props.city || props.town || '',
+            state: props.state || '',
+            country: props.country || ''
+          },
+          provider: 'mapbox',
+          source: 'photon'
+        };
+      });
+    }
+  } catch {
+    return [];
+  }
+  return [];
+}
+
 /**
  * Generates a unique UUIDv4 session token for Mapbox Search Box interactive sessions.
  */
@@ -192,42 +412,45 @@ export async function suggestLocations(
     if (signal?.aborted) {
       throw error;
     }
-    // Backward-compatibility fallback to /api/location/search
+    // Direct Client-Side Photon & Curated Catalog Fallback
     try {
-      const fallbackRes = await apiFetch(`/api/location/search?q=${encodeURIComponent(trimmed)}&limit=8`, { signal });
-      if (fallbackRes.ok) {
-        const fbData = await fallbackRes.json();
-        const list: MapboxSuggestion[] = Array.isArray(fbData?.results) ? fbData.results : [];
-        suggestions = list.map((item) => {
-          const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
-            item.primaryText || item.name || '',
-            item.secondaryText,
-            item.displayName || item.display_name,
-            item.address
-          );
-          return {
-            ...item,
-            mapbox_id: item.mapbox_id || String(item.id || ''),
-            primaryText,
-            secondaryText,
-            displayName,
-            display_name: displayName,
-          };
-        });
+      const qLower = normQuery;
+      const catalogMatches = CLIENT_CATALOG.filter(c => {
+        const n = normalizeQuery(c.name || '');
+        const p = normalizeQuery(c.primaryText || '');
+        const s = normalizeQuery(c.secondaryText || '');
+        return n.includes(qLower) || p.includes(qLower) || s.includes(qLower);
+      });
+
+      const photonMatches = await searchPhotonDirect(trimmed, signal);
+
+      const combined = [
+        ...catalogMatches,
+        ...photonMatches.filter(pm => !catalogMatches.some(cm => cm.name?.toLowerCase() === pm.name?.toLowerCase()))
+      ];
+
+      if (combined.length > 0) {
+        suggestions = combined.slice(0, 8);
+        for (const item of suggestions) {
+          if (item.mapbox_id && Number.isFinite(item.latitude) && Number.isFinite(item.longitude)) {
+            retrieveCache.set(`ret:${item.mapbox_id}`, {
+              timestamp: Date.now(),
+              data: {
+                label: item.displayName || item.name || '',
+                lat: Number(item.latitude),
+                lng: Number(item.longitude),
+                address: item.address,
+                placeName: item.primaryText || item.name,
+                locality: item.secondaryText,
+                city: item.city,
+                state: item.state,
+                country: item.country
+              }
+            });
+          }
+        }
       }
-    } catch (fallbackError) {
-      if (signal?.aborted) {
-        throw fallbackError;
-      }
-      // If it's a network connection error (e.g. backend offline), re-throw so the UI can inform the user
-      if (
-        fallbackError instanceof Error &&
-        (fallbackError.message.includes('Network Connection Error') ||
-          fallbackError.message.includes('Failed to fetch') ||
-          fallbackError.message.includes('NetworkError'))
-      ) {
-        throw fallbackError;
-      }
+    } catch {
       suggestions = [];
     }
   }
@@ -347,7 +570,35 @@ export async function reverseGeocodeLocation(
     }
   } catch (error) {
     if (signal?.aborted) throw error;
-    console.warn('[Reverse Geocode Error]', error);
+    try {
+      const photonRev = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`, { signal });
+      if (photonRev.ok) {
+        const revData = await photonRev.json();
+        const feat = revData?.features?.[0];
+        if (feat) {
+          const props = feat.properties || {};
+          const primary = (props.name || props.street || props.city || 'Location').trim();
+          const secParts = [props.street, props.suburb || props.district, props.city || props.town, props.state, props.country].filter(Boolean);
+          const secondary = secParts.slice(0, 3).join(', ');
+          const display = secondary ? `${primary}, ${secondary}` : primary;
+          const loc: LocationInfo = {
+            label: display,
+            lat,
+            lng: lon,
+            address: { road: props.street || '', suburb: props.suburb || '', city: props.city || props.town || '', state: props.state || '', country: props.country || '' },
+            placeName: primary,
+            locality: secondary,
+            city: props.city || props.town,
+            state: props.state,
+            country: props.country
+          };
+          reverseCache.set(cacheKey, { timestamp: Date.now(), data: loc });
+          return loc;
+        }
+      }
+    } catch {
+      // Ignore network errors on reverse geocode fallback
+    }
   }
 
   const fallbackLabel = `Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
