@@ -110,7 +110,13 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
             errText.includes('Failed to fetch') ||
             errText.includes('NetworkError')
           ) {
-            setErrorMsg('Backend server unreachable. Please make sure the FastAPI server is running on port 5000.');
+            const isLocal = typeof window !== 'undefined' && 
+              (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            setErrorMsg(
+              isLocal
+                ? 'Backend server unreachable. Please make sure the FastAPI server is running on port 5000.'
+                : 'Cloud backend unreachable. The Render free-tier instance may be sleeping or has exceeded monthly limits.'
+            );
           } else {
             setErrorMsg('Unable to find this location. Try entering a nearby landmark, street, or city.');
           }

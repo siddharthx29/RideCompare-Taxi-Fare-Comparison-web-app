@@ -10,6 +10,17 @@ from backend.app.models.db_models import Base, User, Search, Analytics, Location
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = settings.DATABASE_URL
+if os.getenv("VERCEL") and (not DATABASE_URL or "sqlite" in DATABASE_URL):
+    import shutil
+    tmp_db = Path("/tmp") / "ridecompare.db"
+    src_db = APP_DIR / "ridecompare.db"
+    if not tmp_db.exists() and src_db.exists():
+        try:
+            shutil.copyfile(src_db, tmp_db)
+        except Exception:
+            pass
+    DATABASE_URL = f"sqlite:///{tmp_db}"
+
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -24,7 +35,7 @@ else:
     except Exception as err:
         logger.error("Failed to connect to configured PostgreSQL database: %s", err)
         logger.warning("Falling back to local SQLite database so the application stays operational.")
-        sqlite_path = APP_DIR / "ridecompare.db"
+        sqlite_path = Path("/tmp/ridecompare.db") if os.getenv("VERCEL") else (APP_DIR / "ridecompare.db")
         DATABASE_URL = f"sqlite:///{sqlite_path}"
         engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 

@@ -34,7 +34,7 @@ const getErrorMessage = (payload: unknown, status: number): string => {
   return message || fallback;
 };
 
-const tryFetch = async (url: string, options: RequestInit, timeoutMs = 45000): Promise<Response | null> => {
+const tryFetch = async (url: string, options: RequestInit, timeoutMs = 6000): Promise<Response | null> => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
