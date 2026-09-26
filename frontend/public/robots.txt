@@ -1,0 +1,17 @@
+# https://www.robotstxt.org/robotstxt.html
+# Robots exclusion file for RideCompare
+
+User-agent: *
+Allow: /
+
+# Prevent crawling of backend API endpoints and system health checks
+Disallow: /api/
+Disallow: /health
+
+# Prevent indexing internal admin or telemetry query views
+Disallow: /*?admin=*
+Disallow: /*?tab=*
+Disallow: /*?view=admin
+
+# Google Search Engine XML Sitemap
+Sitemap: https://ridecompare.vercel.app/sitemap.xml

@@ -84,8 +84,26 @@ app.include_router(route.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(ml_endpoints.router)
 
-# Serve built frontend in production if available
+PUBLIC_DIR = ROOT_DIR / "frontend" / "public"
 DIST_DIR = ROOT_DIR / "frontend" / "dist"
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def get_sitemap():
+    for candidate in [DIST_DIR / "sitemap.xml", PUBLIC_DIR / "sitemap.xml"]:
+        if candidate.exists():
+            return FileResponse(candidate, media_type="application/xml")
+    raise HTTPException(status_code=404, detail="sitemap.xml not found")
+
+
+@app.get("/robots.txt", include_in_schema=False)
+async def get_robots():
+    for candidate in [DIST_DIR / "robots.txt", PUBLIC_DIR / "robots.txt"]:
+        if candidate.exists():
+            return FileResponse(candidate, media_type="text/plain")
+    raise HTTPException(status_code=404, detail="robots.txt not found")
+
+
+# Serve built frontend in production if available
 
 if DIST_DIR.exists():
     assets_dir = DIST_DIR / "assets"
