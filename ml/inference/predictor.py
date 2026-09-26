@@ -2,12 +2,27 @@ import os
 import json
 import logging
 from typing import Dict, Any, List, Optional
-import numpy as np
-import pandas as pd
-import joblib
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+try:
+    import joblib
+except ImportError:
+    joblib = None
 
 from ml.inference.normalizer import normalize_fare_record, engineer_features
-from ml.training.anomaly_detection import evaluate_anomaly
+try:
+    from ml.training.anomaly_detection import evaluate_anomaly
+except ImportError:
+    evaluate_anomaly = None
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +53,9 @@ class FareIntelligenceEngine:
         self.load_models()
 
     def load_models(self) -> bool:
+        if joblib is None or pd is None or np is None:
+            self.loaded = False
+            return False
         try:
             reg_path = os.path.join(self.models_dir, "fare_regressor.joblib")
             kmeans_path = os.path.join(self.models_dir, "kmeans_cluster.joblib")
@@ -129,12 +147,17 @@ class FareIntelligenceEngine:
             norm_rec["fare_per_km"] = synthetic_fare / max(0.1, distance_km)
             norm_rec["fare_per_min"] = synthetic_fare / max(1.0, duration_min)
 
-        df_single = pd.DataFrame([norm_rec])
-        df_feat = engineer_features(df_single)
+        df_feat = None
+        if self.loaded and pd is not None:
+            try:
+                df_single = pd.DataFrame([norm_rec])
+                df_feat = engineer_features(df_single)
+            except Exception:
+                df_feat = None
 
         actual_fare = float(raw_fare_val) if has_live_price else None
 
-        if not self.loaded or is_international:
+        if not self.loaded or is_international or df_feat is None:
             # Multi-currency theoretical regression baseline
             b_fare = float(norm_rec.get("base_fare", 0.0))
             d_fare = float(norm_rec.get("distance_fare", 0.0))

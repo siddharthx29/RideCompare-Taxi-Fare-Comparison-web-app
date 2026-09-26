@@ -1,6 +1,15 @@
+import math
 from typing import Dict, Any
-import numpy as np
-import pandas as pd
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -9,7 +18,7 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return default
     try:
         val = float(value)
-        return default if np.isnan(val) or np.isinf(val) else val
+        return default if math.isnan(val) or math.isinf(val) else val
     except (ValueError, TypeError):
         return default
 
@@ -50,7 +59,9 @@ def normalize_fare_record(record: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+def engineer_features(df: Any) -> Any:
+    if pd is None or not isinstance(df, getattr(pd, 'DataFrame', type(None))):
+        return df
     """
     Transforms raw tabular transit data:
     - Handles missing values via median and mode imputation

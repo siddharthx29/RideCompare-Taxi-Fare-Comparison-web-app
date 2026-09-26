@@ -1,8 +1,15 @@
 from typing import Dict, Any, Tuple
-import numpy as np
-import pandas as pd
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
+
+try:
+    import numpy as np
+    import pandas as pd
+    from sklearn.ensemble import IsolationForest
+    from sklearn.preprocessing import StandardScaler
+except ImportError:
+    np = None
+    pd = None
+    IsolationForest = Any
+    StandardScaler = Any
 
 
 ANOMALY_FEATURES = [
