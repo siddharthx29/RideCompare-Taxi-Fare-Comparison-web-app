@@ -215,7 +215,19 @@ export async function suggestLocations(
           };
         });
       }
-    } catch {
+    } catch (fallbackError) {
+      if (signal?.aborted) {
+        throw fallbackError;
+      }
+      // If it's a network connection error (e.g. backend offline), re-throw so the UI can inform the user
+      if (
+        fallbackError instanceof Error &&
+        (fallbackError.message.includes('Network Connection Error') ||
+          fallbackError.message.includes('Failed to fetch') ||
+          fallbackError.message.includes('NetworkError'))
+      ) {
+        throw fallbackError;
+      }
       suggestions = [];
     }
   }

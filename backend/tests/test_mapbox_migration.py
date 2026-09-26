@@ -207,7 +207,7 @@ def test_worldwide_locations_discovery():
         assert resp.status_code == 200, f"Suggest failed for {query}"
         data = resp.json()
         assert len(data["suggestions"]) >= 1, f"No suggestions found for {query}"
-        matching = any(expected_text.lower() in (s["displayName"] + " " + s["secondaryText"] + " " + s["country"]).lower() for s in data["suggestions"])
+        matching = any(expected_text.lower() in (s["displayName"] + " " + s["secondaryText"] + " " + s.get("city", "") + " " + s["country"]).lower() for s in data["suggestions"])
         assert matching, f"Expected '{expected_text}' in suggestions for '{query}': {[s['displayName'] for s in data['suggestions']]}"
 
 

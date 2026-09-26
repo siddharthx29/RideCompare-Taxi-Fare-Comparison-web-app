@@ -209,10 +209,10 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
         "mapbox_id": "mbx:poi:kalamassery",
         "name": "Kalamassery",
         "primaryText": "Kalamassery",
-        "secondaryText": "Ernakulam, Kerala",
-        "displayName": "Kalamassery, Ernakulam, Kerala",
-        "display_name": "Kalamassery, Ernakulam, Kerala",
-        "formatted_address": "Kalamassery, Ernakulam, Kerala 682033, India",
+        "secondaryText": "Kochi, Ernakulam, Kerala",
+        "displayName": "Kalamassery, Kochi, Ernakulam, Kerala",
+        "display_name": "Kalamassery, Kochi, Ernakulam, Kerala",
+        "formatted_address": "Kalamassery, Kochi, Ernakulam, Kerala 682033, India",
         "latitude": 10.0545,
         "longitude": 76.3190,
         "lat": 10.0545,
@@ -1663,6 +1663,37 @@ async def _search_geoapify(
     return []
 
 
+async def _search_photon(
+    query: str,
+    near_lat: Optional[float] = None,
+    near_lon: Optional[float] = None,
+    limit: int = 8,
+) -> List[Dict[str, Any]]:
+    """Execute Photon (OSM) search as free worldwide fallback when Mapbox is unavailable."""
+    url = f"{settings.PHOTON_BASE_URL}/api/"
+    params: Dict[str, Any] = {
+        "q": query,
+        "limit": limit,
+    }
+    if near_lat is not None and near_lon is not None:
+        params["lat"] = near_lat
+        params["lon"] = near_lon
+    try:
+        async with httpx.AsyncClient(headers=DEFAULT_HEADERS) as client:
+            resp = await client.get(url, params=params, timeout=PHOTON_TIMEOUT)
+            if resp.status_code == 200:
+                features = resp.json().get("features", [])
+                results = []
+                for feat in features:
+                    parsed = _format_photon_feature(feat)
+                    if parsed:
+                        results.append(parsed)
+                return results
+    except Exception as err:
+        logger.debug("Photon fallback search failed: %s", err)
+    return []
+
+
 # =====================================================================
 # Fallback / Catalog Lookup (for testing or token-absent mode)
 # =====================================================================
@@ -1702,7 +1733,7 @@ async def _perform_suggest(
     country: Optional[str] = None,
     limit: int = 8,
 ) -> Tuple[List[Dict[str, Any]], str]:
-    """Unified suggest pipeline with Mapbox Search Box /suggest."""
+    """Unified suggest pipeline with Mapbox Search Box /suggest and Photon fallback."""
     clean_query = " ".join(query.split())
     norm_query = _normalize(clean_query)
     cache_key = f"suggest:{norm_query}:{proximity}:{country}:{limit}"
@@ -1729,16 +1760,23 @@ async def _perform_suggest(
             )
 
     if not suggestions:
-        db_items = _lookup_db_cache(clean_query, near_lat, near_lon, limit=limit)
         catalog_items = _match_fallback_catalog(clean_query, limit=limit)
-        combined = db_items + catalog_items
+        db_items = _lookup_db_cache(clean_query, near_lat, near_lon, limit=limit)
+        combined = catalog_items + db_items
+
+        if not combined:
+            photon_items = await _search_photon(clean_query, near_lat, near_lon, limit=limit)
+            if photon_items:
+                combined.extend(photon_items)
+                asyncio.create_task(asyncio.to_thread(_store_db_cache, photon_items, clean_query))
 
         for item in combined:
             primary = item.get("primaryText") or item.get("name") or ""
             sec = item.get("secondaryText") or ""
             disp = item.get("displayName") or item.get("display_name") or primary
+            item_id = item.get("mapbox_id") or item.get("place_id") or f"mbx:mock:{_normalize(primary)}"
             sug = {
-                "mapbox_id": item.get("mapbox_id") or item.get("place_id") or f"mbx:mock:{_normalize(primary)}",
+                "mapbox_id": item_id,
                 "name": primary,
                 "primaryText": primary,
                 "secondaryText": sec,
@@ -1764,6 +1802,7 @@ async def _perform_suggest(
                 sug["lat"] = item["latitude"]
                 sug["lon"] = item["longitude"]
                 sug["lng"] = item["longitude"]
+            _cache_set(f"retrieve:{item_id}", sug)
             suggestions.append(sug)
 
     deduped = _deduplicate_results(suggestions)[:limit]
@@ -2036,6 +2075,12 @@ async def _perform_location_search(
     # Step 3: Catalog lookup for test locations if still empty
     if not results:
         results.extend(_match_fallback_catalog(clean_query, limit=limit))
+
+    # Step 3b: Free Photon (OSM) worldwide fallback if still empty
+    if not results:
+        photon_results = await _search_photon(clean_query, near_lat, near_lon, limit=limit)
+        if photon_results:
+            results.extend(photon_results)
 
     # Step 4: Relevance Ranking
     results.sort(key=lambda item: _rank_result(item, clean_query, near_lat, near_lon), reverse=True)

@@ -104,7 +104,16 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
         if (!controller.signal.aborted) {
           setLoading(false);
           setSuggestions([]);
-          setErrorMsg('Unable to find this location. Try entering a nearby landmark, street, or city.');
+          const errText = err instanceof Error ? err.message : String(err || '');
+          if (
+            errText.includes('Network Connection Error') ||
+            errText.includes('Failed to fetch') ||
+            errText.includes('NetworkError')
+          ) {
+            setErrorMsg('Backend server unreachable. Please make sure the FastAPI server is running on port 5000.');
+          } else {
+            setErrorMsg('Unable to find this location. Try entering a nearby landmark, street, or city.');
+          }
         }
       }
     }, 300);
