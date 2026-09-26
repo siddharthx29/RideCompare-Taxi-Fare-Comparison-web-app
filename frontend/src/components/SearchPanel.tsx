@@ -40,21 +40,14 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         const { latitude, longitude } = position.coords;
         try {
           const revResult = await reverseGeocodeLocation(latitude, longitude);
-          const addressLabel = revResult?.displayName || revResult?.name || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-          const locationData: LocationInfo = {
-            label: addressLabel,
+          const locationData: LocationInfo = revResult || {
+            label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
             lat: latitude,
-            lng: longitude,
-            address: revResult?.address,
-            placeName: revResult?.primaryText || revResult?.name,
-            locality: revResult?.secondaryText,
-            city: revResult?.address?.city || revResult?.address?.town,
-            state: revResult?.address?.state,
-            country: revResult?.address?.country
+            lng: longitude
           };
 
           onSourceSelect(locationData);
-          setSourceInput(addressLabel);
+          setSourceInput(locationData.label);
           setSourceError(null);
         } catch {
           const fallback: LocationInfo = {
@@ -173,14 +166,14 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       </form>
 
       <p className="mt-3 text-center text-[10px] text-[var(--text-secondary)]">
-        Search powered by Photon &amp; OpenStreetMap contributors •{' '}
+        Location search powered by{' '}
         <a
           className="underline hover:text-indigo-500 transition-colors"
-          href="https://www.openstreetmap.org/copyright"
+          href="https://www.mapbox.com"
           target="_blank"
           rel="noreferrer"
         >
-          OpenStreetMap data
+          Mapbox Search Box &amp; Geocoding
         </a>
       </p>
     </div>

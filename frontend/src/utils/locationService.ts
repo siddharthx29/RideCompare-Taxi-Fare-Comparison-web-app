@@ -5,16 +5,27 @@ export type GeocodeAddress = Record<string, string>;
 
 export interface GeocodeResult {
   id?: number | string;
+  mapbox_id?: string;
   name?: string;
   primaryText?: string;
   secondaryText?: string;
   displayName?: string;
   display_name?: string;
+  place_formatted?: string;
+  full_address?: string;
+  feature_type?: string;
+  formatted_address?: string;
   latitude?: number;
   longitude?: number;
-  lat: string | number;
+  lat?: string | number;
   lng?: string | number;
   lon?: string | number;
+  city?: string;
+  district?: string;
+  suburb?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
   category?: string;
   address?: Record<string, string>;
   source?: string;
@@ -22,8 +33,26 @@ export interface GeocodeResult {
   importance?: number;
 }
 
+export type MapboxSuggestion = GeocodeResult;
+
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes in-memory cache
-const clientCache = new Map<string, { timestamp: number; data: GeocodeResult[] }>();
+const suggestCache = new Map<string, { timestamp: number; data: MapboxSuggestion[] }>();
+const retrieveCache = new Map<string, { timestamp: number; data: LocationInfo }>();
+const reverseCache = new Map<string, { timestamp: number; data: LocationInfo }>();
+
+/**
+ * Generates a unique UUIDv4 session token for Mapbox Search Box interactive sessions.
+ */
+export const generateSessionToken = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 /**
  * Normalizes query string for reliable cache hits and fuzzy matching
@@ -39,9 +68,9 @@ export const buildLocationContext = (location: LocationInfo | null): string => {
   if (!location) return '';
   const address = location.address || {};
   return [
-    address.city || address.town || address.municipality || address.village || address.suburb,
-    address.state,
-    address.country
+    address.city || address.town || address.municipality || address.village || address.suburb || location.city,
+    address.state || location.state,
+    address.country || location.country
   ]
     .filter(Boolean)
     .join(', ');
@@ -68,13 +97,13 @@ export const formatPlaceDisplay = (
   if (!secondary && address) {
     const parts = [
       address.road,
-      address.suburb || address.neighbourhood || address.quarter,
-      address.city || address.town || address.municipality || address.village,
+      address.suburb || address.neighbourhood,
+      address.city || address.town,
       address.district,
-      address.state
+      address.state,
+      address.country
     ].filter(Boolean) as string[];
 
-    // Remove duplicates or components that already match primary name
     const normPrimary = normalizeQuery(primary);
     const uniqueParts = parts.filter(p => !normPrimary.includes(normalizeQuery(p)));
     secondary = uniqueParts.slice(0, 3).join(', ');
@@ -85,62 +114,91 @@ export const formatPlaceDisplay = (
 };
 
 /**
- * Queries location autocomplete via backend location service:
- * Photon primary -> Cache -> Fallbacks with local client caching.
+ * Primary Mapbox Search Box /suggest:
+ * - Debounced interactive search-as-you-type
+ * - Sends session token for search sessions
+ * - Applies proximity biasing from nearbyLocation if available
+ * - Worldwide place discovery (not restricted to India)
  */
-export async function searchLocations(
+export async function suggestLocations(
   query: string,
+  sessionToken: string,
   nearbyLocation: LocationInfo | null = null,
   signal?: AbortSignal
-): Promise<GeocodeResult[]> {
+): Promise<MapboxSuggestion[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) {
     return [];
   }
 
   const normQuery = normalizeQuery(trimmed);
-  const context = buildLocationContext(nearbyLocation);
-  const nearCoordKey = nearbyLocation
+  const nearKey = nearbyLocation
     ? `${nearbyLocation.lat.toFixed(2)},${nearbyLocation.lng.toFixed(2)}`
     : '';
-  const cacheKey = `${normQuery}|${nearCoordKey}|${context}`;
+  const cacheKey = `sug:${normQuery}|${nearKey}`;
 
-  // 1. Check in-memory client cache
-  const cached = clientCache.get(cacheKey);
+  // 1. Check client memory cache
+  const cached = suggestCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data;
   }
 
-  let results: GeocodeResult[] = [];
+  const params = new URLSearchParams({
+    q: trimmed,
+    session_token: sessionToken,
+    limit: '8'
+  });
 
-  // 2. Primary: Query RideCompare backend location service
+  if (nearbyLocation && Number.isFinite(nearbyLocation.lat) && Number.isFinite(nearbyLocation.lng)) {
+    params.set('near_lat', String(nearbyLocation.lat));
+    params.set('near_lon', String(nearbyLocation.lng));
+    params.set('proximity', `${nearbyLocation.lng.toFixed(5)},${nearbyLocation.lat.toFixed(5)}`);
+  }
+
+  let suggestions: MapboxSuggestion[] = [];
+
   try {
-    const params = new URLSearchParams({ q: trimmed, limit: '8' });
-    if (context) params.set('context', context);
-    if (nearbyLocation) {
-      params.set('near_lat', String(nearbyLocation.lat));
-      params.set('near_lon', String(nearbyLocation.lng));
-    }
-
-    // Try dedicated /api/location/search endpoint first
-    let response = await apiFetch(`/api/location/search?${params.toString()}`, { signal });
+    let response = await apiFetch(`/api/location/suggest?${params.toString()}`, { signal });
     if (!response.ok) {
-      // Fallback to /api/geocode endpoint
-      response = await apiFetch(`/api/geocode?${params.toString()}`, { signal });
+      response = await apiFetch(`/location/suggest?${params.toString()}`, { signal });
     }
 
     if (response.ok) {
-      const rawData = await response.json();
-      const rawList: GeocodeResult[] = Array.isArray(rawData)
-        ? rawData
-        : Array.isArray(rawData?.results)
-        ? rawData.results
+      const data = await response.json();
+      const rawList: MapboxSuggestion[] = Array.isArray(data?.suggestions)
+        ? data.suggestions
+        : Array.isArray(data)
+        ? data
         : [];
 
-      if (rawList.length > 0) {
-        results = rawList.map((item) => {
-          const lat = Number(item.latitude ?? item.lat);
-          const lng = Number(item.longitude ?? item.lng ?? item.lon);
+      suggestions = rawList.map((item) => {
+        const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
+          item.primaryText || item.name || '',
+          item.secondaryText || item.place_formatted,
+          item.displayName || item.display_name,
+          item.address
+        );
+        return {
+          ...item,
+          mapbox_id: item.mapbox_id || String(item.id || ''),
+          primaryText,
+          secondaryText,
+          displayName,
+          display_name: displayName,
+        };
+      });
+    }
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
+    // Backward-compatibility fallback to /api/location/search
+    try {
+      const fallbackRes = await apiFetch(`/api/location/search?q=${encodeURIComponent(trimmed)}&limit=8`, { signal });
+      if (fallbackRes.ok) {
+        const fbData = await fallbackRes.json();
+        const list: MapboxSuggestion[] = Array.isArray(fbData?.results) ? fbData.results : [];
+        suggestions = list.map((item) => {
           const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
             item.primaryText || item.name || '',
             item.secondaryText,
@@ -149,170 +207,154 @@ export async function searchLocations(
           );
           return {
             ...item,
+            mapbox_id: item.mapbox_id || String(item.id || ''),
             primaryText,
             secondaryText,
             displayName,
             display_name: displayName,
-            latitude: lat,
-            longitude: lng,
-            lat,
-            lng,
-            lon: lng
-          };
-        });
-      }
-    }
-  } catch (backendError) {
-    // If request was explicitly aborted due to user typing a newer character, propagate abort
-    if (signal?.aborted) {
-      throw backendError;
-    }
-    // 3. Fallback: Direct browser query to OpenStreetMap Nominatim if backend is unreachable
-    try {
-      const directUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        trimmed
-      )}&format=jsonv2&addressdetails=1&limit=6&accept-language=en`;
-      const directRes = await fetch(directUrl, { signal });
-      if (directRes.ok) {
-        const raw = (await directRes.json()) as Array<{
-          name?: string;
-          display_name: string;
-          lat: string;
-          lon: string;
-          type?: string;
-          address?: Record<string, string>;
-        }>;
-
-        results = raw.map((item) => {
-          const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
-            item.name || '',
-            undefined,
-            item.display_name,
-            item.address
-          );
-          const lat = parseFloat(item.lat);
-          const lng = parseFloat(item.lon);
-          return {
-            name: primaryText,
-            primaryText,
-            secondaryText,
-            displayName,
-            display_name: displayName,
-            latitude: lat,
-            longitude: lng,
-            lat,
-            lng,
-            lon: lng,
-            category: item.type,
-            address: item.address || {},
-            source: 'browser_fallback'
           };
         });
       }
     } catch {
-      results = [];
+      suggestions = [];
     }
   }
 
-  // 4. Save to client cache
-  if (results.length > 0) {
-    clientCache.set(cacheKey, { timestamp: Date.now(), data: results });
+  if (suggestions.length > 0) {
+    suggestCache.set(cacheKey, { timestamp: Date.now(), data: suggestions });
   }
 
-  return results;
+  return suggestions;
 }
 
 /**
- * Reverse geocodes coordinates to a detailed human-readable local address
+ * Mapbox Search Box /retrieve:
+ * - Triggered ONLY upon user selecting a suggestion
+ * - Retrieves authoritative coordinates (latitude, longitude) and normalized address
+ * - Completes session billing cycle
+ */
+export async function retrieveLocation(
+  mapboxId: string,
+  sessionToken: string,
+  signal?: AbortSignal
+): Promise<LocationInfo | null> {
+  if (!mapboxId) return null;
+
+  const cacheKey = `ret:${mapboxId}`;
+  const cached = retrieveCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      id: mapboxId,
+      session_token: sessionToken
+    });
+
+    let response = await apiFetch(`/api/location/retrieve?${params.toString()}`, { signal });
+    if (!response.ok) {
+      response = await apiFetch(`/location/retrieve?${params.toString()}`, { signal });
+    }
+
+    if (response.ok) {
+      const item = await response.json();
+      const lat = Number(item.latitude ?? item.lat);
+      const lng = Number(item.longitude ?? item.lng ?? item.lon);
+
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        const chosenLabel = item.displayName || item.display_name || item.formatted_address || item.primaryText || item.name || 'Selected Location';
+        const loc: LocationInfo = {
+          label: chosenLabel,
+          lat,
+          lng,
+          address: item.address,
+          placeName: item.primaryText || item.name,
+          locality: item.secondaryText || item.suburb || item.locality,
+          city: item.city || item.address?.city || item.address?.town,
+          state: item.state || item.address?.state,
+          country: item.country || item.address?.country
+        };
+        retrieveCache.set(cacheKey, { timestamp: Date.now(), data: loc });
+        return loc;
+      }
+    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    console.warn('[Retrieve Location Error]', error);
+  }
+
+  return null;
+}
+
+/**
+ * Reverse geocodes coordinates to a clean structured local address
  */
 export async function reverseGeocodeLocation(
   lat: number,
   lon: number,
   signal?: AbortSignal
-): Promise<GeocodeResult | null> {
+): Promise<LocationInfo | null> {
   const cacheKey = `rev:${lat.toFixed(5)},${lon.toFixed(5)}`;
-  const cached = clientCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS && cached.data.length > 0) {
-    return cached.data[0];
+  const cached = reverseCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
   }
 
   try {
     let response = await apiFetch(`/api/location/reverse?lat=${lat}&lon=${lon}`, { signal });
     if (!response.ok) {
-      response = await apiFetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`, { signal });
+      response = await apiFetch(`/location/reverse?lat=${lat}&lon=${lon}`, { signal });
     }
 
     if (response.ok) {
-      const data = (await response.json()) as GeocodeResult;
-      if (data && (data.displayName || data.display_name || data.name)) {
+      const data = await response.json();
+      if (data && (data.displayName || data.display_name || data.name || data.formatted_address)) {
         const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
           data.primaryText || data.name || '',
           data.secondaryText,
-          data.displayName || data.display_name,
+          data.displayName || data.display_name || data.formatted_address,
           data.address
         );
-        const enriched: GeocodeResult = {
-          ...data,
-          primaryText,
-          secondaryText,
-          displayName,
-          display_name: displayName,
-          latitude: lat,
-          longitude: lon,
+
+        const loc: LocationInfo = {
+          label: displayName,
           lat,
           lng: lon,
-          lon
+          address: data.address,
+          placeName: primaryText,
+          locality: secondaryText || data.suburb,
+          city: data.city || data.address?.city || data.address?.town,
+          state: data.state || data.address?.state,
+          country: data.country || data.address?.country
         };
-        clientCache.set(cacheKey, { timestamp: Date.now(), data: [enriched] });
-        return enriched;
+
+        reverseCache.set(cacheKey, { timestamp: Date.now(), data: loc });
+        return loc;
       }
     }
-  } catch {
-    // Direct browser reverse fallback
-    try {
-      const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=en`;
-      const directRes = await fetch(nomUrl, { signal });
-      if (directRes.ok) {
-        const item = await directRes.json();
-        const { primaryText, secondaryText, displayName } = formatPlaceDisplay(
-          item.name || '',
-          undefined,
-          item.display_name,
-          item.address
-        );
-        const res: GeocodeResult = {
-          name: primaryText,
-          primaryText,
-          secondaryText,
-          displayName,
-          display_name: displayName,
-          latitude: lat,
-          longitude: lon,
-          lat,
-          lng: lon,
-          lon,
-          address: item.address || {},
-          source: 'browser_fallback'
-        };
-        clientCache.set(cacheKey, { timestamp: Date.now(), data: [res] });
-        return res;
-      }
-    } catch {
-      // Fallback below
-    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    console.warn('[Reverse Geocode Error]', error);
   }
 
   const fallbackLabel = `Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
   return {
-    name: fallbackLabel,
-    primaryText: fallbackLabel,
-    displayName: fallbackLabel,
-    display_name: fallbackLabel,
-    latitude: lat,
-    longitude: lon,
+    label: fallbackLabel,
     lat,
     lng: lon,
-    lon,
     address: {}
   };
+}
+
+/**
+ * Backward-compatible searchLocations helper (for any callers expecting GeocodeResult[])
+ */
+export async function searchLocations(
+  query: string,
+  nearbyLocation: LocationInfo | null = null,
+  signal?: AbortSignal
+): Promise<GeocodeResult[]> {
+  const sessionToken = generateSessionToken();
+  return suggestLocations(query, sessionToken, nearbyLocation, signal);
 }

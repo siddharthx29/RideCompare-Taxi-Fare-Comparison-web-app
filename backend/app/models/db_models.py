@@ -120,7 +120,7 @@ class Location(Base):
     state = Column(String(255), nullable=True)
     postcode = Column(String(50), nullable=True)
     country = Column(String(100), default='India')
-    provider = Column(String(50), default='photon')
+    provider = Column(String(50), default='mapbox')
     provider_place_id = Column(String(100), index=True, nullable=True)
     search_count = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
