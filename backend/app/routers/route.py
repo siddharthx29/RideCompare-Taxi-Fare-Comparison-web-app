@@ -48,7 +48,8 @@ class RedirectPayload(BaseModel):
 
 
 PUBLIC_PROVIDER_FIELDS = (
-    "provider", "vehicleType", "distanceKm", "etaMinutes", "actualFare", "estimatedFare", "currency",
+    "provider", "vehicleType", "distanceKm", "etaMinutes", "actualFare", "estimatedFare",
+    "fareMin", "fareMax", "fare_min", "fare_max", "currency",
     "currencySymbol", "surgeMultiplier", "baseFare", "distanceFare", "durationFare",
     "platformFee", "tollEstimate", "costPerKm", "costPerMin", "appDeepLink", "webLink",
     "isCheapest", "isFastest", "isMostEfficient", "isBestValue", "isStale", "quoteAgeSeconds", "retrieved_at",
@@ -76,6 +77,10 @@ def _public_comparison(comparison: Dict[str, Any]) -> Dict[str, Any]:
             **{key: provider[key] for key in PUBLIC_PROVIDER_FIELDS if key in provider},
             "actualFare": provider.get("actualFare"),
             "estimatedFare": provider.get("actualFare") if provider.get("liveAvailable", True) and provider.get("actualFare") is not None else provider.get("predictedFare", 0),
+            "fareMin": provider.get("fareMin", provider.get("fare_min")),
+            "fareMax": provider.get("fareMax", provider.get("fare_max")),
+            "fare_min": provider.get("fare_min", provider.get("fareMin")),
+            "fare_max": provider.get("fare_max", provider.get("fareMax")),
             "isLive": provider.get("isLive", provider.get("is_live", True)),
             "liveAvailable": provider.get("liveAvailable", provider.get("live_available", True)),
             "isStale": provider.get("is_stale", provider.get("isStale", False)),

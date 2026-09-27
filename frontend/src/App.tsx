@@ -159,7 +159,13 @@ function App() {
         const dFare = Math.round(distKm * perKmRate);
         const tFare = Math.round(durMin * perMinRate);
         const pFee = 5;
-        const total = Math.round(base + dFare + tFare + pFee);
+        const isBike = vType.toLowerCase().includes('bike');
+        const isAuto = vType.toLowerCase().includes('auto');
+        const downPct = isBike ? 0.05 : isAuto ? 0.06 : 0.07;
+        const upPct = isBike ? 0.07 : isAuto ? 0.09 : 0.12;
+        const fMin = Math.round(total * (1 - downPct));
+        const fMax = Math.round(total * (1 + upPct));
+
         return {
           provider: name,
           vehicleType: vType,
@@ -167,10 +173,14 @@ function App() {
           etaMinutes: Math.max(2, Math.round(durMin * 0.2 + 2)),
           actualFare: total,
           estimatedFare: total,
+          fareMin: fMin,
+          fareMax: fMax,
+          fare_min: fMin,
+          fare_max: fMax,
           predictedFare: total,
-          predictedFareMin: Math.round(total * 0.95),
-          predictedFareMax: Math.round(total * 1.08),
-          typicalFareRange: `₹${Math.round(total * 0.95)} - ₹${Math.round(total * 1.08)}`,
+          predictedFareMin: fMin,
+          predictedFareMax: fMax,
+          typicalFareRange: `₹${fMin} - ₹${fMax}`,
           demandLevel: 'NORMAL',
           priceTrend: 'STABLE',
           priceAnomaly: 'NORMAL',

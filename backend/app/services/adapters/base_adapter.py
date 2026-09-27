@@ -49,6 +49,8 @@ class QuoteObject:
             "estimatedFare": self.actual_fare,
             "fare_min": self.fare_min,
             "fare_max": self.fare_max,
+            "fareMin": self.fare_min,
+            "fareMax": self.fare_max,
             "currency": self.currency,
             "currencySymbol": self.currency_symbol,
             "etaMinutes": self.eta_minutes,

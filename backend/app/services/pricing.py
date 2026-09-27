@@ -281,14 +281,31 @@ def calculate_fares_and_scores(
             t_fare = duration_mins * min_rate
             raw_fare = (base + d_fare + t_fare) * effective_surge + plat + toll_charge
             
+            # Compute in-between live rate spread according to demands, surge, and transport type
+            v_low = (v_type or "").lower()
+            if zero_surge:
+                down_pct = 0.04
+                up_pct = 0.05
+            else:
+                surge_excess = max(0.0, effective_surge - 1.0)
+                down_pct = min(0.12, 0.05 + surge_excess * 0.07)
+                up_pct = min(0.20, 0.06 + surge_excess * 0.12)
+                if "bike" in v_low or "moto" in v_low:
+                    down_pct *= 0.85
+                    up_pct *= 0.85
+                elif "auto" in v_low or "tuk" in v_low:
+                    down_pct *= 0.92
+                    up_pct *= 0.92
+
             if currency in ["USD", "EUR", "GBP", "SGD", "AUD", "CAD", "AED", "BRL"]:
                 actual_fare = round(raw_fare, 2)
-                f_min = round(actual_fare * 0.95, 2)
-                f_max = round(actual_fare * 1.05, 2)
+                f_min = round(max(base, actual_fare * (1.0 - down_pct)), 2)
+                f_max = round(max(f_min + 0.50, actual_fare * (1.0 + up_pct)), 2)
             else:
                 actual_fare = round(raw_fare)
-                f_min = round(actual_fare * 0.95)
-                f_max = round(actual_fare * 1.05)
+                step_min = 2 if ("bike" in v_low or "moto" in v_low) else (5 if ("auto" in v_low or "tuk" in v_low) else 10)
+                f_min = round(max(base, actual_fare * (1.0 - down_pct)))
+                f_max = round(max(f_min + step_min, actual_fare * (1.0 + up_pct)))
 
             eta = max(2, round(duration_mins * config.get("etaMultiplier", 1.0)))
 

@@ -437,12 +437,19 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
         <div className="pt-3 flex items-end justify-between">
           <div>
-            <span className="text-[11px] font-medium text-slate-400 block">Lowest Estimated Fare</span>
+            <span className="text-[11px] font-medium text-slate-400 block">Lowest Live In-Between Fare</span>
             <div className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
               <span>{cheapestProvider?.provider}</span>
-              <span className="text-emerald-400 font-extrabold text-lg">
-                {activeSym}{cheapestProvider?.actualFare || cheapestProvider?.estimatedFare}
-              </span>
+              {cheapestProvider && (
+                <>
+                  <span className="text-emerald-400 font-extrabold text-lg">
+                    {activeSym}{cheapestProvider.fareMin ?? Math.round((cheapestProvider.actualFare || cheapestProvider.estimatedFare || 100) * 0.94)} – {activeSym}{cheapestProvider.fareMax ?? Math.round((cheapestProvider.actualFare || cheapestProvider.estimatedFare || 100) * 1.08)}
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-300">
+                    (~{activeSym}{cheapestProvider.actualFare || cheapestProvider.estimatedFare})
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -538,7 +545,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
       <div className="flex items-center gap-3 px-3.5 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[10px] text-[var(--text-secondary)] flex-wrap">
         <span className="font-bold text-[var(--text-primary)]">Pricing Legend:</span>
         <span className="flex items-center gap-1 font-semibold text-emerald-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> LIVE: Live provider price
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> LIVE: In-between live rates (min–max based on demand & surge)
         </span>
         <span className="flex items-center gap-1 font-semibold text-indigo-500 dark:text-indigo-400">
           <Brain size={11} /> ML: ML predicted typical fare
@@ -565,6 +572,27 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           const diffPct = p.predictionDiffPct !== undefined ? p.predictionDiffPct : 0;
           const demand = p.demandLevel || (p.surgeMultiplier >= 1.3 ? 'High' : p.surgeMultiplier > 1.05 ? 'Moderate' : 'Normal');
           const trend = p.priceTrend || 'Stable / Increasing';
+          const sMult = p.surgeMultiplier || 1.0;
+          const isZeroSurge = Boolean(p.zeroSurge);
+          const vTypeLower = (p.vehicleType || '').toLowerCase();
+          const isBike = vTypeLower.includes('bike') || vTypeLower.includes('moto');
+          const isAuto = vTypeLower.includes('auto') || vTypeLower.includes('tuk');
+
+          // Dynamically compute exact in-between live rates according to demand and surge for every transport
+          const liveMin = p.fareMin ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 0.96 : Math.max(0.88, 0.95 - (sMult - 1.0) * 0.07 * (isBike ? 0.85 : 1.0)))) : (p.predictedFareMin ?? Math.round((p.predictedFare || 250) * 0.94)));
+          const liveMax = p.fareMax ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 1.04 : Math.min(1.22, 1.06 + (sMult - 1.0) * 0.12 * (isBike ? 0.85 : 1.0)))) : (p.predictedFareMax ?? Math.round((p.predictedFare || 250) * 1.06)));
+
+          const currentPointFare = liveFare !== null ? liveFare : (p.predictedFare || Math.round((liveMin + liveMax) / 2));
+          const inBetweenPercent = Math.max(10, Math.min(90, Math.round(((currentPointFare - liveMin) / Math.max(1, liveMax - liveMin)) * 100)));
+
+          const demandStatus = isZeroSurge
+            ? { label: 'Zero-Surge Regulated', badgeClass: 'text-amber-500 bg-amber-500/15 border-amber-500/30', barGradient: 'from-amber-400 via-emerald-400 to-emerald-500' }
+            : sMult >= 1.35
+              ? { label: 'Peak Surge Demand', badgeClass: 'text-rose-500 bg-rose-500/15 border-rose-500/30', barGradient: 'from-amber-400 via-rose-500 to-rose-600' }
+              : sMult > 1.05
+                ? { label: 'Moderate Demand', badgeClass: 'text-amber-500 bg-amber-500/15 border-amber-500/30', barGradient: 'from-emerald-400 via-amber-400 to-amber-500' }
+                : { label: 'Standard Demand', badgeClass: 'text-emerald-500 bg-emerald-500/15 border-emerald-500/30', barGradient: 'from-emerald-500 to-teal-500' };
+
           const typicalRange = p.typicalFareRange || `${sym}${p.predictedFareMin ?? Math.round((p.predictedFare || 250) * 0.94)}–${sym}${p.predictedFareMax ?? Math.round((p.predictedFare || 250) * 1.06)}`;
 
           return (
@@ -578,7 +606,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
               }`}
             >
               <div className="p-4 space-y-3">
-                {/* Header Row: Brand & Live Price / Status */}
+                {/* Header Row: Brand & In-Between Live Price / Status */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs shrink-0 ${brand.badgeBg}`}>
@@ -617,7 +645,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                         )}
                         {p.isCheapest && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-400 text-slate-950 border border-amber-500">
-                            💰 Cheapest
+                            💰 Lowest Rate
                           </span>
                         )}
                         {p.isFastest && !p.isCheapest && (
@@ -654,17 +682,22 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
                   </div>
 
-                  {/* Real-time Pricing Authoritative Block */}
+                  {/* Real-time In-Between Live Pricing Block */}
                   <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
                     {hasLivePrice ? (
                       <div className="text-left sm:text-right">
-                        <div className="text-2xl font-black text-[var(--text-primary)] flex items-baseline sm:justify-end gap-1">
-                          {sym}{liveFare}
+                        <div className="text-xl sm:text-2xl font-black text-[var(--text-primary)] flex items-baseline sm:justify-end gap-1.5 tracking-tight">
+                          <span className="text-emerald-600 dark:text-emerald-400">{sym}{liveMin}</span>
+                          <span className="text-xs sm:text-sm font-bold text-[var(--text-secondary)]">to</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">{sym}{liveMax}</span>
                         </div>
-                        <div className="flex items-center sm:justify-end gap-1.5 mt-0.5">
+                        <div className="flex items-center sm:justify-end gap-1.5 mt-0.5 flex-wrap">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            LIVE PRICE
+                            LIVE IN-BETWEEN RATE
+                          </span>
+                          <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-primary)] px-1.5 py-0.5 rounded border border-[var(--border-color)]">
+                            Est: ~{sym}{liveFare}
                           </span>
                           <span className={`text-[10px] font-medium ${isStale ? 'text-amber-500 font-bold' : 'text-[var(--text-secondary)]'}`}>
                             {age <= 3 ? 'Updated just now' : `Updated ${age}s ago`}
@@ -676,8 +709,8 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30 inline-block">
                           Live price unavailable
                         </span>
-                        <div className="text-sm font-black text-[var(--text-primary)]">
-                          ML Estimate: {typicalRange}
+                        <div className="text-base sm:text-lg font-black text-[var(--text-primary)]">
+                          In-Between Est: {typicalRange}
                         </div>
                         <span className="text-[9px] text-amber-500/90 font-medium block">
                           Historical/ML estimate — not a live provider price.
@@ -706,6 +739,55 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Live Demand & Surge In-Between Rate Bar for Every Transport */}
+                <div className="p-2.5 rounded-xl bg-[var(--bg-primary)]/70 border border-[var(--border-color)] space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-semibold flex-wrap gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1">
+                        <Zap size={11} className={sMult > 1.0 ? 'text-amber-500' : 'text-emerald-500'} />
+                        {p.vehicleType} Live Demand & Surge:
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${demandStatus.badgeClass}`}>
+                        {isZeroSurge ? 'Zero Surge Guaranteed' : `${sMult}x Surge • ${demandStatus.label}`}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-[var(--text-secondary)]">
+                      In-between rate: <strong className="text-[var(--text-primary)]">{sym}{liveMin} – {sym}{liveMax}</strong>
+                    </div>
+                  </div>
+
+                  {/* Meter Track with Live Indicator Position */}
+                  <div className="relative pt-3 pb-1">
+                    <div className="h-2 w-full bg-[var(--bg-secondary)] rounded-full overflow-hidden relative border border-[var(--border-color)]">
+                      <div 
+                        className={`h-full bg-gradient-to-r ${demandStatus.barGradient} opacity-80 rounded-full`} 
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div 
+                      className="absolute top-0 flex flex-col items-center -translate-x-1/2 transition-all duration-300 pointer-events-none"
+                      style={{ left: `${inBetweenPercent}%` }}
+                    >
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs border border-slate-700 dark:border-slate-300">
+                        {sym}{currentPointFare}
+                      </span>
+                      <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-slate-900 mt-0.5" />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center text-[9px] font-bold text-[var(--text-secondary)] px-0.5">
+                    <span>Min Live: {sym}{liveMin}</span>
+                    <span className="text-[10px] font-medium text-[var(--text-secondary)]/90">
+                      {isZeroSurge 
+                        ? 'Government meter standard • No peak surcharge' 
+                        : sMult > 1.15 
+                          ? `Surge active: live rate scaled by ${sMult}x dynamic demand` 
+                          : 'Normal demand: rates within regular traffic band'}
+                    </span>
+                    <span>Max Live: {sym}{liveMax}</span>
                   </div>
                 </div>
 
@@ -796,6 +878,16 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                           <span className="text-[var(--text-primary)] font-semibold">{sym}{p.tollEstimate}</span>
                         </div>
                       )}
+                      <div className="flex justify-between text-xs font-medium border-t border-[var(--border-color)] pt-1">
+                        <span className="text-[var(--text-secondary)]">Demand & Surge Factor:</span>
+                        <span className={`font-bold ${sMult > 1.0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                          {isZeroSurge ? 'Zero Surge (1.0x)' : `${sMult}x (${demandStatus.label})`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Live In-Between Rate:</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-black">{sym}{liveMin} – {sym}{liveMax}</span>
+                      </div>
                       {p.regulatoryBody && (
                         <div className="border-t border-[var(--border-color)] pt-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
                           Regulatory Authority: {p.regulatoryBody}

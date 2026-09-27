@@ -443,6 +443,8 @@ class FareIntelligenceEngine:
                 "is_government_backed": p.get("isGovernmentBacked", p.get("is_government_backed", False)),
                 "category_tag": p.get("categoryTag", p.get("category_tag", "Private Aggregator")),
                 "regulatory_body": p.get("regulatoryBody", p.get("regulatory_body")),
+                "fare_min": p.get("fareMin", p.get("fare_min")),
+                "fare_max": p.get("fareMax", p.get("fare_max")),
                 "zero_surge": p.get("zeroSurge", p.get("zero_surge", False)),
                 "currency": p.get("currency", "INR"),
                 "currency_symbol": p.get("currencySymbol", "₹")
@@ -459,6 +461,45 @@ class FareIntelligenceEngine:
             display_actual = round(fare_val) if (has_live and fare_val is not None) else None
             est_fare = round(fare_val) if (has_live and fare_val is not None) else round(p["predicted_fare"])
 
+            # Live In-Between Fare Range according to demand and surge for every transport
+            s_mult = float(p.get("surge_multiplier", 1.0))
+            is_zero_s = p.get("zero_surge", False)
+            v_type_str = (p.get("vehicle_type") or "").lower()
+            curr = p.get("currency", "INR")
+            is_intl = curr in ["USD", "EUR", "GBP", "SGD", "AUD", "CAD", "AED", "BRL"]
+
+            p_fare_min = p.get("fare_min")
+            p_fare_max = p.get("fare_max")
+
+            if p_fare_min is not None and p_fare_max is not None:
+                live_min = round(p_fare_min, 2) if is_intl else round(p_fare_min)
+                live_max = round(p_fare_max, 2) if is_intl else round(p_fare_max)
+            elif fare_val is not None:
+                if is_zero_s:
+                    d_pct = 0.04
+                    u_pct = 0.05
+                else:
+                    s_diff = max(0.0, s_mult - 1.0)
+                    d_pct = min(0.12, 0.05 + s_diff * 0.07)
+                    u_pct = min(0.20, 0.06 + s_diff * 0.12)
+                    if "bike" in v_type_str or "moto" in v_type_str:
+                        d_pct *= 0.85
+                        u_pct *= 0.85
+                    elif "auto" in v_type_str or "tuk" in v_type_str:
+                        d_pct *= 0.92
+                        u_pct *= 0.92
+
+                if is_intl:
+                    live_min = round(fare_val * (1.0 - d_pct), 2)
+                    live_max = round(max(live_min + 0.50, fare_val * (1.0 + u_pct)), 2)
+                else:
+                    st_min = 2 if ("bike" in v_type_str or "moto" in v_type_str) else (5 if ("auto" in v_type_str or "tuk" in v_type_str) else 10)
+                    live_min = round(fare_val * (1.0 - d_pct))
+                    live_max = round(max(live_min + st_min, fare_val * (1.0 + u_pct)))
+            else:
+                live_min = p.get("predicted_fare_min", round(p["predicted_fare"] * 0.94))
+                live_max = p.get("predicted_fare_max", round(p["predicted_fare"] * 1.06))
+
             formatted_providers.append({
                 "provider": p["provider"],
                 "vehicleType": p["vehicle_type"],
@@ -467,6 +508,10 @@ class FareIntelligenceEngine:
                 "etaMinutes": p["eta_minutes"],
                 "actualFare": display_actual,
                 "estimatedFare": est_fare,
+                "fareMin": live_min,
+                "fareMax": live_max,
+                "fare_min": live_min,
+                "fare_max": live_max,
                 "isLive": has_live,
                 "is_live": has_live,
                 "liveAvailable": has_live,

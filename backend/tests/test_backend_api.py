@@ -94,6 +94,10 @@ def test_route_calculation_returns_only_public_fare_fields():
         # Both Live provider pricing and ML pricing intelligence are available
         assert "actualFare" in provider
         assert "isLive" in provider
+        assert "fareMin" in provider
+        assert "fareMax" in provider
+        if provider["actualFare"] is not None:
+            assert provider["fareMin"] <= provider["actualFare"] <= provider["fareMax"]
         assert "predictedFare" in provider
         assert "typicalFareRange" in provider
         assert "demandLevel" in provider

@@ -31,6 +31,10 @@ export interface RideProviderDetails {
   // Real-time Provider Pricing (authoritative source)
   actualFare: number | null;
   estimatedFare: number;
+  fareMin?: number;
+  fareMax?: number;
+  fare_min?: number;
+  fare_max?: number;
   isLive?: boolean;
   liveAvailable?: boolean;
 
