@@ -5,7 +5,7 @@ from typing import Generator
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from backend.app.config import settings, APP_DIR
-from backend.app.models.db_models import Base, User, Search, Analytics, Location
+from backend.app.models.db_models import Base, User, Search, Analytics, Location, DemandObservation
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +161,70 @@ def init_db() -> None:
                 Analytics(provider="Rapido Auto", clicks=37, redirects=35, fare=370.0, created_at=now)
             ]
             db.add_all(seed_analytics)
+
+        if db.query(DemandObservation).count() == 0:
+            now = datetime.utcnow()
+            from backend.app.services.demand_intelligence import get_h3_zone
+            kochi_edappally_zone = get_h3_zone(10.0284, 76.3074)
+            kochi_airport_zone = get_h3_zone(10.1518, 76.3930)
+            blr_indiranagar_zone = get_h3_zone(12.9718, 77.6411)
+
+            seed_observations = []
+            providers_sample = [
+                ("Uber", "Cab", 1.8, "SLIGHTLY HIGH"),
+                ("Ola", "Cab", 1.1, "NORMAL"),
+                ("Rapido", "Auto", 2.9, "HIGH"),
+                ("Rapido", "Bike", 3.2, "HIGH"),
+                ("Local Taxi", "Cab", 0.4, "LOW"),
+            ]
+
+            for offset_hours in [1, 2, 4, 8, 16, 24, 48, 72]:
+                obs_time = now - timedelta(hours=offset_hours)
+                for prov, cat, score, level in providers_sample:
+                    seed_observations.append(
+                        DemandObservation(
+                            timestamp=obs_time,
+                            provider=prov,
+                            pickup_zone=kochi_edappally_zone,
+                            destination_zone=kochi_airport_zone,
+                            ride_category=cat,
+                            observed_fare_if_available=None,
+                            observed_demand_signal=None,
+                            observed_supply_signal=None,
+                            traffic_level=1.2,
+                            distance_km=21.5,
+                            duration_min=42.0,
+                            pricing_pressure_score=score,
+                            demand_level=level,
+                            confidence=0.82,
+                            source_type="ml_estimate",
+                            reason="Historical baseline observation for this zone.",
+                            actual_observation_when_available=None
+                        )
+                    )
+                    seed_observations.append(
+                        DemandObservation(
+                            timestamp=obs_time,
+                            provider=prov,
+                            pickup_zone=blr_indiranagar_zone,
+                            destination_zone=get_h3_zone(12.9351, 77.6244),
+                            ride_category=cat,
+                            observed_fare_if_available=None,
+                            observed_demand_signal=None,
+                            observed_supply_signal=None,
+                            traffic_level=1.4,
+                            distance_km=5.8,
+                            duration_min=20.0,
+                            pricing_pressure_score=score,
+                            demand_level=level,
+                            confidence=0.85,
+                            source_type="ml_estimate",
+                            reason="Historical baseline observation for this zone.",
+                            actual_observation_when_available=None
+                        )
+                    )
+            db.add_all(seed_observations)
+            db.commit()
 
         if db.query(Location).count() == 0:
             now = datetime.utcnow()

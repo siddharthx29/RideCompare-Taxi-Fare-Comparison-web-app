@@ -91,6 +91,40 @@ export interface RideProviderDetails {
   categoryTag?: string;
   regulatoryBody?: string;
   zeroSurge?: boolean;
+
+  // Real-Time Dynamic Pricing & Demand Intelligence
+  pricingPressureScore?: number;
+  pricing_pressure_score?: number;
+  demand_level?: 'LOW' | 'NORMAL' | 'SLIGHTLY HIGH' | 'HIGH' | 'VERY HIGH' | string;
+  pricingPressure?: string;
+  pricing_pressure?: string;
+  confidence_text?: string;
+  confidence_score?: number;
+  demandReason?: string;
+  reason?: string;
+  conditionWording?: string;
+  condition_wording?: string;
+  sourceType?: string;
+  source_type?: string;
+  pickupZone?: string;
+  pickup_zone?: string;
+  destinationZone?: string;
+  destination_zone?: string;
+  lastUpdated?: string;
+  last_updated?: string;
+}
+
+export interface MarketConditionItem {
+  provider: string;
+  vehicleType?: string;
+  demand_level: 'LOW' | 'NORMAL' | 'SLIGHTLY HIGH' | 'HIGH' | 'VERY HIGH' | string;
+  pricing_pressure: string;
+  pricing_pressure_score?: number;
+  confidence: number;
+  confidence_text?: string;
+  reason?: string;
+  source_type?: string;
+  last_updated?: string;
 }
 
 export interface ComparisonRecommendations {
@@ -126,4 +160,7 @@ export interface ComparisonResult {
   recommendations: ComparisonRecommendations;
   insights: string[];
   routeHash?: string;
+  pickupZone?: string;
+  destinationZone?: string;
+  marketConditions?: MarketConditionItem[];
 }

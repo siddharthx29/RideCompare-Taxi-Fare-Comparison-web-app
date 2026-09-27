@@ -1,0 +1,81 @@
+{
+  "version": "v20260927.0529",
+  "model_name": "Gradient Boosting Regressor",
+  "target": "pricing_pressure_score (0.0 to 4.0)",
+  "last_trained": "2026-09-27T05:29:32.480282",
+  "total_training_records": 12000,
+  "validation_metrics": {
+    "mae": 0.0859,
+    "rmse": 0.117,
+    "r2": 0.9918,
+    "mape": 9.21
+  },
+  "model_comparison": {
+    "Gradient Boosting Regressor": {
+      "mae": 0.0859,
+      "rmse": 0.117,
+      "r2": 0.9918,
+      "mape": 9.21
+    },
+    "Random Forest Regressor": {
+      "mae": 0.0901,
+      "rmse": 0.1231,
+      "r2": 0.991,
+      "mape": 9.4
+    }
+  },
+  "top_feature_importances": {
+    "historical_provider_pressure": 0.9777,
+    "historical_demand_deviation": 0.0051,
+    "request_rate": 0.0044,
+    "traffic_level": 0.0036,
+    "recent_request_count_15m": 0.0019,
+    "hour_of_day": 0.0018,
+    "hour_sin": 0.0011,
+    "hour_cos": 0.0008,
+    "route_distance": 0.0004,
+    "ride_category_Bike": 0.0004,
+    "provider_Rapido Bike": 0.0003,
+    "estimated_duration": 0.0003,
+    "provider_Ola Prime": 0.0003,
+    "recent_request_count_30m": 0.0003,
+    "provider_Uber Premier": 0.0003
+  },
+  "thresholds": {
+    "LOW_MAX": 0.5,
+    "NORMAL_MAX": 1.5,
+    "SLIGHTLY_HIGH_MAX": 2.5,
+    "HIGH_MAX": 3.5,
+    "VERY_HIGH_MAX": 4.0
+  },
+  "h3_resolution": 7,
+  "features": {
+    "numerical": [
+      "hour_of_day",
+      "hour_sin",
+      "hour_cos",
+      "day_of_week",
+      "is_weekend",
+      "is_holiday",
+      "latitude",
+      "longitude",
+      "route_distance",
+      "estimated_duration",
+      "traffic_level",
+      "recent_request_count_5m",
+      "recent_request_count_15m",
+      "recent_request_count_30m",
+      "recent_request_count_1h",
+      "recent_request_count_24h",
+      "request_rate",
+      "historical_request_average",
+      "historical_demand_deviation",
+      "historical_provider_pressure",
+      "time_since_last_observation"
+    ],
+    "categorical": [
+      "provider",
+      "ride_category"
+    ]
+  }
+}

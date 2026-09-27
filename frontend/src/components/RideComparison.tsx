@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import type { RideProviderDetails, ComparisonResult } from '../types/ride';
 import { PriceHistoryGraph } from './PriceHistoryGraph';
+import { DemandIntelligenceBadge, MarketConditionsSummaryBar } from './DemandIntelligenceBadge';
 
 interface RideComparisonProps {
   comparison: ComparisonResult;
@@ -541,6 +542,13 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
         </div>
       )}
 
+      {/* RideCompare Real-Time Market Conditions Summary */}
+      <MarketConditionsSummaryBar
+        providers={sortedProviders}
+        marketConditions={comparison.marketConditions}
+        pickupZone={comparison.pickupZone}
+      />
+
       {/* Pricing Legend Header */}
       <div className="flex items-center gap-3 px-3.5 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[10px] text-[var(--text-secondary)] flex-wrap">
         <span className="font-bold text-[var(--text-primary)]">Pricing Legend:</span>
@@ -579,8 +587,8 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           const isAuto = vTypeLower.includes('auto') || vTypeLower.includes('tuk');
 
           // Dynamically compute exact in-between live rates according to demand and surge for every transport
-          const liveMin = p.fareMin ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 0.96 : Math.max(0.88, 0.95 - (sMult - 1.0) * 0.07 * (isBike ? 0.85 : 1.0)))) : (p.predictedFareMin ?? Math.round((p.predictedFare || 250) * 0.94)));
-          const liveMax = p.fareMax ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 1.04 : Math.min(1.22, 1.06 + (sMult - 1.0) * 0.12 * (isBike ? 0.85 : 1.0)))) : (p.predictedFareMax ?? Math.round((p.predictedFare || 250) * 1.06)));
+          const liveMin = p.fareMin ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 0.96 : Math.max(0.88, 0.95 - (sMult - 1.0) * 0.07 * (isBike ? 0.85 : isAuto ? 0.92 : 1.0)))) : (p.predictedFareMin ?? Math.round((p.predictedFare || 250) * 0.94)));
+          const liveMax = p.fareMax ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 1.04 : Math.min(1.22, 1.06 + (sMult - 1.0) * 0.12 * (isBike ? 0.85 : isAuto ? 0.92 : 1.0)))) : (p.predictedFareMax ?? Math.round((p.predictedFare || 250) * 1.06)));
 
           const currentPointFare = liveFare !== null ? liveFare : (p.predictedFare || Math.round((liveMin + liveMax) / 2));
           const inBetweenPercent = Math.max(10, Math.min(90, Math.round(((currentPointFare - liveMin) / Math.max(1, liveMax - liveMin)) * 100)));
@@ -678,6 +686,11 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                             </span>
                           </>
                         )}
+                      </div>
+
+                      {/* Small Pricing-Pressure Indicator */}
+                      <div className="pt-1 flex items-center gap-2 flex-wrap">
+                        <DemandIntelligenceBadge provider={p} />
                       </div>
                     </div>
                   </div>
@@ -851,7 +864,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
               {isExpanded && (
                 <div className="px-4 pb-4 pt-1 border-t border-[var(--border-color)] bg-[var(--bg-primary)]/40 rounded-b-2xl animate-fade-in text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3">
                     <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">
                         Fare Components
@@ -893,6 +906,31 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                           Regulatory Authority: {p.regulatoryBody}
                         </div>
                       )}
+                    </div>
+
+                    <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-rose-500 dark:text-rose-400 block flex items-center gap-1">
+                        <Activity size={12} /> Pricing Pressure & Demand
+                      </span>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Demand Level:</span>
+                        <span className="text-[var(--text-primary)] font-bold">{p.demand_level || p.demandLevel || 'NORMAL'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Pressure Score:</span>
+                        <span className="text-indigo-400 font-extrabold">{(p.pricing_pressure_score ?? p.pricingPressureScore ?? 1.0).toFixed(1)} / 4.0</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Confidence:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{p.confidence_text || (p.confidence ? `${Math.round(p.confidence * 100)}% confidence` : '80% confidence')}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Estimation Layer:</span>
+                        <span className="text-slate-300 font-semibold capitalize">{(p.source_type || p.sourceType || 'ml_estimate').replace('_', ' ')}</span>
+                      </div>
+                      <p className="border-t border-[var(--border-color)] pt-1 text-[10px] text-[var(--text-secondary)] italic">
+                        {p.reason || p.demandReason || 'Standard baseline demand conditions for this area.'}
+                      </p>
                     </div>
 
                     <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">

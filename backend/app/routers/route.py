@@ -10,6 +10,7 @@ import httpx
 from backend.app.database import get_db, SessionLocal
 from backend.app.models.db_models import Search, HistoricalFare, FareSnapshot, Analytics
 from backend.app.services.pricing import calculate_fares_and_scores, calculate_haversine_distance, quote_orchestrator
+from backend.app.services.demand_intelligence import demand_engine, get_h3_zone
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,12 @@ PUBLIC_PROVIDER_FIELDS = (
     "predictedFare", "predictedFareMin", "predictedFareMax", "typicalFareRange",
     "predictionDiff", "predictionDiffPct", "demandLevel", "priceTrend", "priceAnomaly",
     "anomalyReason", "mlInsight", "clusterId", "clusterLabel", "confidence",
-    "confidenceScore", "confidenceLevel", "smartScore", "scoreBreakdown"
+    "confidenceScore", "confidenceLevel", "smartScore", "scoreBreakdown",
+    # Dynamic Pricing & Demand Intelligence fields
+    "pricing_pressure_score", "pricingPressureScore", "demand_level",
+    "pricing_pressure", "pricingPressure", "confidence_score", "confidence_text",
+    "demandReason", "reason", "conditionWording", "condition_wording", "source_type", "sourceType",
+    "pickup_zone", "pickupZone", "destination_zone", "destinationZone", "last_updated", "lastUpdated"
 )
 
 
@@ -69,7 +75,8 @@ def _public_comparison(comparison: Dict[str, Any]) -> Dict[str, Any]:
         "distanceKm", "durationMins", "detectedCity", "state", "country", "currency",
         "currencySymbol", "isServiceable", "message", "regionalNotice", "surgeRuleName",
         "straightLineDistance", "detourDistance", "pricingRegime", "fareSpread",
-        "spreadPercentage", "providers", "recommendations", "insights", "routeHash"
+        "spreadPercentage", "providers", "recommendations", "insights", "routeHash",
+        "pickupZone", "destinationZone", "marketConditions"
     )
     result = {key: comparison[key] for key in public_fields if key in comparison}
     result["providers"] = [
@@ -85,6 +92,14 @@ def _public_comparison(comparison: Dict[str, Any]) -> Dict[str, Any]:
             "liveAvailable": provider.get("liveAvailable", provider.get("live_available", True)),
             "isStale": provider.get("is_stale", provider.get("isStale", False)),
             "quoteAgeSeconds": provider.get("quote_age_seconds", provider.get("quoteAgeSeconds", 0.0)),
+            "pricing_pressure_score": provider.get("pricing_pressure_score", provider.get("pricingPressureScore", 1.0)),
+            "demand_level": provider.get("demand_level", provider.get("demandLevel", "NORMAL")),
+            "pricing_pressure": provider.get("pricing_pressure", provider.get("pricingPressure", "NORMAL")),
+            "confidence": provider.get("confidence", 0.8),
+            "confidence_text": provider.get("confidence_text", provider.get("confidenceLevel", "80% confidence")),
+            "reason": provider.get("reason", provider.get("demandReason", "Standard baseline demand conditions for this area.")),
+            "source_type": provider.get("source_type", provider.get("sourceType", "ml_estimate")),
+            "last_updated": provider.get("last_updated", provider.get("lastUpdated")),
             "priceHistory": {
                 "fares": provider.get("volatility", {}).get("recent_history", []),
                 "trend": provider.get("volatility", {}).get("price_trend", provider.get("priceTrend", "STABLE")),
@@ -174,6 +189,24 @@ def log_historical_observations(
                 timestamp=datetime.utcnow()
             )
             db.add(snap)
+
+            # Persist demand intelligence observation for continuous learning
+            demand_engine.log_observation(
+                db=db,
+                provider=p["provider"],
+                pickup_zone=p.get("pickup_zone") or get_h3_zone(lat1, lon1),
+                destination_zone=p.get("destination_zone") or get_h3_zone(lat2, lon2),
+                ride_category=p["vehicleType"],
+                distance_km=distance_km,
+                duration_min=duration_min,
+                pricing_pressure_score=p.get("pricing_pressure_score", 1.0),
+                demand_level=p.get("demand_level", "NORMAL"),
+                confidence=p.get("confidence", 0.8),
+                source_type=p.get("source_type", "ml_estimate"),
+                reason=p.get("reason", "Standard baseline demand conditions for this area."),
+                observed_fare=fare_val,
+                traffic_level=1.4 if p["surgeMultiplier"] > 1.3 else 1.0
+            )
 
         db.commit()
     except Exception as err:
@@ -305,7 +338,14 @@ async def _process_route_calculation(
                 "booking_url": p.get("webLink", ""),
                 "retrieved_at": p.get("retrieved_at", datetime.utcnow().isoformat()),
                 "quote_age_seconds": p.get("quoteAgeSeconds", p.get("quote_age_seconds", 0.0)),
-                "is_stale": p.get("isStale", False)
+                "is_stale": p.get("isStale", False),
+                "demand_level": p.get("demand_level", "NORMAL"),
+                "pricing_pressure": p.get("pricing_pressure", "NORMAL"),
+                "pricing_pressure_score": p.get("pricing_pressure_score", 1.0),
+                "confidence": p.get("confidence", 0.8),
+                "confidence_text": p.get("confidence_text", "80% confidence"),
+                "demand_reason": p.get("reason", "Standard baseline demand conditions for this area."),
+                "source_type": p.get("source_type", "ml_estimate")
             }
             for p in public_comparison.get("providers", [])
         ]

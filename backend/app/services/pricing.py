@@ -11,6 +11,7 @@ from backend.app.config import FARES_CONFIG_PATH
 from ml.inference.predictor import FareIntelligenceEngine
 from backend.app.services.quote_orchestrator import QuoteOrchestrator
 from backend.app.services.serviceability import resolve_trip_serviceability
+from backend.app.services.demand_intelligence import demand_engine, get_h3_zone
 
 logger = logging.getLogger(__name__)
 
@@ -455,6 +456,65 @@ def calculate_fares_and_scores(
     if not is_serviceable:
         insights.append("⚠️ Note: Coordinates are outside primary city center. Showing standardized regional tariffs.")
 
+    # Demand Intelligence & Pricing Pressure Enrichment
+    traffic_factor = 1.5 if surge_multiplier > 1.3 else (1.2 if surge_multiplier > 1.05 else 1.0)
+    pickup_h3 = get_h3_zone(start_lat, start_lon)
+    dest_h3 = get_h3_zone(end_lat, end_lon) if (end_lat and end_lon) else "zone_destination_unknown"
+
+    for p in enriched_providers:
+        d_intel = demand_engine.estimate_pricing_pressure(
+            pickup_lat=start_lat or 12.97,
+            pickup_lng=start_lon or 77.59,
+            dest_lat=end_lat,
+            dest_lng=end_lon,
+            provider=p["provider"],
+            ride_category=p.get("vehicleType", "Cab"),
+            distance_km=distance_km,
+            duration_min=duration_mins,
+            traffic_level=traffic_factor,
+            osrm_success=osrm_success,
+            db=db
+        )
+        p["pricingPressureScore"] = d_intel["pricing_pressure_score"]
+        p["pricing_pressure_score"] = d_intel["pricing_pressure_score"]
+        p["demandLevel"] = d_intel["demand_level"]
+        p["demand_level"] = d_intel["demand_level"]
+        p["pricingPressure"] = d_intel["pricing_pressure"]
+        p["pricing_pressure"] = d_intel["pricing_pressure"]
+        p["confidence"] = d_intel["confidence"]
+        p["confidenceScore"] = d_intel["confidence_score"]
+        p["confidence_score"] = d_intel["confidence_score"]
+        p["confidenceLevel"] = d_intel["confidence_text"]
+        p["confidence_text"] = d_intel["confidence_text"]
+        p["demandReason"] = d_intel["reason"]
+        p["reason"] = d_intel["reason"]
+        p["conditionWording"] = d_intel["condition_wording"]
+        p["condition_wording"] = d_intel["condition_wording"]
+        p["sourceType"] = d_intel["source_type"]
+        p["source_type"] = d_intel["source_type"]
+        p["pickupZone"] = d_intel["pickup_zone"]
+        p["pickup_zone"] = d_intel["pickup_zone"]
+        p["destinationZone"] = d_intel["destination_zone"]
+        p["destination_zone"] = d_intel["destination_zone"]
+        p["lastUpdated"] = d_intel["last_updated"]
+        p["last_updated"] = d_intel["last_updated"]
+
+    market_conditions = [
+        {
+            "provider": p["provider"],
+            "vehicleType": p.get("vehicleType", "Cab"),
+            "demand_level": p.get("demand_level", "NORMAL"),
+            "pricing_pressure": p.get("pricing_pressure", "NORMAL"),
+            "pricing_pressure_score": p.get("pricing_pressure_score", 1.0),
+            "confidence": p.get("confidence", 0.8),
+            "confidence_text": p.get("confidence_text", "80% confidence"),
+            "reason": p.get("reason", "Standard baseline demand conditions for this area."),
+            "source_type": p.get("source_type", "ml_estimate"),
+            "last_updated": p.get("last_updated")
+        }
+        for p in enriched_providers
+    ]
+
     return {
         "distanceKm": round(distance_km, 1),
         "durationMins": round(duration_mins, 1),
@@ -477,5 +537,8 @@ def calculate_fares_and_scores(
         "recommendations": recommendations,
         "insights": insights if is_serviceable else ["No supported ride services are currently configured for this location."],
         "message": "" if enriched_providers else "No supported ride services are currently configured for this location.",
-        "routeHash": route_hash
+        "routeHash": route_hash,
+        "pickupZone": pickup_h3,
+        "destinationZone": dest_h3,
+        "marketConditions": market_conditions
     }

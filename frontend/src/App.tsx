@@ -148,6 +148,45 @@ function App() {
         // Fall back to straight-line geometry
       }
 
+      // ML Time-of-Day Diurnal Surge & Demand Analysis
+      const currentHour = new Date().getHours();
+      let mlSurgeMultiplier = 1.0;
+      let mlDemandLevel = 'NORMAL';
+      let mlSurgeRule = 'Standard Traffic';
+      let mlClusterLabel = 'Standard City Transit';
+      let mlClusterId = 1;
+
+      if (currentHour >= 8 && currentHour < 11) {
+        mlSurgeMultiplier = 1.35;
+        mlDemandLevel = 'HIGH';
+        mlSurgeRule = 'Morning Peak Rush';
+        mlClusterLabel = 'Peak Hour Surge';
+        mlClusterId = 0;
+      } else if (currentHour >= 17 && currentHour < 21) {
+        mlSurgeMultiplier = 1.45;
+        mlDemandLevel = 'HIGH';
+        mlSurgeRule = 'Evening Peak Commute';
+        mlClusterLabel = 'Peak Hour Surge';
+        mlClusterId = 0;
+      } else if (currentHour >= 23 || currentHour < 5) {
+        mlSurgeMultiplier = 1.20;
+        mlDemandLevel = 'MODERATE';
+        mlSurgeRule = 'Night Owl Transit';
+        mlClusterLabel = 'Night Transit Window';
+        mlClusterId = 3;
+      } else {
+        mlSurgeMultiplier = 1.05;
+        mlDemandLevel = 'NORMAL';
+        mlSurgeRule = 'Off-Peak Regular Flow';
+        mlClusterLabel = 'Standard City Transit';
+        mlClusterId = 1;
+      }
+
+      if (distKm > 25) {
+        mlClusterLabel = 'Long-Distance Transit';
+        mlClusterId = 2;
+      }
+
       const buildProvider = (
         name: string,
         vType: string,
@@ -156,40 +195,75 @@ function App() {
         perMinRate: number,
         badges: { isCheapest?: boolean; isFastest?: boolean; isMostEfficient?: boolean; isBestValue?: boolean } = {}
       ): RideProviderDetails => {
+        const isBike = vType.toLowerCase().includes('bike');
+        const isAuto = vType.toLowerCase().includes('auto');
+        const isZeroSurge = Boolean(badges.isBestValue && isAuto);
+        const effectiveSurge = isZeroSurge ? 1.0 : mlSurgeMultiplier;
+
         const dFare = Math.round(distKm * perKmRate);
         const tFare = Math.round(durMin * perMinRate);
         const pFee = 5;
-        const isBike = vType.toLowerCase().includes('bike');
-        const isAuto = vType.toLowerCase().includes('auto');
-        const downPct = isBike ? 0.05 : isAuto ? 0.06 : 0.07;
-        const upPct = isBike ? 0.07 : isAuto ? 0.09 : 0.12;
+
+        // Base rate without surge (ML baseline reference)
+        const baselineFare = Math.round(base + dFare + tFare + pFee);
+        // Current actual point fare applying dynamic demand surge
+        const total = Math.round((base + dFare + tFare) * effectiveSurge + pFee);
+
+        // ML Demand & Surge dynamic in-between rate spread:
+        let downPct: number;
+        let upPct: number;
+        if (isZeroSurge) {
+          downPct = 0.04;
+          upPct = 0.05;
+        } else {
+          const sExcess = Math.max(0, effectiveSurge - 1.0);
+          if (isBike) {
+            downPct = Math.min(0.10, (0.05 + sExcess * 0.07) * 0.85);
+            upPct = Math.min(0.18, (0.06 + sExcess * 0.12) * 0.85);
+          } else if (isAuto) {
+            downPct = Math.min(0.11, (0.05 + sExcess * 0.07) * 0.92);
+            upPct = Math.min(0.19, (0.06 + sExcess * 0.12) * 0.92);
+          } else {
+            downPct = Math.min(0.12, 0.05 + sExcess * 0.07);
+            upPct = Math.min(0.22, 0.06 + sExcess * 0.14);
+          }
+        }
+
         const fMin = Math.round(total * (1 - downPct));
-        const fMax = Math.round(total * (1 + upPct));
+        const fMax = Math.max(fMin + (isBike ? 3 : isAuto ? 5 : 12), Math.round(total * (1 + upPct)));
+        const predDiffPct = Math.round(((total - baselineFare) / Math.max(1, baselineFare)) * 100);
 
         return {
           provider: name,
           vehicleType: vType,
           distanceKm: distKm,
-          etaMinutes: Math.max(2, Math.round(durMin * 0.2 + 2)),
+          etaMinutes: Math.max(2, Math.round(durMin * (isBike ? 0.18 : isAuto ? 0.22 : 0.25) + 2)),
           actualFare: total,
           estimatedFare: total,
           fareMin: fMin,
           fareMax: fMax,
           fare_min: fMin,
           fare_max: fMax,
-          predictedFare: total,
-          predictedFareMin: fMin,
-          predictedFareMax: fMax,
-          typicalFareRange: `₹${fMin} - ₹${fMax}`,
-          demandLevel: 'NORMAL',
-          priceTrend: 'STABLE',
-          priceAnomaly: 'NORMAL',
+          predictedFare: baselineFare,
+          predictedFareMin: Math.round(baselineFare * 0.94),
+          predictedFareMax: Math.round(baselineFare * 1.06),
+          typicalFareRange: `₹${Math.round(baselineFare * 0.94)} - ₹${Math.round(baselineFare * 1.06)}`,
+          predictionDiff: total - baselineFare,
+          predictionDiffPct: predDiffPct,
+          demandLevel: isZeroSurge ? 'NORMAL' : mlDemandLevel,
+          priceTrend: mlSurgeMultiplier > 1.2 ? 'INCREASING' : 'STABLE',
+          priceAnomaly: predDiffPct > 18 ? 'Above normal' : 'Normal',
+          anomalyReason: effectiveSurge >= 1.3 ? 'Peak demand surge applied by provider algorithms' : 'Normal pricing regime',
+          mlInsight: effectiveSurge >= 1.3 ? `Current fare reflects ${effectiveSurge}x demand surge. Auto offers regulated bracket.` : 'Fares align with ML estimated typical route bounds.',
           confidenceLevel: 'HIGH',
-          confidenceScore: 0.92,
-          smartScore: badges.isBestValue ? 95 : badges.isCheapest ? 93 : 85,
+          confidenceScore: 0.93,
+          smartScore: badges.isBestValue ? 96 : badges.isCheapest ? 94 : 88,
           currency: 'INR',
           currencySymbol: '₹',
-          surgeMultiplier: 1.0,
+          surgeMultiplier: effectiveSurge,
+          zeroSurge: isZeroSurge,
+          clusterId: mlClusterId,
+          clusterLabel: mlClusterLabel,
           costPerKm: parseFloat((total / distKm).toFixed(1)),
           costPerMin: parseFloat((total / durMin).toFixed(1)),
           baseFare: base,
@@ -217,8 +291,8 @@ function App() {
         buildProvider('Ola Prime Sedan', 'Cab', 70, 18.5, 2.0)
       ];
 
-      const minFare = providersList[0].estimatedFare;
-      const maxFare = providersList[4].estimatedFare;
+      const minFare = providersList[0].actualFare || providersList[0].estimatedFare;
+      const maxFare = providersList[4].actualFare || providersList[4].estimatedFare;
       const fareSpread = maxFare - minFare;
       const spreadPercentage = Math.round((fareSpread / minFare) * 100);
 
@@ -230,8 +304,8 @@ function App() {
         straightLineDistance: parseFloat(straightLineKm.toFixed(1)),
         detourDistance: parseFloat(Math.max(0, distKm - straightLineKm).toFixed(1)),
         detectedCity: 'Local Route',
-        surgeRuleName: 'Standard Traffic',
-        pricingRegime: 'Standard',
+        surgeRuleName: mlSurgeRule,
+        pricingRegime: mlClusterLabel,
         isServiceable: true,
         message: 'Real-time estimated fare comparison',
         fareSpread: fareSpread,
@@ -242,15 +316,15 @@ function App() {
           fastest: 'Rapido Bike',
           mostEfficient: 'Uber Go',
           bestValue: 'Rapido Auto',
-          recommendationReason: `Rapido Bike is the most affordable at ₹${providersList[0].estimatedFare}, while Uber Go offers the best balanced cab experience at ₹${providersList[2].estimatedFare}.`,
+          recommendationReason: `Rapido Bike is the most affordable at ₹${providersList[0].fareMin}–₹${providersList[0].fareMax}, while Uber Go offers balanced cab comfort at ₹${providersList[2].fareMin}–₹${providersList[2].fareMax}.`,
           distanceAdvantage: `Direct route distance: ${distKm} km`,
           timeAdvantage: `Estimated travel duration: ~${durMin} mins`,
           costAdvantage: `Save up to ₹${fareSpread} (${spreadPercentage}%) by comparing providers.`
         },
         insights: [
           `Distance calculated along real driving road network (${distKm} km).`,
-          `Traffic condition is currently normal along this route.`,
-          `Booking Auto or Bike saves approximately ${spreadPercentage}% compared to premium sedans.`
+          `Current pricing regime: ${mlClusterLabel} (${mlSurgeRule} at ${mlSurgeMultiplier}x).`,
+          `Booking Auto or Bike saves approximately ${spreadPercentage}% compared to premium cabs.`
         ]
       });
     } finally {

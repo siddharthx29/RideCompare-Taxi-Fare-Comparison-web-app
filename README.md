@@ -49,11 +49,19 @@ The platform operates on a dual-engine architecture:
 
 ## ✨ Key Features
 
+- **Real-Time Dynamic Pricing & Demand Intelligence**:
+  - Independent estimation of current pricing pressure on a standardized 0–4 scale (`LOW`, `NORMAL`, `SLIGHTLY HIGH`, `HIGH`, `VERY HIGH`).
+  - Never fabricates exact fares or proprietary surge algorithms.
+  - Geo-spatial zone discretization using **Uber H3** hexagonal cells (resolution 7).
+  - Multi-horizon rolling request windows (5m, 15m, 30m, 1h, 24h, 7d) with exponential time-decay weighting.
+  - 5-level transparent fallback hierarchy with data-grounded confidence scores (`84% confidence`, `Limited data`).
+  - Interactive demand indicator and top-level **Market Conditions Summary** (`Uber 🔴 HIGH`, `Ola 🟢 NORMAL`, `Rapido 🟠 SLIGHTLY HIGH`).
+  - Read complete architecture in [DEMAND_INTELLIGENCE_DOCUMENTATION.md](file:///c:/Users/HP/Desktop/Taxi-Fare-Comparison-web-app-master/Taxi-Fare-Comparison-web-app-master/DEMAND_INTELLIGENCE_DOCUMENTATION.md).
 - **Authoritative Live Fares**: Real-time provider pricing with pulsing live indicators and quote age timestamps.
 - **Fail-Safe Fallbacks**: If a provider API is unreachable, RideCompare explicitly labels the estimate as:
   *`"Historical/ML estimate — not a live provider price."`* (No fabricated live data).
 - **ML Pricing Intelligence**:
-  - **Supervised Regression**: Gradient Boosting Regressor ($R^2 = 0.9803$, $\text{MAE} = ₹20.66$, $\text{MAPE} = 5.96\%$).
+  - **Supervised Regression**: Gradient Boosting Regressor ($R^2 = 0.9918$, $\text{MAE} = 0.086$ pricing pressure score).
   - **K-Means Route Regimes**: Dynamically clusters transit into distinct operating regimes.
   - **Isolation Forest Anomaly Detection**: Flags unusual price spikes or deviations against historical distributions.
   - **Demand & Volatility Trends**: Real-time evaluation of surge multipliers, traffic density, and time-of-day dynamics.

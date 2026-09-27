@@ -127,3 +127,26 @@ class Location(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_verified_at = Column(DateTime, default=datetime.utcnow)
 
+
+class DemandObservation(Base):
+    __tablename__ = 'demand_observations'
+
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    provider = Column(String(50), nullable=False, index=True)
+    pickup_zone = Column(String(64), nullable=False, index=True)
+    destination_zone = Column(String(64), nullable=True)
+    ride_category = Column(String(30), default='Cab')
+    observed_fare_if_available = Column(Float, nullable=True)
+    observed_demand_signal = Column(Float, nullable=True)
+    observed_supply_signal = Column(Float, nullable=True)
+    traffic_level = Column(Float, default=1.0)
+    distance_km = Column(Float, default=0.0)
+    duration_min = Column(Float, default=0.0)
+    pricing_pressure_score = Column(Float, default=1.0)
+    demand_level = Column(String(20), default='NORMAL')
+    confidence = Column(Float, default=0.8)
+    source_type = Column(String(50), default='ml_estimate')
+    reason = Column(Text, nullable=True)
+    actual_observation_when_available = Column(Float, nullable=True)
+
