@@ -16,7 +16,10 @@
       "bounds": {"south": 9.65, "north": 10.3, "west": 75.9, "east": 76.65},
       "providers": ["Uber", "Ola", "Rapido", "NammaYatri", "KeralaSavari"],
       "quote_names": ["Kerala Savari Auto", "Kerala Savari Cab", "Uber Go", "Uber Premier", "Rapido Bike", "Rapido Auto", "Ola Mini", "Namma Yatri Auto", "Namma Yatri Cab"],
-      "intercity": false
+      "intercity": true,
+      "outstation_destinations": ["munnar", "alappuzha", "alleppey", "thrissur", "kottayam", "thekkady", "vagamon", "idukki", "wayanad", "kumarakom", "athirappilly", "marari"],
+      "outstation_providers": ["Uber", "Ola"],
+      "outstation_quote_names": ["Uber Intercity", "Ola Outstation", "Kerala Tourism Tourist Taxi"]
     },
     "Bangalore": {
       "country_code": "IN",
@@ -25,7 +28,10 @@
       "bounds": {"south": 12.65, "north": 13.35, "west": 77.2, "east": 78.0},
       "providers": ["LocalTaxi", "Uber", "Ola", "Rapido", "NammaYatri"],
       "quote_names": ["Namma Yatri Auto", "Namma Yatri Cab", "KSTDC Airport Taxi", "Uber Go", "Uber Premier", "Rapido Bike", "Rapido Auto", "Ola Mini", "Ola Prime"],
-      "intercity": false
+      "intercity": true,
+      "outstation_destinations": ["mysore", "mysuru", "coorg", "madikeri", "ooty", "nandi hills", "chikmagalur", "hosur", "tumkur", "kolar", "hassan", "bandipur", "kabini"],
+      "outstation_providers": ["Uber", "LocalTaxi"],
+      "outstation_quote_names": ["Uber Intercity", "KSTDC Outstation Taxi"]
     },
     "Mumbai": {
       "country_code": "IN",
@@ -34,7 +40,10 @@
       "bounds": {"south": 18.85, "north": 19.35, "west": 72.7, "east": 73.1},
       "providers": ["LocalTaxi", "Uber", "Ola", "Rapido"],
       "quote_names": ["Mumbai Kaali Peeli", "Mumbai Cool Cab", "Mumbai Metered Auto", "Uber Go", "Uber Premier", "Rapido Auto", "Ola Mini", "Ola Prime"],
-      "intercity": false
+      "intercity": true,
+      "outstation_destinations": ["pune", "lonavala", "khandala", "alibaug", "nashik", "shirdi", "mahabaleshwar", "panchgani", "matheran"],
+      "outstation_providers": ["LocalTaxi", "Uber"],
+      "outstation_quote_names": ["Mumbai Cool Cab", "Uber Premier"]
     },
     "Kolkata": {
       "country_code": "IN",

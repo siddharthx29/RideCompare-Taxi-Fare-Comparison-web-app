@@ -12,6 +12,7 @@ from ml.inference.predictor import FareIntelligenceEngine
 from backend.app.services.quote_orchestrator import QuoteOrchestrator
 from backend.app.services.serviceability import resolve_trip_serviceability
 from backend.app.services.demand_intelligence import demand_engine, get_h3_zone
+from backend.app.services.route_intelligence import agentic_decision_engine
 
 logger = logging.getLogger(__name__)
 
@@ -347,25 +348,69 @@ def calculate_fares_and_scores(
             v_type = config.get("vehicleType", "Cab")
             cat_tag = config.get("categoryTag", "Private Aggregator")
             from backend.app.services.adapters.base_adapter import QuoteObject
-            quotes.append(QuoteObject(
-                provider=name,
-                vehicle_type=v_type,
-                actual_fare=None,
-                currency=currency,
-                currency_symbol=currency_symbol,
-                eta_minutes=max(2, round(duration_mins * config.get("etaMultiplier", 1.0))),
-                distance_km=round(distance_km, 1),
-                duration_minutes=round(duration_mins, 1),
-                surge_multiplier=surge_multiplier,
-                availability=False,
-                is_live=False,
-                live_available=False,
-                source="ml_historical_estimate",
-                rating=config.get("rating", 4.5),
-                category_tag=cat_tag,
-                regulatory_body=config.get("regulatoryBody"),
-                zero_surge=config.get("zeroSurge", False)
-            ))
+
+            if config and "baseFare" in config and "perKmRate" in config:
+                base = config.get("baseFare", 50)
+                km_rate = config.get("perKmRate", 14.0)
+                min_rate = config.get("perMinRate", 2.0)
+                plat = config.get("platformFee", 15)
+                zero_surge = config.get("zeroSurge", False)
+                is_govt = config.get("isGovernmentBacked", False)
+                reg_body = config.get("regulatoryBody")
+                effective_surge = 1.0 if zero_surge else surge_multiplier
+                d_fare = distance_km * km_rate
+                t_fare = duration_mins * min_rate
+                raw_fare = (base + d_fare + t_fare) * effective_surge + plat + toll_charge
+                actual_fare = round(raw_fare, 2 if currency in ["USD", "EUR", "GBP", "SGD", "AUD", "CAD", "AED", "BRL"] else 0)
+                eta = max(5, round(duration_mins * config.get("etaMultiplier", 1.0)))
+                quotes.append(QuoteObject(
+                    provider=name,
+                    vehicle_type=v_type,
+                    actual_fare=actual_fare,
+                    fare_min=round(actual_fare * 0.94),
+                    fare_max=round(actual_fare * 1.08),
+                    currency=currency,
+                    currency_symbol=currency_symbol,
+                    eta_minutes=eta,
+                    distance_km=round(distance_km, 1),
+                    duration_minutes=round(duration_mins, 1),
+                    surge_multiplier=effective_surge,
+                    base_fare=base,
+                    distance_fare=round(d_fare, 2),
+                    duration_fare=round(t_fare, 2),
+                    platform_fee=plat,
+                    toll_estimate=toll_charge,
+                    cost_per_km=round(actual_fare / max(0.1, distance_km), 2),
+                    cost_per_min=round(actual_fare / max(1.0, eta), 2),
+                    rating=config.get("rating", 4.5),
+                    source="permitted_tariff",
+                    is_live=True,
+                    live_available=True,
+                    is_government_backed=is_govt,
+                    category_tag=cat_tag,
+                    regulatory_body=reg_body,
+                    zero_surge=zero_surge
+                ))
+            else:
+                quotes.append(QuoteObject(
+                    provider=name,
+                    vehicle_type=v_type,
+                    actual_fare=None,
+                    currency=currency,
+                    currency_symbol=currency_symbol,
+                    eta_minutes=max(2, round(duration_mins * config.get("etaMultiplier", 1.0))),
+                    distance_km=round(distance_km, 1),
+                    duration_minutes=round(duration_mins, 1),
+                    surge_multiplier=surge_multiplier,
+                    availability=False,
+                    is_live=False,
+                    live_available=False,
+                    source="ml_historical_estimate",
+                    rating=config.get("rating", 4.5),
+                    category_tag=cat_tag,
+                    regulatory_body=config.get("regulatoryBody"),
+                    zero_surge=config.get("zeroSurge", False)
+                ))
 
     raw_providers = []
     for q in quotes:
@@ -404,49 +449,56 @@ def calculate_fares_and_scores(
         if "priceTrend" in p and vol.get("price_trend") in ("RISING", "FALLING"):
             p["priceTrend"] = "Increasing" if vol.get("price_trend") == "RISING" else "Decreasing"
 
-    live_fares = [p["actualFare"] for p in enriched_providers if p.get("actualFare") is not None]
-    candidate_fares = live_fares if live_fares else [p["predictedFare"] for p in enriched_providers]
+    # Agentic Route Feasibility & Vehicle Suitability Pipeline (Feasibility before Price)
+    decision_output = agentic_decision_engine.process_route_and_filter_candidates(
+        origin=source,
+        destination=destination,
+        distance_km=distance_km,
+        duration_mins=duration_mins,
+        raw_candidates=enriched_providers,
+        detected_city=city,
+        origin_lat=start_lat,
+        origin_lng=start_lon,
+        dest_lat=end_lat,
+        dest_lng=end_lon,
+        pickup_address=pickup_address,
+        drop_address=drop_address,
+        currency_symbol=currency_symbol
+    )
+
+    direct_rides = decision_output["directRides"]
+    excluded_rides = decision_output["unsupportedRides"]
+    partial_rides = decision_output["partialRides"]
+    multimodal_option = decision_output["multimodalOption"]
+    agent_reasoning = decision_output["agentReasoning"]
+    route_context = decision_output["routeContext"]
+    recommendations = decision_output["recommendations"]
+
+    # Active pool of display providers: direct rides if available, or enriched if fallback
+    active_providers = direct_rides if direct_rides else enriched_providers
+
+    live_fares = [p["actualFare"] for p in active_providers if p.get("actualFare") is not None]
+    candidate_fares = live_fares if live_fares else [p["predictedFare"] for p in active_providers if p.get("predictedFare") is not None]
     min_fare = min(candidate_fares) if candidate_fares else 0
     max_fare = max(candidate_fares) if candidate_fares else 0
     fare_spread = round(max_fare - min_fare, 2 if currency in ["USD", "EUR", "GBP", "SGD", "AUD", "CAD", "AED", "BRL"] else 0)
     spread_pct = round((fare_spread / max(0.01, min_fare)) * 100.0, 1)
 
-    live_candidates = [p for p in enriched_providers if p.get("actualFare") is not None]
-    pool = live_candidates if live_candidates else enriched_providers
-    cheapest_p = min(pool, key=lambda x: x.get("actualFare") if x.get("actualFare") is not None else x.get("predictedFare", 0)) if pool else None
-    fastest_p = min(enriched_providers, key=lambda x: x["etaMinutes"]) if enriched_providers else None
-    best_p = max(enriched_providers, key=lambda x: x.get("smartScore", 0)) if enriched_providers else None
-
-    # Tag highlights
-    for p in enriched_providers:
-        p["isCheapest"] = (p["provider"] == cheapest_p["provider"]) if cheapest_p else False
-        p["isFastest"] = (p["provider"] == fastest_p["provider"]) if fastest_p else False
-        p["isMostEfficient"] = (p["provider"] == best_p["provider"]) if best_p else False
-        p["isBestValue"] = p["isMostEfficient"]
-
-    recommendations = {
-        "cheapest": cheapest_p["provider"] if cheapest_p else "",
-        "fastest": fastest_p["provider"] if fastest_p else "",
-        "mostEfficient": best_p["provider"] if best_p else "",
-        "bestValue": best_p["provider"] if best_p else "",
-        "recommendationReason": f"{best_p['provider']} delivers the optimal balance of price, ETA, and reliability." if best_p else "All options compared.",
-        "distanceAdvantage": f"{round(detour_dist, 1)} km detour over straight-line path ({round(straight_dist, 1)} km direct).",
-        "timeAdvantage": f"{fastest_p['provider']} saves up to {round(max(p['etaMinutes'] for p in enriched_providers) - fastest_p['etaMinutes'])} mins ETA." if (fastest_p and len(enriched_providers) > 1) else "Fastest pickup available.",
-        "costAdvantage": f"Save up to {currency_symbol}{fare_spread} by booking {cheapest_p['provider']} over the highest fare option." if cheapest_p else "Competitive rates."
-    }
-
     # Count government-backed options
-    govt_options = [p for p in enriched_providers if p.get("isGovernmentBacked")]
-    zero_surge_options = [p for p in enriched_providers if p.get("zeroSurge")]
-    robotaxi_options = [p for p in enriched_providers if "Autonomous" in p.get("categoryTag", "") or "Robotaxi" in p.get("provider", "")]
+    govt_options = [p for p in active_providers if p.get("isGovernmentBacked")]
+    zero_surge_options = [p for p in active_providers if p.get("zeroSurge")]
+    robotaxi_options = [p for p in active_providers if "Autonomous" in p.get("categoryTag", "") or "Robotaxi" in p.get("provider", "")]
 
     insights = [
-        f"Comparing {len(enriched_providers)} ride options for {round(distance_km, 1)} km trip in {city} ({state_name}).",
-        f"Pricing spread of {currency_symbol}{fare_spread} ({spread_pct}%) detected across operational services in this region.",
+        f"🤖 AI Route Feasibility: {agent_reasoning['headline']}",
+        f"Comparing {len(active_providers)} eligible direct options for {round(distance_km, 1)} km trip ({route_context.get('route_type', 'JOURNEY')}).",
+        f"Pricing spread of {currency_symbol}{fare_spread} ({spread_pct}%) detected across verified feasible services.",
         f"Current pricing pattern: {surge_rule}."
     ]
+    if agent_reasoning.get("rapidoBikeExcluded"):
+        insights.append("⚠️ Rapido Bike taxi was excluded from direct rides because 2-wheeler transport is unsafe / unsupported for this distance.")
     if robotaxi_options:
-        insights.append(f"🤖 Fully Autonomous commercial robotaxis operational in this region.")
+        insights.append("🤖 Fully Autonomous commercial robotaxis operational in this region.")
     if govt_options:
         insights.append(f"🏛 {len(govt_options)} Government-regulated / Open Mobility options active with transparent public tariffs.")
     if zero_surge_options:
@@ -456,12 +508,13 @@ def calculate_fares_and_scores(
     if not is_serviceable:
         insights.append("⚠️ Note: Coordinates are outside primary city center. Showing standardized regional tariffs.")
 
-    # Demand Intelligence & Pricing Pressure Enrichment
+    # Demand Intelligence & Pricing Pressure Enrichment across all evaluated providers
     traffic_factor = 1.5 if surge_multiplier > 1.3 else (1.2 if surge_multiplier > 1.05 else 1.0)
     pickup_h3 = get_h3_zone(start_lat, start_lon)
     dest_h3 = get_h3_zone(end_lat, end_lon) if (end_lat and end_lon) else "zone_destination_unknown"
 
-    for p in enriched_providers:
+    all_providers_to_enrich = active_providers + excluded_rides + partial_rides
+    for p in all_providers_to_enrich:
         d_intel = demand_engine.estimate_pricing_pressure(
             pickup_lat=start_lat or 12.97,
             pickup_lng=start_lon or 77.59,
@@ -512,7 +565,7 @@ def calculate_fares_and_scores(
             "source_type": p.get("source_type", "ml_estimate"),
             "last_updated": p.get("last_updated")
         }
-        for p in enriched_providers
+        for p in active_providers
     ]
 
     return {
@@ -532,13 +585,21 @@ def calculate_fares_and_scores(
         "pricingRegime": surge_rule,
         "fareSpread": fare_spread,
         "spreadPercentage": spread_pct,
-        "anomalyCount": sum(1 for p in enriched_providers if p.get("isAnomaly")),
-        "providers": enriched_providers,
+        "anomalyCount": sum(1 for p in active_providers if p.get("isAnomaly")),
+        "providers": active_providers,
+        "directProviders": direct_rides,
+        "excludedProviders": excluded_rides,
+        "partialProviders": partial_rides,
+        "allEvaluations": decision_output.get("allEvaluations", []),
+        "multimodalOption": multimodal_option,
+        "agentReasoning": agent_reasoning,
+        "routeClassification": route_context,
         "recommendations": recommendations,
         "insights": insights if is_serviceable else ["No supported ride services are currently configured for this location."],
-        "message": "" if enriched_providers else "No supported ride services are currently configured for this location.",
+        "message": "" if active_providers else "No supported ride services are currently configured for this location.",
         "routeHash": route_hash,
         "pickupZone": pickup_h3,
         "destinationZone": dest_h3,
         "marketConditions": market_conditions
     }
+

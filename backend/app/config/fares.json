@@ -45,7 +45,9 @@
         "Rapido Auto": { "baseFare": 28, "perKmRate": 10.0, "perMinRate": 1.5, "platformFee": 10, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
         "Ola Mini": { "baseFare": 48, "perKmRate": 14.5, "perMinRate": 2.2, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
         "Ola Prime": { "baseFare": 65, "perKmRate": 17.5, "perMinRate": 2.4, "platformFee": 18, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.5, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
-        "Local Taxi": { "baseFare": 60, "perKmRate": 16.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.3, "rating": 3.5, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Karnataka Transport Dept" }
+        "Local Taxi": { "baseFare": 60, "perKmRate": 16.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.3, "rating": 3.5, "isGovernmentBacked": true, "categoryTag": "State-Regulated", "regulatoryBody": "Karnataka Transport Dept" },
+        "Uber Intercity": { "baseFare": 550, "perKmRate": 17.5, "perMinRate": 1.5, "platformFee": 40, "vehicleType": "Cab", "etaMultiplier": 1.1, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Intercity Fleet" },
+        "KSTDC Outstation Taxi": { "baseFare": 650, "perKmRate": 18.5, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.6, "isGovernmentBacked": true, "categoryTag": "Govt-Regulated Tourism", "regulatoryBody": "Karnataka State Tourism Dev Corp", "zeroSurge": true }
       }
     },
     "Kochi": {
@@ -62,7 +64,10 @@
         "Uber Premier": { "baseFare": 65, "perKmRate": 16.5, "perMinRate": 2.2, "platformFee": 15, "vehicleType": "Cab", "etaMultiplier": 0.95, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
         "Rapido Bike": { "baseFare": 12, "perKmRate": 6.5, "perMinRate": 0.8, "platformFee": 4, "vehicleType": "Bike", "etaMultiplier": 0.8, "rating": 4.3, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
         "Rapido Auto": { "baseFare": 25, "perKmRate": 9.0, "perMinRate": 1.2, "platformFee": 8, "vehicleType": "Auto", "etaMultiplier": 1.05, "rating": 4.2, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
-        "Ola Mini": { "baseFare": 42, "perKmRate": 13.5, "perMinRate": 2.0, "platformFee": 10, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.1, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" }
+        "Ola Mini": { "baseFare": 42, "perKmRate": 13.5, "perMinRate": 2.0, "platformFee": 10, "vehicleType": "Cab", "etaMultiplier": 1.05, "rating": 4.1, "isGovernmentBacked": false, "categoryTag": "Private Aggregator" },
+        "Uber Intercity": { "baseFare": 450, "perKmRate": 17.0, "perMinRate": 1.5, "platformFee": 40, "vehicleType": "Cab", "etaMultiplier": 1.1, "rating": 4.7, "isGovernmentBacked": false, "categoryTag": "Intercity Fleet" },
+        "Ola Outstation": { "baseFare": 500, "perKmRate": 17.5, "perMinRate": 1.0, "platformFee": 45, "vehicleType": "Cab", "etaMultiplier": 1.1, "rating": 4.6, "isGovernmentBacked": false, "categoryTag": "Outstation Cab" },
+        "Kerala Tourism Tourist Taxi": { "baseFare": 600, "perKmRate": 18.0, "perMinRate": 0.0, "platformFee": 0, "vehicleType": "Cab", "etaMultiplier": 1.0, "rating": 4.8, "isGovernmentBacked": true, "categoryTag": "Govt-Regulated Tourism", "regulatoryBody": "Kerala Tourism Development Corp (KTDC)", "zeroSurge": true }
       }
     },
     "Goa": {

@@ -112,6 +112,73 @@ export interface RideProviderDetails {
   destination_zone?: string;
   lastUpdated?: string;
   last_updated?: string;
+
+  // Agentic AI & Route Eligibility
+  eligibility?: 'DIRECT' | 'PARTIAL' | 'UNSUPPORTED' | string;
+  eligibilityReason?: string;
+  suitabilityLevel?: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNSUITABLE' | string;
+  suitabilityScore?: number;
+  routeSupported?: boolean;
+  coverageConfidence?: string;
+  vehicleSuitabilityConfidence?: string;
+  evaluationExplanations?: string[];
+  partialBoundary?: string;
+  warning?: string;
+}
+
+export interface RouteClassification {
+  origin_label: string;
+  destination_label: string;
+  distance_km: number;
+  duration_mins: number;
+  route_type: 'LOCAL' | 'SHORT_DISTANCE' | 'MEDIUM_DISTANCE' | 'LONG_DISTANCE' | 'INTERCITY' | 'OUTSTATION' | 'AIRPORT_TRANSFER' | string;
+  origin_city?: string;
+  destination_city?: string;
+  is_intercity?: boolean;
+  is_outstation?: boolean;
+  is_airport_transfer?: boolean;
+  classification_reason?: string;
+}
+
+export interface MultimodalLeg {
+  leg_number: number;
+  mode: string;
+  provider: string;
+  vehicle_type: string;
+  from_location: string;
+  to_location: string;
+  distance_km: number;
+  duration_mins: number;
+  estimated_fare: number;
+  currency_symbol?: string;
+  instructions: string;
+}
+
+export interface MultimodalOption {
+  type: string;
+  title: string;
+  summary: string;
+  total_distance_km: number;
+  total_duration_mins: number;
+  total_estimated_fare: number;
+  currency_symbol?: string;
+  transfer_count: number;
+  legs: MultimodalLeg[];
+  recommendation_note?: string;
+}
+
+export interface AgentReasoning {
+  headline: string;
+  routeClassification: string;
+  routeDistanceKm: number;
+  auditSummary: string;
+  feasibleDirectCount: number;
+  excludedCount: number;
+  partialCount: number;
+  cheapestDirect?: string;
+  recommendedDirect?: string;
+  rapidoBikeExcluded?: boolean;
+  exclusionHighlights?: string[];
 }
 
 export interface MarketConditionItem {
@@ -132,6 +199,7 @@ export interface ComparisonRecommendations {
   fastest: string;
   mostEfficient: string;
   bestValue: string;
+  recommended?: string;
   recommendationReason: string;
   distanceAdvantage: string;
   timeAdvantage: string;
@@ -157,6 +225,12 @@ export interface ComparisonResult {
   fareSpread: number;
   spreadPercentage: number;
   providers: RideProviderDetails[];
+  directProviders?: RideProviderDetails[];
+  excludedProviders?: RideProviderDetails[];
+  partialProviders?: RideProviderDetails[];
+  multimodalOption?: MultimodalOption;
+  agentReasoning?: AgentReasoning;
+  routeClassification?: RouteClassification;
   recommendations: ComparisonRecommendations;
   insights: string[];
   routeHash?: string;
@@ -164,3 +238,4 @@ export interface ComparisonResult {
   destinationZone?: string;
   marketConditions?: MarketConditionItem[];
 }
+

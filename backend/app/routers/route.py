@@ -66,8 +66,50 @@ PUBLIC_PROVIDER_FIELDS = (
     "pricing_pressure_score", "pricingPressureScore", "demand_level",
     "pricing_pressure", "pricingPressure", "confidence_score", "confidence_text",
     "demandReason", "reason", "conditionWording", "condition_wording", "source_type", "sourceType",
-    "pickup_zone", "pickupZone", "destination_zone", "destinationZone", "last_updated", "lastUpdated"
+    "pickup_zone", "pickupZone", "destination_zone", "destinationZone", "last_updated", "lastUpdated",
+    # Agentic AI & Route Eligibility fields
+    "eligibility", "eligibilityReason", "suitabilityLevel", "suitabilityScore",
+    "routeSupported", "coverageConfidence", "vehicleSuitabilityConfidence",
+    "evaluationExplanations", "partialBoundary", "warning"
 )
+
+
+def _format_provider_dict(provider: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        **{key: provider[key] for key in PUBLIC_PROVIDER_FIELDS if key in provider},
+        "actualFare": provider.get("actualFare"),
+        "estimatedFare": provider.get("actualFare") if provider.get("liveAvailable", True) and provider.get("actualFare") is not None else provider.get("predictedFare", 0),
+        "fareMin": provider.get("fareMin", provider.get("fare_min")),
+        "fareMax": provider.get("fareMax", provider.get("fare_max")),
+        "fare_min": provider.get("fare_min", provider.get("fareMin")),
+        "fare_max": provider.get("fare_max", provider.get("fareMax")),
+        "isLive": provider.get("isLive", provider.get("is_live", True)),
+        "liveAvailable": provider.get("liveAvailable", provider.get("live_available", True)),
+        "isStale": provider.get("is_stale", provider.get("isStale", False)),
+        "quoteAgeSeconds": provider.get("quote_age_seconds", provider.get("quoteAgeSeconds", 0.0)),
+        "pricing_pressure_score": provider.get("pricing_pressure_score", provider.get("pricingPressureScore", 1.0)),
+        "demand_level": provider.get("demand_level", provider.get("demandLevel", "NORMAL")),
+        "pricing_pressure": provider.get("pricing_pressure", provider.get("pricingPressure", "NORMAL")),
+        "confidence": provider.get("confidence", 0.8),
+        "confidence_text": provider.get("confidence_text", provider.get("confidenceLevel", "80% confidence")),
+        "reason": provider.get("reason", provider.get("demandReason", "Standard baseline demand conditions for this area.")),
+        "source_type": provider.get("source_type", provider.get("sourceType", "ml_estimate")),
+        "last_updated": provider.get("last_updated", provider.get("lastUpdated")),
+        "priceHistory": {
+            "fares": provider.get("volatility", {}).get("recent_history", []),
+            "trend": provider.get("volatility", {}).get("price_trend", provider.get("priceTrend", "STABLE")),
+        },
+        "eligibility": provider.get("eligibility", "DIRECT"),
+        "eligibilityReason": provider.get("eligibilityReason", ""),
+        "suitabilityLevel": provider.get("suitabilityLevel", "HIGH"),
+        "suitabilityScore": provider.get("suitabilityScore", 1.0),
+        "routeSupported": provider.get("routeSupported", True),
+        "coverageConfidence": provider.get("coverageConfidence", "HIGH"),
+        "vehicleSuitabilityConfidence": provider.get("vehicleSuitabilityConfidence", "HIGH"),
+        "evaluationExplanations": provider.get("evaluationExplanations", []),
+        "partialBoundary": provider.get("partialBoundary"),
+        "warning": provider.get("warning")
+    }
 
 
 def _public_comparison(comparison: Dict[str, Any]) -> Dict[str, Any]:
@@ -76,37 +118,18 @@ def _public_comparison(comparison: Dict[str, Any]) -> Dict[str, Any]:
         "currencySymbol", "isServiceable", "message", "regionalNotice", "surgeRuleName",
         "straightLineDistance", "detourDistance", "pricingRegime", "fareSpread",
         "spreadPercentage", "providers", "recommendations", "insights", "routeHash",
-        "pickupZone", "destinationZone", "marketConditions"
+        "pickupZone", "destinationZone", "marketConditions",
+        "directProviders", "excludedProviders", "partialProviders",
+        "multimodalOption", "agentReasoning", "routeClassification"
     )
     result = {key: comparison[key] for key in public_fields if key in comparison}
-    result["providers"] = [
-        {
-            **{key: provider[key] for key in PUBLIC_PROVIDER_FIELDS if key in provider},
-            "actualFare": provider.get("actualFare"),
-            "estimatedFare": provider.get("actualFare") if provider.get("liveAvailable", True) and provider.get("actualFare") is not None else provider.get("predictedFare", 0),
-            "fareMin": provider.get("fareMin", provider.get("fare_min")),
-            "fareMax": provider.get("fareMax", provider.get("fare_max")),
-            "fare_min": provider.get("fare_min", provider.get("fareMin")),
-            "fare_max": provider.get("fare_max", provider.get("fareMax")),
-            "isLive": provider.get("isLive", provider.get("is_live", True)),
-            "liveAvailable": provider.get("liveAvailable", provider.get("live_available", True)),
-            "isStale": provider.get("is_stale", provider.get("isStale", False)),
-            "quoteAgeSeconds": provider.get("quote_age_seconds", provider.get("quoteAgeSeconds", 0.0)),
-            "pricing_pressure_score": provider.get("pricing_pressure_score", provider.get("pricingPressureScore", 1.0)),
-            "demand_level": provider.get("demand_level", provider.get("demandLevel", "NORMAL")),
-            "pricing_pressure": provider.get("pricing_pressure", provider.get("pricingPressure", "NORMAL")),
-            "confidence": provider.get("confidence", 0.8),
-            "confidence_text": provider.get("confidence_text", provider.get("confidenceLevel", "80% confidence")),
-            "reason": provider.get("reason", provider.get("demandReason", "Standard baseline demand conditions for this area.")),
-            "source_type": provider.get("source_type", provider.get("sourceType", "ml_estimate")),
-            "last_updated": provider.get("last_updated", provider.get("lastUpdated")),
-            "priceHistory": {
-                "fares": provider.get("volatility", {}).get("recent_history", []),
-                "trend": provider.get("volatility", {}).get("price_trend", provider.get("priceTrend", "STABLE")),
-            },
-        }
-        for provider in comparison.get("providers", [])
-    ]
+    result["providers"] = [_format_provider_dict(p) for p in comparison.get("providers", [])]
+    if "excludedProviders" in comparison:
+        result["excludedProviders"] = [_format_provider_dict(p) for p in comparison.get("excludedProviders", [])]
+    if "partialProviders" in comparison:
+        result["partialProviders"] = [_format_provider_dict(p) for p in comparison.get("partialProviders", [])]
+    if "directProviders" in comparison:
+        result["directProviders"] = [_format_provider_dict(p) for p in comparison.get("directProviders", [])]
     return result
 
 
@@ -282,8 +305,17 @@ async def _process_route_calculation(
         drop_address=drop_address
     )
 
-    fares = [p["actualFare"] for p in comparison["providers"]]
-    potential_savings = (max(fares) - min(fares)) if fares else 0.0
+    valid_fares = [p["actualFare"] for p in comparison.get("providers", []) if p.get("actualFare") is not None]
+    potential_savings = (max(valid_fares) - min(valid_fares)) if valid_fares else 0.0
+
+    def _extract_name(rec):
+        if isinstance(rec, dict):
+            return rec.get("provider", "None")
+        return str(rec) if rec else "None"
+
+    rec_cheapest = _extract_name(comparison.get("recommendations", {}).get("cheapest"))
+    rec_fastest = _extract_name(comparison.get("recommendations", {}).get("fastest"))
+    rec_best = _extract_name(comparison.get("recommendations", {}).get("mostEfficient") or comparison.get("recommendations", {}).get("bestValue"))
 
     search_rec = Search(
         source=source_label,
@@ -294,9 +326,9 @@ async def _process_route_calculation(
         dest_lng=lon2,
         distance_km=round(distance_km, 1),
         duration_min=round(duration_mins),
-        cheapest_provider=comparison["recommendations"]["cheapest"],
-        fastest_provider=comparison["recommendations"]["fastest"],
-        best_provider=comparison["recommendations"]["mostEfficient"],
+        cheapest_provider=rec_cheapest,
+        fastest_provider=rec_fastest,
+        best_provider=rec_best,
         savings=float(potential_savings)
     )
     db.add(search_rec)

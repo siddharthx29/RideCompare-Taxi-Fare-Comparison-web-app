@@ -182,10 +182,33 @@ function App() {
         mlClusterId = 1;
       }
 
-      if (distKm > 25) {
-        mlClusterLabel = 'Long-Distance Transit';
-        mlClusterId = 2;
+      // Agentic AI Route Classification
+      const fullText = `${source.label} ${dest.label}`.toLowerCase();
+      const isAirport = ['airport', 'cial', 'kia', 'kempegowda', 'dabolim', 'mopa', 'heathrow', 'sfo', 'jfk', 'dxb'].some(k => fullText.includes(k));
+      const isOutstationDest = ['munnar', 'thekkady', 'vagamon', 'alappuzha', 'alleppey', 'coorg', 'ooty', 'nandi hills', 'mysore', 'pune', 'lonavala', 'dudhsagar', 'idukki', 'wayanad'].some(k => fullText.includes(k));
+
+      let routeType: 'LOCAL' | 'SHORT_DISTANCE' | 'MEDIUM_DISTANCE' | 'LONG_DISTANCE' | 'INTERCITY' | 'OUTSTATION' | 'AIRPORT_TRANSFER' = 'LOCAL';
+      let classificationReason = 'Short urban intra-city commute.';
+
+      if (isAirport) {
+        routeType = 'AIRPORT_TRANSFER';
+        classificationReason = 'Airport transfer corridor. Prioritizing luggage-capable, highway-cleared fleet.';
+      } else if (isOutstationDest || distKm >= 75) {
+        routeType = 'OUTSTATION';
+        classificationReason = `Long-distance outstation tourist / hill route detected (${distKm} km). Local municipal transit and bike taxis are prohibited.`;
+      } else if (distKm > 40) {
+        routeType = 'INTERCITY';
+        classificationReason = `Intercity corridor across administrative districts (${distKm} km). Highway-capable cabs required.`;
+      } else if (distKm > 20) {
+        routeType = 'MEDIUM_DISTANCE';
+        classificationReason = `Suburban perimeter transit (${distKm} km). Cabs and autos eligible; bike taxis limited.`;
+      } else if (distKm > 10) {
+        routeType = 'SHORT_DISTANCE';
+        classificationReason = `Short intra-city trip (${distKm} km). All standard vehicle types eligible.`;
       }
+
+      const isBikeEligible = distKm <= 18 && routeType !== 'OUTSTATION' && routeType !== 'INTERCITY' && routeType !== 'AIRPORT_TRANSFER';
+      const isAutoEligible = distKm <= 32 && routeType !== 'OUTSTATION' && routeType !== 'INTERCITY';
 
       const buildProvider = (
         name: string,
@@ -193,7 +216,9 @@ function App() {
         base: number,
         perKmRate: number,
         perMinRate: number,
-        badges: { isCheapest?: boolean; isFastest?: boolean; isMostEfficient?: boolean; isBestValue?: boolean } = {}
+        badges: { isCheapest?: boolean; isFastest?: boolean; isMostEfficient?: boolean; isBestValue?: boolean } = {},
+        eligibilityStatus: 'DIRECT' | 'PARTIAL' | 'UNSUPPORTED' = 'DIRECT',
+        eligibilityReasonText = '✓ Suitable for this route'
       ): RideProviderDetails => {
         const isBike = vType.toLowerCase().includes('bike');
         const isAuto = vType.toLowerCase().includes('auto');
@@ -279,22 +304,126 @@ function App() {
           isBestValue: Boolean(badges.isBestValue),
           isLive: true,
           liveAvailable: true,
+          eligibility: eligibilityStatus,
+          eligibilityReason: eligibilityReasonText,
+          suitabilityLevel: eligibilityStatus === 'DIRECT' ? 'HIGH' : 'UNSUITABLE',
+          suitabilityScore: eligibilityStatus === 'DIRECT' ? 0.95 : 0.0,
+          routeSupported: eligibilityStatus === 'DIRECT',
+          coverageConfidence: 'HIGH',
+          vehicleSuitabilityConfidence: 'HIGH',
+          evaluationExplanations: [eligibilityReasonText]
         };
       };
 
-      const providersList: RideProviderDetails[] = [
-        buildProvider('Rapido Bike', 'Bike', 20, 8.5, 0.8, { isCheapest: true, isFastest: true }),
-        buildProvider('Rapido Auto', 'Auto', 25, 11.5, 1.0, { isBestValue: true }),
-        buildProvider('Uber Go', 'Cab', 42, 14.5, 1.5, { isMostEfficient: true }),
-        buildProvider('Ola Mini', 'Cab', 40, 14.0, 1.4),
-        buildProvider('Uber Premier', 'Cab', 75, 19.5, 2.2),
-        buildProvider('Ola Prime Sedan', 'Cab', 70, 18.5, 2.0)
-      ];
+      const directCandidates: RideProviderDetails[] = [];
+      const excludedCandidates: RideProviderDetails[] = [];
 
-      const minFare = providersList[0].actualFare || providersList[0].estimatedFare;
-      const maxFare = providersList[4].actualFare || providersList[4].estimatedFare;
-      const fareSpread = maxFare - minFare;
-      const spreadPercentage = Math.round((fareSpread / minFare) * 100);
+      // Rapido Bike
+      if (isBikeEligible) {
+        directCandidates.push(buildProvider('Rapido Bike', 'Bike', 20, 8.5, 0.8, {}, 'DIRECT', '✓ Highly suitable for short urban travel'));
+      } else {
+        excludedCandidates.push(buildProvider(
+          'Rapido Bike', 'Bike', 20, 8.5, 0.8, {}, 'UNSUPPORTED',
+          `✕ Rapido Bike is not considered for this journey because the service/vehicle type does not support ${distKm} km ${routeType.toLowerCase()} routes.`
+        ));
+      }
+
+      // Rapido Auto
+      if (isAutoEligible) {
+        directCandidates.push(buildProvider('Rapido Auto', 'Auto', 25, 11.5, 1.0, {}, 'DIRECT', '✓ Practical for short-to-medium city trips'));
+      } else {
+        excludedCandidates.push(buildProvider(
+          'Rapido Auto', 'Auto', 25, 11.5, 1.0, {}, 'UNSUPPORTED',
+          `✕ Auto rickshaws are restricted to local municipal perimeters and cannot operate on ${distKm} km ${routeType.toLowerCase()} routes.`
+        ));
+      }
+
+      // Standard Cabs & Outstation Cabs
+      if (routeType === 'OUTSTATION' || routeType === 'INTERCITY') {
+        directCandidates.push(buildProvider('Uber Intercity', 'Cab', 450, 17.0, 1.5, { isBestValue: true }, 'DIRECT', '✓ Dedicated intercity fleet with experienced highway drivers and luggage capacity'));
+        directCandidates.push(buildProvider('Ola Outstation', 'Cab', 500, 17.5, 1.2, {}, 'DIRECT', '✓ Outstation cab tier certified for long-distance highway routes'));
+        directCandidates.push(buildProvider('Tourist Taxi (Regulated)', 'Cab', 600, 18.0, 0.0, { isMostEfficient: true }, 'DIRECT', '✓ Tourism-registered commercial chauffeur certified for high-range terrain'));
+      } else {
+        directCandidates.push(buildProvider('Uber Go', 'Cab', 42, 14.5, 1.5, { isMostEfficient: true }, 'DIRECT', '✓ Reliable urban cab for intra-city transit'));
+        directCandidates.push(buildProvider('Ola Mini', 'Cab', 40, 14.0, 1.4, {}, 'DIRECT', '✓ Compact city cab'));
+        directCandidates.push(buildProvider('Uber Premier', 'Cab', 75, 19.5, 2.2, {}, 'DIRECT', '✓ Premium sedan with top-rated drivers'));
+      }
+
+      // Mark badges ONLY on directCandidates
+      if (directCandidates.length > 0) {
+        const sortedByPrice = [...directCandidates].sort((a, b) => (a.actualFare || a.estimatedFare) - (b.actualFare || b.estimatedFare));
+        const sortedByEta = [...directCandidates].sort((a, b) => a.etaMinutes - b.etaMinutes);
+        sortedByPrice[0].isCheapest = true;
+        sortedByEta[0].isFastest = true;
+      }
+
+      const activeProviders = directCandidates.length > 0 ? directCandidates : excludedCandidates;
+      const minFare = activeProviders[0].actualFare || activeProviders[0].estimatedFare;
+      const maxFare = activeProviders[activeProviders.length - 1].actualFare || activeProviders[activeProviders.length - 1].estimatedFare;
+      const fareSpread = Math.max(0, maxFare - minFare);
+      const spreadPercentage = Math.round((fareSpread / Math.max(1, minFare)) * 100);
+
+      const cheapestDirect = directCandidates.find(p => p.isCheapest)?.provider || directCandidates[0]?.provider || 'No direct options';
+      const recommendedDirect = directCandidates.find(p => p.isMostEfficient)?.provider || directCandidates[0]?.provider || 'No direct options';
+
+      // Multimodal suggestion
+      const multimodalOpt = (routeType === 'OUTSTATION' || routeType === 'INTERCITY' || distKm > 45) ? {
+        type: 'MULTIMODAL',
+        title: `Multimodal Route: Local Cab + Express Transit`,
+        summary: `Combine a short local cab to the regional transit terminal with an express service directly to destination.`,
+        total_distance_km: distKm,
+        total_duration_mins: Math.round(durMin * 1.1 + 15),
+        total_estimated_fare: Math.round(distKm * 8 + 120),
+        currency_symbol: '₹',
+        transfer_count: 1,
+        recommendation_note: 'Never hide transfers: this option saves up to 45% compared to a dedicated outstation cab.',
+        legs: [
+          {
+            leg_number: 1,
+            mode: 'Local Cab / Auto',
+            provider: 'Local Taxi / Uber Go',
+            vehicle_type: 'Cab',
+            from_location: source.label.split(',')[0],
+            to_location: 'Central Transit Terminal',
+            distance_km: Math.round(Math.min(18, distKm * 0.15)),
+            duration_mins: Math.round(Math.min(35, durMin * 0.2)),
+            estimated_fare: 180,
+            currency_symbol: '₹',
+            instructions: `Take a local ride to Central Transit Terminal.`
+          },
+          {
+            leg_number: 2,
+            mode: 'Intercity Express',
+            provider: 'State RTC Express / Intercity Coach',
+            vehicle_type: 'Express Bus',
+            from_location: 'Central Transit Terminal',
+            to_location: dest.label.split(',')[0],
+            distance_km: Math.round(distKm * 0.85),
+            duration_mins: Math.round(durMin * 0.9),
+            estimated_fare: Math.round(distKm * 7),
+            currency_symbol: '₹',
+            instructions: `Board the express service directly to ${dest.label.split(',')[0]}.`
+          }
+        ]
+      } : undefined;
+
+      const agentReasoningObj = {
+        headline: (routeType === 'OUTSTATION' || routeType === 'INTERCITY' || distKm > 60)
+          ? `Long-distance ${routeType.toLowerCase()} route detected (${distKm} km). Local bikes & autos excluded before price ranking.`
+          : `Local urban route validated (${distKm} km). All standard vehicle types eligible.`,
+        routeClassification: routeType,
+        routeDistanceKm: distKm,
+        auditSummary: (routeType === 'OUTSTATION' || routeType === 'INTERCITY' || distKm > 60)
+          ? `RideCompare evaluated ${directCandidates.length + excludedCandidates.length} options. Rapido Bike and local autos were excluded because 2/3-wheelers do not support long-distance highway routes. Prioritizing ${directCandidates.length} verified direct outstation cabs.`
+          : `All urban providers (Bikes, Autos, Cabs) operate within this local transit zone.`,
+        feasibleDirectCount: directCandidates.length,
+        excludedCount: excludedCandidates.length,
+        partialCount: 0,
+        cheapestDirect: cheapestDirect,
+        recommendedDirect: recommendedDirect,
+        rapidoBikeExcluded: !isBikeEligible,
+        exclusionHighlights: excludedCandidates.map(e => `${e.provider}: ${e.eligibilityReason}`)
+      };
 
       setSearchId(Date.now());
       setRouteGeometry(routeGeom);
@@ -303,28 +432,43 @@ function App() {
         durationMins: durMin,
         straightLineDistance: parseFloat(straightLineKm.toFixed(1)),
         detourDistance: parseFloat(Math.max(0, distKm - straightLineKm).toFixed(1)),
-        detectedCity: 'Local Route',
+        detectedCity: routeType === 'OUTSTATION' ? 'Intercity Corridor' : 'Local Route',
         surgeRuleName: mlSurgeRule,
         pricingRegime: mlClusterLabel,
         isServiceable: true,
         message: 'Real-time estimated fare comparison',
         fareSpread: fareSpread,
         spreadPercentage: spreadPercentage,
-        providers: providersList,
+        providers: activeProviders,
+        directProviders: directCandidates,
+        excludedProviders: excludedCandidates,
+        partialProviders: [],
+        multimodalOption: multimodalOpt,
+        agentReasoning: agentReasoningObj,
+        routeClassification: {
+          origin_label: source.label,
+          destination_label: dest.label,
+          distance_km: distKm,
+          duration_mins: durMin,
+          route_type: routeType,
+          classification_reason: classificationReason
+        },
         recommendations: {
-          cheapest: 'Rapido Bike',
-          fastest: 'Rapido Bike',
-          mostEfficient: 'Uber Go',
-          bestValue: 'Rapido Auto',
-          recommendationReason: `Rapido Bike is the most affordable at ₹${providersList[0].fareMin}–₹${providersList[0].fareMax}, while Uber Go offers balanced cab comfort at ₹${providersList[2].fareMin}–₹${providersList[2].fareMax}.`,
-          distanceAdvantage: `Direct route distance: ${distKm} km`,
+          cheapest: cheapestDirect,
+          fastest: directCandidates.find(p => p.isFastest)?.provider || cheapestDirect,
+          mostEfficient: recommendedDirect,
+          bestValue: directCandidates.find(p => p.isBestValue)?.provider || recommendedDirect,
+          recommended: recommendedDirect,
+          recommendationReason: agentReasoningObj.headline,
+          distanceAdvantage: `Direct route distance: ${distKm} km (${routeType})`,
           timeAdvantage: `Estimated travel duration: ~${durMin} mins`,
-          costAdvantage: `Save up to ₹${fareSpread} (${spreadPercentage}%) by comparing providers.`
+          costAdvantage: `Verified direct choices evaluated before price comparison.`
         },
         insights: [
           `Distance calculated along real driving road network (${distKm} km).`,
-          `Current pricing regime: ${mlClusterLabel} (${mlSurgeRule} at ${mlSurgeMultiplier}x).`,
-          `Booking Auto or Bike saves approximately ${spreadPercentage}% compared to premium cabs.`
+          `AI Route Feasibility: ${agentReasoningObj.headline}`,
+          !isBikeEligible ? `⚠️ Rapido Bike taxi excluded from direct rides (unsuitable for ${distKm} km ${routeType.toLowerCase()} travel).` : `All standard urban modes available for this distance.`,
+          `Current pricing regime: ${mlClusterLabel} (${mlSurgeRule} at ${mlSurgeMultiplier}x).`
         ]
       });
     } finally {

@@ -70,6 +70,14 @@ def resolve_service_region(
     return None
 
 
+def _quick_haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    import math
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = math.sin(d_lat / 2.0) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2.0) ** 2
+    return 6371.0 * 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+
+
 def resolve_trip_serviceability(
     pickup_label: str,
     pickup_lat: float,
@@ -82,8 +90,33 @@ def resolve_trip_serviceability(
 ) -> Tuple[Optional[str], Tuple[str, ...], Tuple[str, ...]]:
     pickup_region = resolve_service_region(pickup_label, pickup_lat, pickup_lng, pickup_address)
     drop_region = resolve_service_region(drop_label, drop_lat, drop_lng, drop_address)
-    if not pickup_region or pickup_region != drop_region:
+
+    if not pickup_region:
         return None, (), ()
 
     region = SERVICE_REGIONS[pickup_region]
-    return pickup_region, tuple(region["providers"]), tuple(region["quote_names"])
+
+    # Standard intra-regional transit
+    if pickup_region == drop_region:
+        return pickup_region, tuple(region["providers"]), tuple(region["quote_names"])
+
+    # Outstation and intercity transit check
+    if region.get("intercity") and pickup_lat and pickup_lng and drop_lat and drop_lng:
+        dist = _quick_haversine(pickup_lat, pickup_lng, drop_lat, drop_lng)
+        if 15.0 <= dist <= 300.0:
+            norm_drop = _normalize(drop_label)
+            outstation_dests = region.get("outstation_destinations", [])
+            dest_match = any(d and d in norm_drop for d in outstation_dests)
+
+            drop_addr = drop_address or {}
+            drop_state = _normalize(drop_addr.get("state", ""))
+            state_aliases = region.get("state_aliases", [])
+            state_match = bool(drop_state) and any(alias and alias in drop_state for alias in state_aliases)
+
+            if dest_match or state_match:
+                combined_providers = tuple(dict.fromkeys(list(region.get("providers", [])) + list(region.get("outstation_providers", []))))
+                combined_quotes = tuple(dict.fromkeys(list(region.get("quote_names", [])) + list(region.get("outstation_quote_names", []))))
+                return pickup_region, combined_providers, combined_quotes
+
+
+    return None, (), ()

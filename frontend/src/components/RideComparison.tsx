@@ -3,7 +3,9 @@ import {
   Zap, ArrowUpRight, ChevronDown, ChevronUp,
   Sparkles, Clock, Car, Bike, Navigation, ShieldCheck,
   RefreshCw, Radio, AlertCircle, Bot, Brain, TrendingUp,
-  Activity
+  Activity, CheckCircle2, XCircle, Route, AlertTriangle,
+  ArrowRight, CornerDownRight, Check, X, ShieldAlert,
+  Layers, MapPin
 } from 'lucide-react';
 import type { RideProviderDetails, ComparisonResult } from '../types/ride';
 import { PriceHistoryGraph } from './PriceHistoryGraph';
@@ -24,15 +26,30 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 }) => {
   const {
     providers, insights, detectedCity,
-    pricingRegime, fareSpread, spreadPercentage
+    pricingRegime, fareSpread, spreadPercentage,
+    directProviders, excludedProviders, partialProviders,
+    multimodalOption, agentReasoning, routeClassification
   } = comparison;
 
   const defaultSym = comparison.currencySymbol || (comparison.currency === 'USD' ? '$' : comparison.currency === 'EUR' ? '€' : comparison.currency === 'GBP' ? '£' : '₹');
+
+  // Segregate direct viable rides from excluded / partial rides
+  const directList = (directProviders && directProviders.length > 0)
+    ? directProviders
+    : providers.filter(p => p.eligibility !== 'UNSUPPORTED' && p.eligibility !== 'PARTIAL');
+  const excludedList = (excludedProviders && excludedProviders.length > 0)
+    ? excludedProviders
+    : providers.filter(p => p.eligibility === 'UNSUPPORTED');
+  const partialList = (partialProviders && partialProviders.length > 0)
+    ? partialProviders
+    : providers.filter(p => p.eligibility === 'PARTIAL');
 
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'recommended' | 'price' | 'eta'>('recommended');
   const [vehicleFilter, setVehicleFilter] = useState<'ALL' | 'CAB' | 'AUTO' | 'BIKE' | 'ROBOTAXI'>('ALL');
   const [nowTimestamp, setNowTimestamp] = useState(0);
+  const [showAuditDrawer, setShowAuditDrawer] = useState(true);
+  const [showMultimodalDrawer, setShowMultimodalDrawer] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -54,7 +71,10 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
     setExpandedProvider(prev => prev === providerName ? null : providerName);
   };
 
-  const filteredProviders = providers.filter(p => {
+  // Base list of rides: verified direct rides (or fallback if none verified)
+  const baseProviders = directList.length > 0 ? directList : providers;
+
+  const filteredProviders = baseProviders.filter(p => {
     if (vehicleFilter === 'ALL') return true;
     const type = p.vehicleType.toUpperCase();
     const name = p.provider.toUpperCase();
@@ -397,18 +417,35 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
     }
   };
 
-  const cheapestProvider = providers.find(p => p.isCheapest) || providers[0];
+  const cheapestProvider = baseProviders.find(p => p.isCheapest) || baseProviders[0];
   const activeSym = cheapestProvider?.currencySymbol || defaultSym;
   const hasRobotaxi = providers.some(p => (p.categoryTag || '').includes('Autonomous') || p.provider.includes('Waymo'));
+  const routeType = routeClassification?.route_type || (comparison.distanceKm > 60 ? 'OUTSTATION' : comparison.distanceKm > 25 ? 'INTERCITY' : 'LOCAL');
+
+  const formatRouteTypeLabel = (type: string) => {
+    switch (type) {
+      case 'OUTSTATION': return 'Outstation Long-Distance';
+      case 'INTERCITY': return 'Intercity Transit';
+      case 'AIRPORT_TRANSFER': return 'Airport Corridor';
+      case 'MEDIUM_DISTANCE': return 'Regional / Suburb';
+      case 'SHORT_DISTANCE': return 'Short Distance';
+      case 'LOCAL': return 'Local City Route';
+      default: return type.replace('_', ' ');
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <div className="p-4 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl border border-indigo-900/50 shadow-md">
-        <div className="flex items-center justify-between gap-2 pb-2 border-b border-indigo-800/40">
-          <div className="flex items-center gap-2">
+      <div className="p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl border border-indigo-900/50 shadow-md">
+        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-indigo-800/40 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded-full border border-cyan-500/40">
+              <Route size={12} className="text-cyan-400" />
+              {formatRouteTypeLabel(routeType)}
+            </span>
             <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-              <Radio size={11} className="text-emerald-400 animate-pulse" />
-              Route-aware fare estimates
+              <ShieldCheck size={12} className="text-emerald-400" />
+              Route Feasibility Validated
             </span>
             <span className="text-[11px] font-semibold text-indigo-200 hidden sm:inline">
               {detectedCity || 'Transit Zone'} {comparison.country ? `(${comparison.country})` : ''} • {comparison.distanceKm.toFixed(1)} km ({comparison.durationMins} mins)
@@ -436,9 +473,47 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           </div>
         </div>
 
-        <div className="pt-3 flex items-end justify-between">
+        {/* Agentic AI Route Reasoning Banner */}
+        {agentReasoning && (
+          <div className="my-3 p-3 bg-indigo-900/30 border border-indigo-500/30 rounded-xl space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs font-bold text-indigo-200 flex items-center gap-1.5">
+                <Brain size={13} className="text-indigo-400" />
+                AI Route Intelligence & Eligibility Audit
+              </span>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
+                  ✓ {directList.length} Direct Viable
+                </span>
+                {excludedList.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-300 border border-rose-500/30">
+                    ✕ {excludedList.length} Ineligible Filtered
+                  </span>
+                )}
+                {partialList.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/30">
+                    ⚠ {partialList.length} Partial
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-indigo-100/90 leading-relaxed">
+              {agentReasoning.auditSummary || agentReasoning.headline}
+            </p>
+            {agentReasoning.rapidoBikeExcluded && (
+              <div className="flex items-start gap-1.5 text-[11px] text-amber-300 bg-amber-950/40 border border-amber-600/40 p-2 rounded-lg font-medium">
+                <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Long-distance route detected:</strong> Rapido Bike and local two-wheelers have been excluded from direct ride recommendations ({agentReasoning.rapidoBikeReason || 'two-wheelers are not suitable for journeys of this distance'}). Feasibility and passenger safety are prioritized over price.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="pt-2 flex items-end justify-between">
           <div>
-            <span className="text-[11px] font-medium text-slate-400 block">Lowest Live In-Between Fare</span>
+            <span className="text-[11px] font-medium text-slate-400 block">Lowest Live In-Between Fare (Direct Verified)</span>
             <div className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
               <span>{cheapestProvider?.provider}</span>
               {cheapestProvider && (
@@ -565,8 +640,22 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
       <div className="space-y-3">
         {sortedProviders.length === 0 && (
-          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-5 text-sm font-semibold text-[var(--text-secondary)]">
-            {comparison.message || 'No supported ride services are currently configured for this location.'}
+          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-5 text-sm font-semibold text-[var(--text-secondary)] space-y-1.5">
+            <div className="text-[var(--text-primary)] font-bold flex items-center gap-1.5">
+              <AlertCircle size={16} className="text-amber-500" />
+              {vehicleFilter === 'BIKE'
+                ? `No Bike Taxis Eligible for ${formatRouteTypeLabel(routeType)}`
+                : vehicleFilter === 'AUTO'
+                ? `No Auto-Rickshaws Eligible for ${formatRouteTypeLabel(routeType)}`
+                : 'No Direct Rides Verified'}
+            </div>
+            <p className="text-xs font-normal leading-relaxed">
+              {vehicleFilter === 'BIKE'
+                ? `Bike taxis (e.g. Rapido Bike) are restricted to short-distance urban journeys (< 18 km) for passenger safety and regulatory limits. On this ${comparison.distanceKm.toFixed(1)} km journey, bike taxis are excluded. Check the Feasibility Audit below.`
+                : vehicleFilter === 'AUTO'
+                ? `Auto-rickshaws are restricted to local municipal trips (< 32 km) and do not support long-distance / outstation transit.`
+                : comparison.message || 'No direct ride services verified for this filter.'}
+            </p>
           </div>
         )}
         {sortedProviders.map((p) => {
@@ -659,6 +748,22 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                         {p.isFastest && !p.isCheapest && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-500 text-white border border-blue-600">
                             ⚡ Fastest
+                          </span>
+                        )}
+                        {p.routeSupported !== false && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-950 text-emerald-400 border border-emerald-500/40 flex items-center gap-0.5">
+                            <CheckCircle2 size={10} className="text-emerald-400" /> Verified Direct
+                          </span>
+                        )}
+                        {p.suitabilityLevel && (
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold flex items-center gap-0.5 ${
+                            p.suitabilityLevel === 'HIGH'
+                              ? 'bg-indigo-950 text-indigo-300 border border-indigo-500/40'
+                              : p.suitabilityLevel === 'MEDIUM'
+                              ? 'bg-amber-950 text-amber-300 border border-amber-500/40'
+                              : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                          }`}>
+                            Suitability: {p.suitabilityLevel}
                           </span>
                         )}
                       </div>
@@ -961,6 +1066,29 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
 
                     <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-emerald-500 block flex items-center gap-1">
+                        <ShieldCheck size={12} /> Route Feasibility & Suitability Audit
+                      </span>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Eligibility Status:</span>
+                        <span className="text-emerald-400 font-bold">{p.eligibility || 'DIRECT'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Vehicle Suitability:</span>
+                        <span className="text-indigo-400 font-bold">{p.suitabilityLevel || 'HIGH'} ({p.suitabilityScore || 90}%)</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-[var(--text-secondary)]">Coverage Confidence:</span>
+                        <span className="text-[var(--text-primary)] font-semibold">{p.coverageConfidence || 'HIGH'}</span>
+                      </div>
+                      {p.eligibilityReason && (
+                        <p className="border-t border-[var(--border-color)] pt-1 text-[10px] text-emerald-300">
+                          {p.eligibilityReason}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl space-y-1.5">
                       <span className="text-[10px] uppercase font-bold text-[var(--text-secondary)] block">Service Information</span>
                       <div className="text-xs text-[var(--text-primary)]">
                         {p.categoryTag ? `Category: ${p.categoryTag}` : 'Provider fleet quote'}
@@ -977,6 +1105,160 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           );
         })}
       </div>
+
+      {/* Multimodal Transit Option (Combined Journey) */}
+      {multimodalOption && (
+        <div className="p-4 bg-gradient-to-br from-slate-900 via-cyan-950/40 to-slate-900 border border-cyan-500/40 rounded-2xl space-y-3 shadow-md">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-500/50">
+                <Layers size={16} />
+              </span>
+              <div>
+                <h4 className="text-sm font-extrabold text-cyan-200">
+                  {multimodalOption.title || 'Multimodal Combined Transit Alternative'}
+                </h4>
+                <p className="text-[11px] text-cyan-300/80">
+                  {multimodalOption.summary}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">
+                {multimodalOption.transfer_count} Transfer Required
+              </span>
+              <span className="text-sm font-black text-cyan-300">
+                Est. {multimodalOption.currency_symbol || defaultSym}{multimodalOption.total_estimated_fare}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {multimodalOption.legs.map((leg, lIdx) => (
+              <div key={lIdx} className="p-2.5 bg-black/30 border border-cyan-500/20 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-5 h-5 rounded-full bg-cyan-900 text-cyan-200 flex items-center justify-center font-bold text-[10px] shrink-0">
+                    {leg.leg_number}
+                  </span>
+                  <div>
+                    <span className="font-bold text-white block">
+                      {leg.provider} ({leg.vehicle_type})
+                    </span>
+                    <span className="text-[11px] text-slate-300 flex items-center gap-1">
+                      <span>{leg.from_location}</span>
+                      <ArrowRight size={10} className="text-cyan-400" />
+                      <span>{leg.to_location}</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="font-bold text-cyan-300">
+                    {leg.currency_symbol || defaultSym}{leg.estimated_fare}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    {leg.distance_km} km • ~{leg.duration_mins} mins
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-1 border-t border-cyan-800/40 flex items-center justify-between text-[10px] text-cyan-300/80 font-medium">
+            <span>✓ Complete transfers explicitly indicated — never concealed.</span>
+            <span>Total travel time: ~{multimodalOption.total_duration_mins} mins</span>
+          </div>
+        </div>
+      )}
+
+      {/* Excluded Services & AI Service Coverage Audit Section */}
+      {excludedList.length > 0 && (
+        <div className="bg-[var(--bg-secondary)] border border-rose-500/30 rounded-2xl overflow-hidden shadow-xs">
+          <div
+            onClick={() => setShowAuditDrawer(!showAuditDrawer)}
+            className="p-3.5 bg-rose-950/20 hover:bg-rose-950/30 transition-colors cursor-pointer flex items-center justify-between gap-2 border-b border-rose-500/20"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="p-1 rounded-lg bg-rose-950 text-rose-400 border border-rose-500/40 shrink-0">
+                <ShieldAlert size={16} />
+              </span>
+              <div className="truncate">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-rose-300">
+                    AI Service Coverage & Route Feasibility Audit
+                  </h4>
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-950 text-rose-400 border border-rose-600/40">
+                    {excludedList.length} Excluded
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                  Disqualified services that cannot safely, realistically, or legally complete this entire journey
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] font-semibold text-rose-400 hidden sm:inline">
+                Priority 1: Route Feasibility &gt; Price
+              </span>
+              {showAuditDrawer ? <ChevronUp size={16} className="text-rose-400" /> : <ChevronDown size={16} className="text-rose-400" />}
+            </div>
+          </div>
+
+          {showAuditDrawer && (
+            <div className="p-3.5 space-y-2.5 bg-black/10">
+              <div className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                RideCompare evaluates <strong>route feasibility and service coverage before price optimization</strong>. The ride services below were detected or queried but excluded from direct recommendations:
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {excludedList.map((p, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-[var(--bg-primary)] border border-rose-500/20 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                        <span className="text-xs font-bold text-[var(--text-primary)]">
+                          {p.provider}
+                        </span>
+                        <span className="text-[10px] font-medium text-[var(--text-secondary)]">
+                          ({p.vehicleType})
+                        </span>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-rose-950 text-rose-300 border border-rose-600/40">
+                        ✕ Excluded
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-rose-400/90 bg-rose-950/30 p-2 rounded-lg border border-rose-500/20 font-medium">
+                      {p.eligibilityReason || 'Route exceeds vehicle operational limits or falls outside provider service area.'}
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-[var(--text-secondary)] pt-1">
+                      <span>Vehicle Suitability: <strong className="text-rose-400">{p.suitabilityLevel || 'UNSUITABLE'}</strong></span>
+                      {p.actualFare && (
+                        <span>API Rate: {p.currencySymbol || defaultSym}{p.actualFare} (Excluded)</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Partial Providers Notice if any */}
+      {partialList.length > 0 && (
+        <div className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-2xl flex items-start gap-2.5 text-xs text-amber-200">
+          <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold text-amber-300 block">
+              Partial Coverage Services ({partialList.length})
+            </span>
+            <p className="text-[11px] text-amber-200/90 leading-relaxed font-normal">
+              Services like {partialList.map(p => p.provider).join(', ')} operate only in local zones or sub-sections of this journey and cannot complete the direct route. They have been separated from direct recommendations.
+            </p>
+          </div>
+        </div>
+      )}
 
       <PriceHistoryGraph providers={sortedProviders} />
 
