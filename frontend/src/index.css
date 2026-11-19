@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+/* Design Token Overrides & Custom Theme Variables */
+:root {
+  --bg-primary: #0c0d0f;
+  --bg-secondary: #141619;
+  --text-primary: #f4f5f6;
+  --text-secondary: #9a9fa7;
+  --border-color: #292b30;
+  --accent-color: #ff8055;
+  --accent-hover: #ff9877;
+  --accent-blue: #6ea8ff;
+  --accent-yellow: #f5c451;
+  --glass-bg: rgba(20, 22, 25, 0.92);
+  --glass-border: rgba(59, 62, 68, 0.72);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.18);
+  --shadow-lg: 0 4px 14px rgb(0 0 0 / 0.22);
+  --map-filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(1.12);
+  --surface: #111414;
+  --surface-container-low: #191c1c;
+  --surface-container: #1d2020;
+  --surface-container-high: #282a2a;
+  --surface-container-highest: #323535;
+  --on-surface: #e1e3e2;
+  --on-surface-variant: #dfc0b1;
+  --secondary-green: #5adda4;
+}
+
+.dark {
+  --bg-primary: #080a0b;
+  --bg-secondary: #111516;
+  --text-primary: #f5f7f6;
+  --text-secondary: #8d9996;
+  --border-color: #26302f;
+  --accent-color: #ff7043;
+  --accent-hover: #ff8a61;
+  --accent-blue: #6ea8ff;
+  --accent-yellow: #f5c451;
+  --glass-bg: rgba(17, 21, 22, 0.88);
+  --glass-border: rgba(67, 80, 78, 0.68);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.16);
+  --shadow-lg: 0 4px 14px rgb(0 0 0 / 0.18);
+  --map-filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(1.12);
+}
+
+.light {
+  --bg-primary: #f6f3ed;
+  --bg-secondary: #fffdf9;
+  --text-primary: #201e1b;
+  --text-secondary: #6d6860;
+  --border-color: #ddd5c8;
+  --accent-color: #ee5a32;
+  --accent-hover: #d94822;
+  --accent-blue: #3f78c8;
+  --accent-yellow: #c89520;
+  --glass-bg: rgba(255, 253, 249, 0.92);
+  --glass-border: rgba(210, 201, 187, 0.9);
+  --shadow-sm: 0 1px 2px 0 rgb(40 32 20 / 0.06);
+  --shadow-md: 0 2px 8px rgb(40 32 20 / 0.10);
+  --shadow-lg: 0 4px 14px rgb(40 32 20 / 0.12);
+  --map-filter: none;
+}
+
+body {
+  min-width: 320px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', "Avenir Next", system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button, input {
+  font-family: inherit;
+}
+
+button {
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+}
+
+#root {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.035em;
+}
+
+::selection {
+  background: rgba(255, 112, 67, 0.35);
+  color: #ffffff;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes pinDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.82);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(3px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-pin-drop {
+  animation: pinDrop 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Leaflet Map Visual Overrides */
+.leaflet-container {
+  background-color: var(--bg-secondary) !important;
+  font-family: inherit;
+}
+
+.leaflet-tile {
+  filter: var(--map-filter);
+  transition: filter 0.5s ease;
+}
+
+/* Custom Leaflet Controls Styling */
+.leaflet-bar {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-md) !important;
+  background-color: var(--bg-secondary) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-bar a {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  transition: background-color 0.2s;
+}
+
+.leaflet-bar a:hover {
+  background-color: var(--bg-primary) !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
