@@ -22,7 +22,10 @@ class Settings(BaseSettings):
         return self.ENVIRONMENT
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
     ADMIN_KEY: str = os.getenv("ADMIN_KEY", "")
-    MAPBOX_ACCESS_TOKEN: str = os.getenv("MAPBOX_ACCESS_TOKEN", os.getenv("MAPBOX_SERVER_TOKEN", ""))
+    MAPBOX_ACCESS_TOKEN: str = os.getenv(
+        "MAPBOX_ACCESS_TOKEN",
+        os.getenv("MAPBOX_SECRET_TOKEN", os.getenv("MAPBOX_SERVER_TOKEN", ""))
+    )
     MAPBOX_PUBLIC_TOKEN: str = os.getenv("MAPBOX_PUBLIC_TOKEN", "")
     GEOCODING_PROVIDER: str = os.getenv("GEOCODING_PROVIDER", "mapbox")
     GEOAPIFY_API_KEY: str = os.getenv("GEOAPIFY_API_KEY", "")
