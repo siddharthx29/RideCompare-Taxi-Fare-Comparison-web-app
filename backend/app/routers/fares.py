@@ -17,7 +17,6 @@ from backend.app.models.db_models import (
     HistoricalFare,
 )
 from backend.app.services.fare_verification import (
-    SUPPORTED_PROVIDERS,
     VOTE_TYPES,
     assess_submission,
     route_fingerprint,
@@ -52,9 +51,9 @@ class FareSubmissionPayload(BaseModel):
     @classmethod
     def validate_provider(cls, value: str) -> str:
         normalized = value.strip().lower()
-        if normalized not in SUPPORTED_PROVIDERS:
-            raise ValueError("provider must be Uber, Ola, or Rapido")
-        return normalized.title()
+        if len(normalized) < 2:
+            raise ValueError("provider name is required")
+        return " ".join(word[:1].upper() + word[1:] for word in normalized.split())
 
     @field_validator("currency")
     @classmethod

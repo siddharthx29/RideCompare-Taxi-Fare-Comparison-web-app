@@ -7,6 +7,7 @@ import { PlatformAnalyticsDashboard } from './components/PlatformAnalyticsDashbo
 import { InternalMLDashboard } from './components/InternalMLDashboard';
 import { FareSurgeTracker } from './components/FareSurgeTracker';
 import { FareIntelligence } from './components/FareIntelligence';
+import { About } from './components/About';
 import type { MapSelectionMode } from './components/MapView';
 import { Download, X, Search, BarChart3, Home, Lock } from 'lucide-react';
 import type { ComparisonResult, LocationInfo, RouteGeometry, RideProviderDetails } from './types/ride';
@@ -45,6 +46,7 @@ function App() {
     return new URLSearchParams(window.location.search).get('view') === 'surge';
   });
   const [showFareIntelligence, setShowFareIntelligence] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [fareIntelligenceTab, setFareIntelligenceTab] = useState<'submit' | 'history'>('submit');
   const [adminTab, setAdminTab] = useState<'analytics' | 'ml'>(() => {
     if (typeof window === 'undefined') return 'analytics';
@@ -616,10 +618,13 @@ function App() {
         setShowSurgeTracker={setShowSurgeTracker}
         showFareIntelligence={showFareIntelligence}
         setShowFareIntelligence={setShowFareIntelligence}
+        showAbout={showAbout}
+        setShowAbout={setShowAbout}
         onUserMenuAction={(action) => {
           if (action === 'fare-intelligence' || action === 'submissions') {
             setShowAdmin(false);
             setShowSurgeTracker(false);
+            setShowAbout(false);
             setFareIntelligenceTab(action === 'submissions' ? 'history' : 'submit');
             setShowFareIntelligence(true);
           }
@@ -627,6 +632,7 @@ function App() {
         onLogoClick={() => {
           setShowAdmin(false);
           setShowFareIntelligence(false);
+          setShowAbout(false);
           resetSearch();
         }}
       />
@@ -657,7 +663,9 @@ function App() {
           </div>
         )}
 
-        {showFareIntelligence ? (
+        {showAbout ? (
+          <About />
+        ) : showFareIntelligence ? (
           <FareIntelligence initialTab={fareIntelligenceTab} />
         ) : showSurgeTracker ? (
           <FareSurgeTracker />
@@ -837,14 +845,14 @@ function App() {
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-[var(--glass-border)] grid grid-cols-3 py-2 text-center text-[10px] font-bold text-[var(--text-secondary)]">
         <button
-          onClick={() => { setShowAdmin(false); resetSearch(); }}
+          onClick={() => { setShowAdmin(false); setShowSurgeTracker(false); setShowFareIntelligence(false); setShowAbout(false); resetSearch(); }}
           className={`flex flex-col items-center gap-0.5 cursor-pointer ${!showAdmin && !comparison ? 'text-indigo-600 dark:text-indigo-400' : ''}`}
         >
           <Home size={18} />
           <span>Home</span>
         </button>
         <button
-          onClick={() => { setShowAdmin(false); }}
+          onClick={() => { setShowAdmin(false); setShowSurgeTracker(false); setShowFareIntelligence(false); setShowAbout(false); }}
           className={`flex flex-col items-center gap-0.5 cursor-pointer ${!showAdmin && comparison ? 'text-indigo-600 dark:text-indigo-400' : ''}`}
         >
           <Search size={18} />
@@ -855,6 +863,7 @@ function App() {
             setShowAdmin(false);
             setShowSurgeTracker(false);
             setShowFareIntelligence(true);
+            setShowAbout(false);
           }}
           className={`flex flex-col items-center gap-0.5 cursor-pointer ${showFareIntelligence ? 'text-indigo-600 dark:text-indigo-400' : ''}`}
         >

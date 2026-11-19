@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CheckCircle2, FileImage, Flag, RefreshCw, ShieldAlert } from 'lucide-react';
 import { apiFetch } from '../utils/api';
+import { LocationAutocompleteInput } from './LocationAutocompleteInput';
+import { MapView } from './MapView';
+import type { MapSelectionMode } from './MapView';
+import type { LocationInfo } from '../types/ride';
+import { reverseGeocodeLocation } from '../utils/locationService';
 
 type Report = {
   id: number;
@@ -23,6 +28,49 @@ type Report = {
 };
 
 type FareIntelligenceTab = 'submit' | 'history';
+
+const PROVIDER_CATEGORIES: Record<string, string[]> = {
+  Uber: ['UberX', 'Uber Go', 'Uber Moto', 'Uber Auto', 'Uber Premier', 'Uber Black', 'Uber XL', 'Uber Electric', 'Uber Intercity'],
+  Ola: ['Mini', 'Prime Sedan', 'Prime SUV', 'Prime Play', 'Auto', 'Bike', 'Electric', 'Outstation'],
+  Rapido: ['Bike', 'Auto', 'Cab', 'Cab XL'],
+  Lyft: ['Standard', 'Lyft XL', 'Lyft Black', 'Lyft Lux', 'Lyft Electric'],
+  Bolt: ['Bolt', 'Bolt XL', 'Bolt Green', 'Bolt Business', 'Bolt Electric'],
+  Grab: ['JustGrab', 'GrabCar', 'GrabTaxi', 'GrabBike', 'GrabCar Premium', 'GrabFamily'],
+  FreeNow: ['Taxi', 'Car', 'XL', 'Electric', 'Accessible'],
+  'Black Cab': ['Standard Hackney Cab', 'Accessible Cab', 'Electric Black Cab'],
+  Waymo: ['Standard Robotaxi', 'Waymo One'],
+  Careem: ['Hala Taxi', 'Economy', 'Comfort', 'Comfort XL', 'Max', 'Bike'],
+  'Dubai Taxi': ['Standard Taxi', 'Family Taxi', 'Ladies Taxi', 'Airport Taxi', 'Limousine'],
+  'CDG Zig': ['Standard Taxi', 'Comfort', 'MaxiCab', 'Limousine'],
+  'GO Taxi': ['Standard Taxi', 'Nihon Kotsu', 'Taxi XL'],
+  Kakao: ['Blue', 'Venti', 'Black', 'Mobility'],
+  'Xanh SM': ['Standard EV', 'Premium EV', '7-Seater EV'],
+  G7: ['G7 Taxi', 'G7 Access', 'G7 Green', 'G7 XL'],
+  'Curb Taxi': ['Yellow Cab', 'Accessible Taxi', 'Airport Taxi'],
+  DiDi: ['Express', 'Premium', 'Taxi', 'SUV', 'Electric', 'Bike'],
+  'inDrive': ['Economy', 'Comfort', 'XL', 'Taxi', 'Bike'],
+  'Yandex Go': ['Economy', 'Comfort', 'Comfort+', 'Business', 'Minivan', 'Taxi', 'EV'],
+  Maxim: ['Economy', 'Comfort', 'Business', 'Taxi', 'Delivery'],
+  Gett: ['Taxi', 'Executive', 'XL', 'Accessible'],
+  CMT: ['Taxi', 'Black Cab', 'Accessible Taxi'],
+  'Addison Lee': ['Standard', 'Executive', 'XL', 'Accessible'],
+  'Regulated Local Taxi': ['Sedan', 'Hatchback', 'SUV', 'Auto', 'Bike', 'Taxi', 'Airport Taxi'],
+  Other: ['Standard Cab', 'Hatchback', 'Sedan', 'SUV', 'Auto', 'Bike', 'Electric', 'Minivan', 'Accessible', 'Taxi', 'Airport Transfer', 'Outstation'],
+};
+
+const PROVIDER_OPTIONS = Object.keys(PROVIDER_CATEGORIES);
+const CURRENCY_OPTIONS = [
+  ['INR', '₹ - INR'], ['USD', '$ - USD'], ['EUR', '€ - EUR'], ['GBP', '£ - GBP'],
+  ['AED', 'AED'], ['SGD', 'SGD'], ['JPY', '¥ - JPY'], ['AUD', 'A$ - AUD'],
+  ['CAD', 'C$ - CAD'], ['NZD', 'NZ$ - NZD'], ['CHF', 'CHF'], ['CNY', '¥ - CNY'],
+  ['KRW', '₩ - KRW'], ['HKD', 'HK$ - HKD'], ['THB', '฿ - THB'], ['MYR', 'RM - MYR'],
+  ['IDR', 'Rp - IDR'], ['PHP', '₱ - PHP'], ['VND', '₫ - VND'], ['ZAR', 'R - ZAR'],
+  ['BRL', 'R$ - BRL'], ['MXN', 'MX$ - MXN'], ['ARS', '$ - ARS'], ['TRY', '₺ - TRY'],
+];
+
+function currencySymbol(currency: string): string {
+  return ({ INR: '₹', USD: '$', EUR: '€', GBP: '£', JPY: '¥', CNY: '¥', KRW: '₩', SGD: 'S$', AED: 'AED ', THB: '฿', MYR: 'RM ', PHP: '₱', VND: '₫', ZAR: 'R', BRL: 'R$', MXN: 'MX$', ARS: '$', TRY: '₺' } as Record<string, string>)[currency] || currency;
+}
 
 const statusStyles: Record<string, string> = {
   VERIFIED: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
@@ -51,14 +99,14 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
   const [message, setMessage] = useState('');
   const [screenshotName, setScreenshotName] = useState('');
   const [screenshotReference, setScreenshotReference] = useState<string | null>(null);
+  const [pickupLocation, setPickupLocation] = useState<LocationInfo | null>(null);
+  const [destinationLocation, setDestinationLocation] = useState<LocationInfo | null>(null);
+  const [mapSelectionMode, setMapSelectionMode] = useState<MapSelectionMode>(null);
   const [form, setForm] = useState({
     provider: 'Uber',
+    currency: 'INR',
     pickupLocation: '',
     destinationLocation: '',
-    pickupLat: '12.9716',
-    pickupLng: '77.5946',
-    destinationLat: '12.9352',
-    destinationLng: '77.6245',
     vehicleCategory: 'Cab',
     submittedFare: '',
     quotationTimestamp: new Date().toISOString().slice(0, 16),
@@ -93,6 +141,11 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
 
   const update = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));
 
+  const updateProvider = (provider: string) => {
+    const firstCategory = PROVIDER_CATEGORIES[provider]?.[0] || 'Standard Cab';
+    setForm((current) => ({ ...current, provider, vehicleCategory: firstCategory }));
+  };
+
   const loadMySubmissions = async () => {
     setLoadingHistory(true);
     try {
@@ -123,8 +176,52 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
     }
   };
 
+  const handleMapLocationSelect = async (
+    mode: Exclude<MapSelectionMode, null>,
+    coordinates: [number, number]
+  ) => {
+    const [lat, lng] = coordinates;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const reversed = await reverseGeocodeLocation(lat, lng);
+    const location: LocationInfo = reversed || {
+      label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      lat,
+      lng,
+    };
+    if (mode === 'pickup') {
+      setPickupLocation(location);
+      setForm((current) => ({ ...current, pickupLocation: location.label }));
+    } else {
+      setDestinationLocation(location);
+      setForm((current) => ({ ...current, destinationLocation: location.label }));
+    }
+    setMapSelectionMode(null);
+  };
+
+  const useCurrentLocation = (mode: Exclude<MapSelectionMode, null>) => {
+    if (!navigator.geolocation) {
+      setMessage('Current-location access is not supported by this browser.');
+      return;
+    }
+    setMapSelectionMode(mode);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        await handleMapLocationSelect(mode, [position.coords.latitude, position.coords.longitude]);
+      },
+      () => {
+        setMapSelectionMode(null);
+        setMessage('Location access was unavailable. Search for a place or select a map pin.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!pickupLocation || !destinationLocation) {
+      setMessage('Select both the pickup and destination using location search or the map.');
+      return;
+    }
     setSubmitting(true);
     setMessage('');
     try {
@@ -135,8 +232,8 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
           provider: form.provider,
           pickupLocation: form.pickupLocation,
           destinationLocation: form.destinationLocation,
-          pickupCoordinates: [Number(form.pickupLat), Number(form.pickupLng)],
-          destinationCoordinates: [Number(form.destinationLat), Number(form.destinationLng)],
+          pickupCoordinates: [pickupLocation.lat, pickupLocation.lng],
+          destinationCoordinates: [destinationLocation.lat, destinationLocation.lng],
           vehicleCategory: form.vehicleCategory,
           submittedFare: Number(form.submittedFare),
           currency: 'INR',
@@ -155,6 +252,9 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
       setMySubmissions((current) => [report, ...current]);
       setMessage(`Submitted for verification: ${report.status.replaceAll('_', ' ')}. This is not a live provider quote.`);
       setForm((current) => ({ ...current, submittedFare: '', estimatedDistanceKm: '', estimatedDurationMin: '' }));
+      setPickupLocation(null);
+      setDestinationLocation(null);
+      setForm((current) => ({ ...current, pickupLocation: '', destinationLocation: '' }));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Submission failed.');
     } finally {
@@ -204,7 +304,7 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
         <div className="glass-panel rounded-2xl p-5 md:p-7">
           <h2 className="text-xl font-bold">My Fare Submissions</h2>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">Only this browser profile can manage these anonymous device-scoped reports.</p>
-          {loadingHistory ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">Loading your submissions...</p> : mySubmissions.length === 0 ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">You have not submitted any fares.</p> : <div className="mt-5 grid gap-3">{mySubmissions.map((report) => <article key={report.id} className="rounded-xl border border-[var(--border-color)] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{report.provider} · ₹{report.submittedFare}</p><p className="mt-1 text-xs text-[var(--text-secondary)]">{report.pickupLocation} → {report.destinationLocation}</p><p className="mt-1 text-[10px] text-[var(--text-secondary)]">{new Date(report.createdAt || report.quotationTimestamp).toLocaleString()}</p></div><span className={`rounded-full border px-2 py-1 text-[10px] font-bold ${statusStyles[report.status] || statusStyles.COMMUNITY_REPORTED}`}>{report.status.replaceAll('_', ' ')}</span></div><p className="mt-3 text-xs text-[var(--text-secondary)]">{Math.round(report.confidenceScore * 100)}% confidence · {report.explanation}</p><button onClick={() => void removeSubmission(report.id)} className="mt-3 rounded-lg border border-red-500/30 px-2 py-1 text-[10px] text-red-400">Remove report</button></article>)}</div>}
+          {loadingHistory ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">Loading your submissions...</p> : mySubmissions.length === 0 ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">You have not submitted any fares.</p> : <div className="mt-5 grid gap-3">{mySubmissions.map((report) => <article key={report.id} className="rounded-xl border border-[var(--border-color)] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{report.provider} · {currencySymbol(report.currency)}{report.submittedFare}</p><p className="mt-1 text-xs text-[var(--text-secondary)]">{report.pickupLocation} → {report.destinationLocation}</p><p className="mt-1 text-[10px] text-[var(--text-secondary)]">{new Date(report.createdAt || report.quotationTimestamp).toLocaleString()}</p></div><span className={`rounded-full border px-2 py-1 text-[10px] font-bold ${statusStyles[report.status] || statusStyles.COMMUNITY_REPORTED}`}>{report.status.replaceAll('_', ' ')}</span></div><p className="mt-3 text-xs text-[var(--text-secondary)]">{Math.round(report.confidenceScore * 100)}% confidence · {report.explanation}</p><button onClick={() => void removeSubmission(report.id)} className="mt-3 rounded-lg border border-red-500/30 px-2 py-1 text-[10px] text-red-400">Remove report</button></article>)}</div>}
         </div>
       ) : (
         <>
@@ -219,16 +319,78 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
           </div>
         </div>
         <form onSubmit={submit} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="text-xs font-semibold">Pickup location<input required className={inputClass} value={form.pickupLocation} onChange={(e) => update('pickupLocation', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Drop-off location<input required className={inputClass} value={form.destinationLocation} onChange={(e) => update('destinationLocation', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Platform<select className={inputClass} value={form.provider} onChange={(e) => update('provider', e.target.value)}><option>Uber</option><option>Ola</option><option>Rapido</option></select></label>
-          <label className="text-xs font-semibold">Vehicle category<input required className={inputClass} value={form.vehicleCategory} onChange={(e) => update('vehicleCategory', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Exact fare (INR)<input required type="number" min="1" className={inputClass} value={form.submittedFare} onChange={(e) => update('submittedFare', e.target.value)} /></label>
+          <LocationAutocompleteInput
+            label="Pickup location"
+            placeholder="Search pickup area, landmark or address"
+            value={form.pickupLocation}
+            onChangeText={(text) => update('pickupLocation', text)}
+            selectedLocation={pickupLocation}
+            onSelectLocation={(location) => setPickupLocation(location)}
+            nearbyLocation={destinationLocation}
+            showLocateButton
+            onLocate={() => useCurrentLocation('pickup')}
+            isLocating={mapSelectionMode === 'pickup'}
+            required
+          />
+          <LocationAutocompleteInput
+            label="Drop-off location"
+            placeholder="Search destination area, landmark or address"
+            value={form.destinationLocation}
+            onChangeText={(text) => update('destinationLocation', text)}
+            selectedLocation={destinationLocation}
+            onSelectLocation={(location) => setDestinationLocation(location)}
+            nearbyLocation={pickupLocation}
+            showLocateButton
+            onLocate={() => useCurrentLocation('destination')}
+            isLocating={mapSelectionMode === 'destination'}
+            required
+          />
+          <div className="md:col-span-2 h-[300px] overflow-hidden rounded-xl border border-[var(--border-color)]">
+            <MapView
+              sourceCoords={pickupLocation ? [pickupLocation.lat, pickupLocation.lng] : null}
+              destCoords={destinationLocation ? [destinationLocation.lat, destinationLocation.lng] : null}
+              routeGeometry={null}
+              selectionMode={mapSelectionMode}
+              onSelectionModeChange={setMapSelectionMode}
+              onMapLocationSelect={handleMapLocationSelect}
+            />
+          </div>
+          <label className="text-xs font-semibold">
+            Taxi platform
+            <select
+              className={inputClass}
+              value={form.provider}
+              onChange={(event) => updateProvider(event.target.value)}
+            >
+              {PROVIDER_OPTIONS.map((provider) => <option key={provider} value={provider}>{provider}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-semibold">
+            Vehicle category
+            <select
+              required
+              className={inputClass}
+              value={form.vehicleCategory}
+              onChange={(event) => update('vehicleCategory', event.target.value)}
+            >
+              {(PROVIDER_CATEGORIES[form.provider] || PROVIDER_CATEGORIES.Other).map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold">
+            Currency
+            <select className={inputClass} value={form.currency} onChange={(event) => update('currency', event.target.value)}>
+              {CURRENCY_OPTIONS.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-semibold">
+            Exact fare ({form.currency})
+            <input required type="number" min="1" step="0.01" className={inputClass} value={form.submittedFare} onChange={(event) => update('submittedFare', event.target.value)} />
+          </label>
           <label className="text-xs font-semibold">Quotation time<input required type="datetime-local" className={inputClass} value={form.quotationTimestamp} onChange={(e) => update('quotationTimestamp', e.target.value)} /></label>
           <label className="text-xs font-semibold">Distance (km)<input required type="number" min="0.1" step="0.1" className={inputClass} value={form.estimatedDistanceKm} onChange={(e) => update('estimatedDistanceKm', e.target.value)} /></label>
           <label className="text-xs font-semibold">Duration (minutes)<input required type="number" min="1" step="1" className={inputClass} value={form.estimatedDurationMin} onChange={(e) => update('estimatedDurationMin', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Pickup coordinates (lat, lng)<div className="flex gap-2"><input required type="number" step="any" className={inputClass} value={form.pickupLat} onChange={(e) => update('pickupLat', e.target.value)} /><input required type="number" step="any" className={inputClass} value={form.pickupLng} onChange={(e) => update('pickupLng', e.target.value)} /></div></label>
-          <label className="text-xs font-semibold">Drop-off coordinates (lat, lng)<div className="flex gap-2"><input required type="number" step="any" className={inputClass} value={form.destinationLat} onChange={(e) => update('destinationLat', e.target.value)} /><input required type="number" step="any" className={inputClass} value={form.destinationLng} onChange={(e) => update('destinationLng', e.target.value)} /></div></label>
           <label className="text-xs font-semibold">Surge multiplier (optional)<input type="number" min="0" step="0.1" className={inputClass} value={form.surgeMultiplier} onChange={(e) => update('surgeMultiplier', e.target.value)} /></label>
           <label className="text-xs font-semibold">Additional fees<input type="number" min="0" step="1" className={inputClass} value={form.additionalFees} onChange={(e) => update('additionalFees', e.target.value)} /></label>
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--border-color)] p-3 text-xs font-semibold"><FileImage size={16} />{screenshotName || 'Optional screenshot'}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void uploadScreenshot(e.target.files?.[0])} /></label>
@@ -240,7 +402,7 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
 
       <div className="glass-panel rounded-2xl p-5 md:p-7">
         <div className="flex items-center justify-between"><div><h2 className="text-xl font-bold">Community Fare Reports</h2><p className="mt-1 text-xs text-[var(--text-secondary)]">Reported observations are separate from live provider pricing.</p></div><button onClick={() => void loadReports()} className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]" title="Refresh reports"><RefreshCw size={16} /></button></div>
-        {loadingReports ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">Loading reports...</p> : reports.length === 0 ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">No community reports yet.</p> : <div className="mt-5 grid gap-3">{reports.map((report) => <article key={report.id} className="rounded-xl border border-[var(--border-color)] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{report.provider} · {report.vehicleCategory}</p><p className="mt-1 text-xs text-[var(--text-secondary)]">{report.pickupLocation} → {report.destinationLocation}</p></div><span className={`rounded-full border px-2 py-1 text-[10px] font-bold ${statusStyles[report.status] || statusStyles.COMMUNITY_REPORTED}`}>{report.status.replaceAll('_', ' ')}</span></div><div className="mt-3 flex flex-wrap items-center gap-4 text-sm"><strong>₹{report.submittedFare}</strong><span className="text-xs text-[var(--text-secondary)]">{report.evidenceCount} supporting observations · {Math.round(report.confidenceScore * 100)}% confidence</span>{report.hasScreenshot && <span className="flex items-center gap-1 text-xs text-blue-400"><FileImage size={13} /> evidence attached</span>}</div><p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">{report.explanation}</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void vote(report.id, 'CONFIRM')} className="flex items-center gap-1 rounded-lg border border-emerald-500/30 px-2 py-1 text-[10px] text-emerald-400"><CheckCircle2 size={12} /> Confirm ({report.votes?.CONFIRM || 0})</button><button onClick={() => void vote(report.id, 'MISMATCH')} className="flex items-center gap-1 rounded-lg border border-amber-500/30 px-2 py-1 text-[10px] text-amber-300"><Flag size={12} /> Price does not match ({report.votes?.MISMATCH || 0})</button><button onClick={() => void vote(report.id, 'SUSPICIOUS')} className="rounded-lg border border-red-500/30 px-2 py-1 text-[10px] text-red-400">Report suspicious</button></div></article>)}</div>}
+        {loadingReports ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">Loading reports...</p> : reports.length === 0 ? <p className="py-8 text-center text-sm text-[var(--text-secondary)]">No community reports yet.</p> : <div className="mt-5 grid gap-3">{reports.map((report) => <article key={report.id} className="rounded-xl border border-[var(--border-color)] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{report.provider} · {report.vehicleCategory}</p><p className="mt-1 text-xs text-[var(--text-secondary)]">{report.pickupLocation} → {report.destinationLocation}</p></div><span className={`rounded-full border px-2 py-1 text-[10px] font-bold ${statusStyles[report.status] || statusStyles.COMMUNITY_REPORTED}`}>{report.status.replaceAll('_', ' ')}</span></div><div className="mt-3 flex flex-wrap items-center gap-4 text-sm"><strong>{currencySymbol(report.currency)}{report.submittedFare}</strong><span className="text-xs text-[var(--text-secondary)]">{report.evidenceCount} supporting observations · {Math.round(report.confidenceScore * 100)}% confidence</span>{report.hasScreenshot && <span className="flex items-center gap-1 text-xs text-blue-400"><FileImage size={13} /> evidence attached</span>}</div><p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">{report.explanation}</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void vote(report.id, 'CONFIRM')} className="flex items-center gap-1 rounded-lg border border-emerald-500/30 px-2 py-1 text-[10px] text-emerald-400"><CheckCircle2 size={12} /> Confirm ({report.votes?.CONFIRM || 0})</button><button onClick={() => void vote(report.id, 'MISMATCH')} className="flex items-center gap-1 rounded-lg border border-amber-500/30 px-2 py-1 text-[10px] text-amber-300"><Flag size={12} /> Price does not match ({report.votes?.MISMATCH || 0})</button><button onClick={() => void vote(report.id, 'SUSPICIOUS')} className="rounded-lg border border-red-500/30 px-2 py-1 text-[10px] text-red-400">Report suspicious</button></div></article>)}</div>}
       </div>
         </>
       )}

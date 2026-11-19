@@ -10,6 +10,8 @@ interface NavbarProps {
   setShowSurgeTracker: (show: boolean) => void;
   showFareIntelligence: boolean;
   setShowFareIntelligence: (show: boolean) => void;
+  showAbout: boolean;
+  setShowAbout: (show: boolean) => void;
   onUserMenuAction: (action: 'profile' | 'submissions' | 'fare-intelligence' | 'saved-routes' | 'settings' | 'logout') => void;
   onLogoClick: () => void;
 }
@@ -23,6 +25,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setShowSurgeTracker,
   showFareIntelligence,
   setShowFareIntelligence,
+  showAbout,
+  setShowAbout,
   onUserMenuAction,
   onLogoClick,
 }) => {
@@ -62,7 +66,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       <nav className="hidden items-center gap-1 text-sm lg:flex">
         <button
-          onClick={onLogoClick}
+          onClick={() => {
+            setShowAdmin(false);
+            setShowSurgeTracker(false);
+            setShowFareIntelligence(false);
+            setShowAbout(false);
+          }}
           className="px-3 py-2 text-sm text-[#dfc0b1] transition-colors hover:text-[#e1e3e2]"
         >
           Home
@@ -78,12 +87,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             setShowAdmin(false);
             setShowSurgeTracker(false);
             setShowFareIntelligence(true);
+            setShowAbout(false);
           }}
           className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${showFareIntelligence ? 'bg-[#282a2a] text-[#e1e3e2]' : 'text-[#dfc0b1] hover:text-[#e1e3e2]'}`}
         >
           Fare Intelligence
         </button>
-        <a href="#about" className="px-3 py-2 text-sm text-[#dfc0b1] transition-colors hover:text-[#e1e3e2]">About</a>
+        <button
+          onClick={() => {
+            setShowAdmin(false);
+            setShowSurgeTracker(false);
+            setShowFareIntelligence(false);
+            setShowAbout(true);
+          }}
+          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${showAbout ? 'bg-[#282a2a] text-[#e1e3e2]' : 'text-[#dfc0b1] hover:text-[#e1e3e2]'}`}
+        >
+          About
+        </button>
       </nav>
       </div>
 

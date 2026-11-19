@@ -17,7 +17,6 @@ from backend.app.models.db_models import (
 from ml.inference.predictor import FareIntelligenceEngine
 
 
-SUPPORTED_PROVIDERS = {"uber", "ola", "rapido"}
 VOTE_TYPES = {"CONFIRM", "MISMATCH", "OUTDATED", "SUSPICIOUS"}
 PUBLISHED_STATUSES = {"VERIFIED", "CORROBORATED", "COMMUNITY_REPORTED", "UNDER_REVIEW"}
 _fare_engine = FareIntelligenceEngine()
