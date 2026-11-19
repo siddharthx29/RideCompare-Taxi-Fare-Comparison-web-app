@@ -4,7 +4,7 @@ const isBrowser = typeof window !== 'undefined';
 const isLocalHost = (): boolean => {
   if (!isBrowser) return false;
   const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+  return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.endsWith('.localhost');
 };
 
 const getApiBaseUrl = (): string => {
@@ -82,16 +82,21 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
 
     let finalError = error instanceof Error ? error : new Error('Unknown API request failure.');
 
-    if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+    if (error instanceof TypeError || (error instanceof Error && (
+      error.message.includes('Failed to fetch') ||
+      error.message.includes('NetworkError') ||
+      error.message.includes('Load failed')
+    ))) {
       if (isLocalHost()) {
         finalError = new Error(
           'Network Connection Error: Failed to connect to the backend API server. ' +
-          'Please ensure the Python FastAPI backend is running on port 5000 (uvicorn backend.app.main:app --port 5000).'
+          'Start it with: python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 5000 --reload'
         );
       } else {
         finalError = new Error(
-          'Network Connection Error: Unable to reach the backend API server. ' +
-          'If deployed on Vercel, please ensure Deployment Protection (SSO) is disabled in Project Settings.'
+          'Network Connection Error: Unable to reach the API from this deployed page. ' +
+          'Verify that /api and /health rewrites are deployed, the API entry point is healthy, ' +
+          'and Vercel Deployment Protection allows this page to access the site.'
         );
       }
     }

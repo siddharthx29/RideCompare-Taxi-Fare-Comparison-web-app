@@ -47,7 +47,6 @@ function App() {
   });
   const [showFareIntelligence, setShowFareIntelligence] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
-  const [fareIntelligenceTab, setFareIntelligenceTab] = useState<'submit' | 'history'>('submit');
   const [adminTab, setAdminTab] = useState<'analytics' | 'ml'>(() => {
     if (typeof window === 'undefined') return 'analytics';
     const params = new URLSearchParams(window.location.search);
@@ -171,7 +170,7 @@ function App() {
 
       setDistanceError(
         `Live fare search could not be completed: ${errMsg || 'the backend service is unavailable'}. ` +
-        'No fabricated or unverified prices were added.'
+        'Check that the backend is running and that /api routes are reachable. No fabricated or unverified prices were added.'
       );
       setComparison(null);
       setRouteGeometry(null);
@@ -620,15 +619,6 @@ function App() {
         setShowFareIntelligence={setShowFareIntelligence}
         showAbout={showAbout}
         setShowAbout={setShowAbout}
-        onUserMenuAction={(action) => {
-          if (action === 'fare-intelligence' || action === 'submissions') {
-            setShowAdmin(false);
-            setShowSurgeTracker(false);
-            setShowAbout(false);
-            setFareIntelligenceTab(action === 'submissions' ? 'history' : 'submit');
-            setShowFareIntelligence(true);
-          }
-        }}
         onLogoClick={() => {
           setShowAdmin(false);
           setShowFareIntelligence(false);
@@ -666,7 +656,7 @@ function App() {
         {showAbout ? (
           <About />
         ) : showFareIntelligence ? (
-          <FareIntelligence initialTab={fareIntelligenceTab} />
+          <FareIntelligence />
         ) : showSurgeTracker ? (
           <FareSurgeTracker />
         ) : showAdmin ? (

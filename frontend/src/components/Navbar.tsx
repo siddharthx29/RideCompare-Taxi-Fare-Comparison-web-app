@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { Sun, Moon, BarChart3, CarFront, UserCircle, ChevronDown } from 'lucide-react';
+import { Sun, Moon, BarChart3, CarFront } from 'lucide-react';
 
 interface NavbarProps {
   darkMode: boolean;
@@ -12,7 +11,6 @@ interface NavbarProps {
   setShowFareIntelligence: (show: boolean) => void;
   showAbout: boolean;
   setShowAbout: (show: boolean) => void;
-  onUserMenuAction: (action: 'profile' | 'submissions' | 'fare-intelligence' | 'saved-routes' | 'settings' | 'logout') => void;
   onLogoClick: () => void;
 }
 
@@ -27,29 +25,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setShowFareIntelligence,
   showAbout,
   setShowAbout,
-  onUserMenuAction,
   onLogoClick,
 }) => {
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const closeMenu = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) setUserMenuOpen(false);
-    };
-    document.addEventListener('mousedown', closeMenu);
-    return () => document.removeEventListener('mousedown', closeMenu);
-  }, []);
-
-  const menuItems = [
-    ['profile', 'My Profile'],
-    ['submissions', 'My Fare Submissions'],
-    ['fare-intelligence', 'Fare Intelligence'],
-    ['saved-routes', 'Saved Routes'],
-    ['settings', 'Settings'],
-    ['logout', 'Logout'],
-  ] as const;
-
   return (
     <header className="fixed left-0 top-0 z-50 h-16 w-full bg-[#111414]/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
       <div className="mx-auto flex h-full w-full items-center justify-between px-4 md:px-8">
@@ -128,34 +105,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {darkMode ? <Sun size={16} className="text-[#ffb68e]" /> : <Moon size={16} className="text-slate-600" />}
         </button>
-        <div className="relative" ref={userMenuRef}>
-          <button
-            onClick={() => setUserMenuOpen((open) => !open)}
-            className="flex items-center gap-1 rounded-full bg-[#282a2a] px-2 py-1.5 text-[#e1e3e2]"
-            aria-label="Open user menu"
-            aria-expanded={userMenuOpen}
-          >
-            <UserCircle size={19} />
-            <ChevronDown size={13} className={userMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
-          </button>
-          {userMenuOpen && (
-            <div className="absolute right-0 top-12 w-56 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-2 shadow-2xl">
-              <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Local profile</p>
-              {menuItems.map(([action, label]) => (
-                <button
-                  key={action}
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    onUserMenuAction(action);
-                  }}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition-colors hover:bg-[var(--bg-primary)] ${action === 'fare-intelligence' ? 'text-[var(--accent-color)]' : 'text-[var(--text-primary)]'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
       </div>
     </header>
