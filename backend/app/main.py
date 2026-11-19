@@ -28,7 +28,10 @@ logger = logging.getLogger("smart-fare-backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    try:
+        init_db()
+    except Exception as exc:
+        logger.exception("Database initialization failed; continuing with degraded database health: %s", exc)
     yield
 
 
