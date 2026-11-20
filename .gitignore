@@ -65,3 +65,6 @@ Thumbs.db
 # Temporary training data / raw scratch files (Keep models/saved/ metadata & joblib tracked)
 ml/data/raw/*.csv
 ml/data/processed/
+
+.vercel
+.env*

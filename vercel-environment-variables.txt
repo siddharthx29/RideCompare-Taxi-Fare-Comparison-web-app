@@ -1,44 +1,69 @@
-# Vercel environment variable import template
-# Replace placeholder values before importing.
+==============================================================================
+RIDECOMPARE - VERCEL ENVIRONMENT VARIABLES CONFIGURATION & INSTRUCTIONS
+==============================================================================
 
-# Core backend
-DATABASE_URL=sqlite:///./ridecompare.db
+HOW TO UPLOAD TO VERCEL:
+------------------------------------------------------------------------------
+METHOD 1 (Vercel Web Dashboard - Fastest):
+  1. Open your project on Vercel: https://vercel.com/dashboard
+  2. Go to: Settings -> Environment Variables
+  3. Click "Import" or copy & paste the block below into the input box
+  4. Select environments: Production, Preview, Development
+  5. Click "Save"
+  6. Trigger a new deployment (Deployments -> Redeploy)
+
+METHOD 2 (Using Vercel CLI):
+  Run the following command from the root directory:
+  vercel env pull .env.local
+
+==============================================================================
+RAW COPY-PASTE BLOCK (Copy everything between the lines):
+==============================================================================
+ENV=production
+ENVIRONMENT=production
 PORT=5000
 HOST=0.0.0.0
 WORKERS=1
-ENVIRONMENT=production
-ENV=production
-ADMIN_KEY=REPLACE_WITH_A_SECURE_ADMIN_KEY
-CORS_ORIGINS=https://YOUR-VERCEL-DOMAIN.vercel.app
-ALLOWED_ORIGINS=https://YOUR-VERCEL-DOMAIN.vercel.app
-ML_ALLOWED_ORIGINS=https://YOUR-VERCEL-DOMAIN.vercel.app
-
-# Mapbox and geocoding
-MAPBOX_ACCESS_TOKEN=REPLACE_WITH_MAPBOX_ACCESS_TOKEN
-MAPBOX_SECRET_TOKEN=REPLACE_WITH_MAPBOX_SECRET_SK_TOKEN
-MAPBOX_SERVER_TOKEN=REPLACE_WITH_MAPBOX_SERVER_TOKEN
-MAPBOX_PUBLIC_TOKEN=REPLACE_WITH_MAPBOX_PUBLIC_TOKEN
+CORS_ORIGINS=https://ridecompare.vercel.app
+ALLOWED_ORIGINS=https://ridecompare.vercel.app
+ML_ALLOWED_ORIGINS=https://ridecompare.vercel.app
+ADMIN_KEY=rc_live_admin_9f3b7c2a1e4d805b6e2c8a4f7d0e3b1a
+DATABASE_URL=sqlite:///./ridecompare.db
+VITE_API_URL=
 GEOCODING_PROVIDER=mapbox
-GEOAPIFY_API_KEY=
+MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
+MAPBOX_PUBLIC_TOKEN=your_mapbox_public_token_here
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_public_token_here
 PHOTON_BASE_URL=https://photon.komoot.io
 NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
 GEOCODING_BASE_URL=https://nominatim.openstreetmap.org
-GEOCODING_USER_AGENT=RideCompare/3.0
+GEOCODING_USER_AGENT=RideCompare/3.0 (https://ridecompare.vercel.app; contact: admin@ridecompare.com)
 LOCATION_CACHE_TTL_DAYS=14
-
-# Optional provider quote APIs
+GEOAPIFY_API_KEY=
 UBER_API_KEY=
 LYFT_API_KEY=
 OLA_API_KEY=
 RAPIDO_API_KEY=
 BOLT_API_KEY=
 GRAB_API_KEY=
+==============================================================================
 
-# Frontend
-VITE_API_URL=
-VITE_MAPBOX_ACCESS_TOKEN=REPLACE_WITH_MAPBOX_PUBLIC_TOKEN
+KEY NOTES ON SPECIFIC VARIABLES:
+------------------------------------------------------------------------------
+1. VITE_API_URL:
+   - For full-stack deployment on Vercel (recommended), leave VITE_API_URL blank!
+     vercel.json automatically routes /api/* to the serverless Python backend.
+   - If your backend runs on an external server (e.g., Render), set:
+     VITE_API_URL=https://ridecompare.onrender.com
 
-# PostgreSQL (only when DATABASE_URL uses PostgreSQL)
-POSTGRES_USER=ridecompare
-POSTGRES_PASSWORD=REPLACE_WITH_A_LONG_RANDOM_URL_SAFE_PASSWORD
-POSTGRES_DB=ridecompare
+2. DATABASE_URL:
+   - If you add the Neon PostgreSQL integration via Vercel Marketplace,
+     Vercel will automatically provide DATABASE_URL and POSTGRES_URL.
+   - If using SQLite on Vercel serverless, the backend will automatically
+     use an ephemeral database at /tmp/ridecompare.db.
+
+3. MAPBOX vs. FREE FALLBACK:
+   - If you have Mapbox tokens, set MAPBOX_ACCESS_TOKEN and MAPBOX_PUBLIC_TOKEN.
+   - If you do NOT have Mapbox tokens, change GEOCODING_PROVIDER to:
+     GEOCODING_PROVIDER=photon
+     (Photon uses OpenStreetMap and is 100% free with no API key needed).

@@ -24,6 +24,8 @@ if os.getenv("VERCEL") and (not DATABASE_URL or "sqlite" in DATABASE_URL):
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+if "postgresql+psycopg://" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql+psycopg://", "postgresql+psycopg2://", 1)
 
 if DATABASE_URL.startswith("sqlite:"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
