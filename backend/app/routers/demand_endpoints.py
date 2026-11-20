@@ -26,7 +26,10 @@ from backend.app.services.demand_intelligence import (
     get_demand_wording,
     METADATA_FILE_PATH
 )
-from ml.training.train_demand_model import train_demand_intelligence_pipeline
+try:
+    from ml.training.train_demand_model import train_demand_intelligence_pipeline
+except Exception:
+    train_demand_intelligence_pipeline = None
 
 router = APIRouter(prefix="/api", tags=["Dynamic Pricing & Demand Intelligence"])
 
@@ -234,6 +237,11 @@ async def retrain_demand_model(
     sample_size: int = Query(12000, ge=1000, le=100000)
 ):
     """Triggers scheduled or on-demand retraining of the dynamic pricing pressure model."""
+    if train_demand_intelligence_pipeline is None:
+        raise HTTPException(
+            status_code=501,
+            detail="Model retraining is unavailable in serverless environment. Run training in offline/worker container."
+        )
     try:
         meta = train_demand_intelligence_pipeline()
         # Reload model into singleton engine

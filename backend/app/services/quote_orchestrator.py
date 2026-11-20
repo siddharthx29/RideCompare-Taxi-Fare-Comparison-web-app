@@ -1,7 +1,11 @@
 import asyncio
 import hashlib
 import logging
-import numpy as np
+import statistics
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
@@ -179,7 +183,13 @@ class QuoteOrchestrator:
             change_per_min = round((abs_change / time_diff) * 60, 2)
 
             if len(fares) > 2:
-                cv = (float(np.std(fares)) / max(1.0, float(np.mean(fares)))) * 100
+                if np is not None:
+                    mean_fare = float(np.mean(fares))
+                    std_fare = float(np.std(fares))
+                else:
+                    mean_fare = statistics.mean(fares) if fares else 1.0
+                    std_fare = statistics.stdev(fares) if len(fares) > 1 else 0.0
+                cv = (std_fare / max(1.0, mean_fare)) * 100
                 if cv > 15:
                     volatility = "HIGH"
                 elif cv > 6:

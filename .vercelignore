@@ -1,0 +1,16 @@
+.git
+.github
+report_assets
+*.pdf
+build_full_mca_report_19ch.py
+generate_problem_statement_pdf.py
+generate_report_assets.py
+ml/data
+ml/training
+ml/models/saved/*.joblib
+ml/models/saved/*.pkl
+.pytest_cache
+tests
+uploads
+*.db
+backend/app/ridecompare.db
