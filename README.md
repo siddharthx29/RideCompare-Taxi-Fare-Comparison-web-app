@@ -1,10 +1,21 @@
 # RideCompare 🚕⚡
 
-**RideCompare** is an intelligent urban mobility aggregator and route pricing intelligence platform. It solves a core consumer challenge: **"What are ride providers charging right now, and how does that price compare with expected historical behavior?"**
+**RideCompare** is an urban ride-fare comparison platform. It calculates estimated fare ranges across all ride services available at the user's location (Uber, Ola, Rapido, inDrive, Namma Yatri, Bolt, Grab, DiDi, Lyft, etc.), sorted cheapest first, using internal statutory rate card models and point-in-polygon geofencing.
 
-The platform operates on a dual-engine architecture:
-1. **Real-Time Authoritative Provider Pricing**: Captures and displays live provider rates (e.g. `₹287 ● LIVE PRICE`) with timestamped validation. Live provider quotes are always authoritative and never overwritten by artificial approximations.
-2. **AI/Machine Learning Pricing Intelligence**: Analyzes live observations alongside 12,000+ historical trip records to predict typical fare baselines, demand levels, price anomalies, and expected fare ranges.
+> 📖 **Read the Complete Management Guide**: [RATE_CARDS_GUIDE.md](file:///c:/Users/HP/Downloads/RideCompare-Taxi-Fare-Comparison-web-app-main%20%281%29/RideCompare-Taxi-Fare-Comparison-web-app-main/RATE_CARDS_GUIDE.md) — How to add a city, update rate cards, and flip aggregator regulatory statuses.
+
+---
+
+## 🏛️ Core Principles & Hard Rules
+
+1. **Zero Scraping**: No scraping of Uber/Ola/Rapido or any other ride app. No unofficial or reverse-engineered APIs. All prices come from internal statutory rate cards and verified routing algorithms.
+2. **Ranges Only (Labeled "Estimate")**: Every price is labeled **"Estimate"** and presented as a range (`low – high`), never a single exact number. Includes mandatory legal footer: *"Actual fare is shown in the app and may differ due to live demand, traffic, tolls and taxes."*
+3. **Official App Deep Links**: Each result card features an **"Open in app"** deep link (`uber://`, `ola://`, `rapido://`, `nammayatri://`, `bolt://`, etc.) with browser web fallback.
+4. **4-Case Availability Gating**:
+   - **Case A (Intra-city with active apps)**: Both points inside geofence with $\ge 1$ active app service $\rightarrow$ show comparisons sorted cheapest first.
+   - **Case B (Metered-only)**: In region, 0 active app services, but metered autos/taxis exist $\rightarrow$ show "Normal auto / local taxi" card with government minimum meter estimate (range) and message: *"No ride-hailing apps operate here. Typical metered auto fare estimate:"*.
+   - **Case C (Unsupported area)**: Outside all geofences or no services $\rightarrow$ disable "Compare" button, show *"Ride services are not available in this area."*, and block API with HTTP 422 (`OUT_OF_COVERAGE`).
+   - **Case D (Intercity)**: Pickup and drop in different cities/regions $\rightarrow$ show intercity notice banner: *"Standard city-ride fares do not apply for intercity/outstation trips."*
 
 ---
 

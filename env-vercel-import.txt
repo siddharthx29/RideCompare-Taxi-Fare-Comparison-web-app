@@ -1,0 +1,63 @@
+# ==============================================================================
+# RIDECOMPARE - VERCEL ENVIRONMENT CONFIGURATION (.txt format)
+# Directly import or paste this into Vercel:
+# Vercel Dashboard -> Project -> Settings -> Environment Variables -> "Import .env"
+# ==============================================================================
+
+# Core runtime & environment
+ENV=production
+ENVIRONMENT=production
+PORT=5000
+HOST=0.0.0.0
+WORKERS=1
+
+# CORS & Domain Origin Protection
+CORS_ORIGINS=https://ridecompare.vercel.app
+ALLOWED_ORIGINS=https://ridecompare.vercel.app
+ML_ALLOWED_ORIGINS=https://ridecompare.vercel.app
+
+# Generated Cryptographic Admin Secret
+ADMIN_KEY=rc_live_admin_9f3b7c2a1e4d805b6e2c8a4f7d0e3b1a
+
+# Neon PostgreSQL Database Credentials (Auto-extracted from your Neon project)
+DATABASE_URL=postgresql://neondb_owner:npg_X0Hf9RhrVIJx@ep-wandering-thunder-azd35wgf-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require
+DATABASE_URL_UNPOOLED=postgresql://neondb_owner:npg_X0Hf9RhrVIJx@ep-wandering-thunder-azd35wgf.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+POSTGRES_URL=postgresql://neondb_owner:npg_X0Hf9RhrVIJx@ep-wandering-thunder-azd35wgf-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require
+POSTGRES_USER=neondb_owner
+POSTGRES_PASSWORD=npg_X0Hf9RhrVIJx
+POSTGRES_HOST=ep-wandering-thunder-azd35wgf-pooler.c-3.ap-southeast-1.aws.neon.tech
+POSTGRES_DATABASE=neondb
+PGHOST=ep-wandering-thunder-azd35wgf-pooler.c-3.ap-southeast-1.aws.neon.tech
+PGUSER=neondb_owner
+PGPASSWORD=npg_X0Hf9RhrVIJx
+PGDATABASE=neondb
+NEON_PROJECT_ID=dry-wind-07396778
+
+# Frontend Configuration (Empty for full-stack Vercel serverless relative routing)
+VITE_API_URL=
+
+# Geocoding Provider
+# Set to 'photon' by default (OpenStreetMap, 100% free, no API key required)
+# Switch to 'mapbox' if you paste your personal Mapbox token below
+GEOCODING_PROVIDER=photon
+PHOTON_BASE_URL=https://photon.komoot.io
+NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
+GEOCODING_BASE_URL=https://nominatim.openstreetmap.org
+GEOCODING_USER_AGENT=RideCompare/3.0 (https://ridecompare.vercel.app; contact: admin@ridecompare.com)
+LOCATION_CACHE_TTL_DAYS=14
+
+# Optional Mapbox Access Tokens (Leave empty if using Photon, or insert your pk/sk token)
+MAPBOX_ACCESS_TOKEN=
+MAPBOX_PUBLIC_TOKEN=
+MAPBOX_SECRET_TOKEN=
+MAPBOX_SERVER_TOKEN=
+VITE_MAPBOX_ACCESS_TOKEN=
+
+# Optional Provider & Service Keys
+GEOAPIFY_API_KEY=
+UBER_API_KEY=
+LYFT_API_KEY=
+OLA_API_KEY=
+RAPIDO_API_KEY=
+BOLT_API_KEY=
+GRAB_API_KEY=

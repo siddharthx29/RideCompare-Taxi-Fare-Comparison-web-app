@@ -420,9 +420,9 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
   const handleBook = (p: RideProviderDetails, e: React.MouseEvent) => {
     e.stopPropagation();
-    onBooking(p.provider, p.actualFare || p.estimatedFare);
+    onBooking(p.provider, p.low ?? p.fareMin ?? 0);
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const destinationUrl = isMobile && p.appDeepLink ? p.appDeepLink : p.webLink;
+    const destinationUrl = (isMobile && p.deeplink) ? p.deeplink : (p.deeplink || p.appDeepLink || p.webLink);
     if (destinationUrl) {
       window.open(destinationUrl, '_blank', 'noopener,noreferrer');
     }
@@ -430,7 +430,6 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
   const cheapestProvider = baseProviders.find(p => p.isCheapest) || baseProviders[0];
   const activeSym = cheapestProvider?.currencySymbol || defaultSym;
-  const hasAnyLivePrice = baseProviders.some(p => p.liveAvailable !== false && p.actualFare !== null && p.actualFare !== undefined);
   const hasRobotaxi = providers.some(p => (p.categoryTag || '').includes('Autonomous') || p.provider.includes('Waymo'));
   const routeType = routeClassification?.route_type || (comparison.distanceKm > 60 ? 'OUTSTATION' : comparison.distanceKm > 25 ? 'INTERCITY' : 'LOCAL');
 
@@ -445,6 +444,100 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
       default: return type.replace('_', ' ');
     }
   };
+
+  // Case D Check: Intercity or Outstation ride
+  if (comparison.reason_code === 'INTERCITY_TRIP') {
+    return (
+      <div className="p-6 bg-[var(--bg-secondary)] border border-amber-500/40 rounded-2xl text-center space-y-4 shadow-sm animate-fade-in">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
+          <Route size={28} />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-lg font-bold text-[var(--text-primary)]">Intercity / Outstation Journey Detected</h3>
+          <p className="text-sm text-[var(--text-secondary)] max-w-lg mx-auto leading-relaxed">
+            {comparison.notice || 'Pickup and drop are in different cities or regions. Standard city-ride fares do not apply for intercity/outstation trips.'}
+          </p>
+        </div>
+        <div className="p-3 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl inline-flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+          <span>Distance: <strong className="text-[var(--text-primary)]">{comparison.distanceKm} km</strong></span>
+          <span>•</span>
+          <span>Estimated Duration: <strong className="text-[var(--text-primary)]">~{comparison.durationMins} mins</strong></span>
+        </div>
+        <div className="pt-2 text-xs text-amber-400/90 font-medium">
+          Please check dedicated intercity / outstation options or intercity bus/rail connections for this route.
+        </div>
+        <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-center text-xs text-[var(--text-secondary)] font-medium">
+          Actual fare is shown in the app and may differ due to live demand, traffic, tolls and taxes.
+        </div>
+      </div>
+    );
+  }
+
+  // Case B Check: Metered auto / local taxi only (no ride-hailing apps available)
+  if (comparison.fallback?.type === 'auto' || comparison.reason_code === 'METERED_AUTO_ONLY') {
+    const fb = comparison.fallback;
+    const lowFare = fb?.low ?? fb?.estimate?.low ?? 30;
+    const highFare = fb?.high ?? fb?.estimate?.high ?? 60;
+    const currencySym = comparison.currencySymbol || '₹';
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3">
+          <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+          <div>
+            <h4 className="text-sm font-bold text-[var(--text-primary)]">
+              No Ride-Hailing Apps Operate Here
+            </h4>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              {fb?.message || 'No ride-hailing apps operate here. Typical metered auto fare estimate:'}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-5 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
+                <Navigation size={22} />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-base text-[var(--text-primary)]">
+                  {fb?.service || 'Normal auto / local taxi'}
+                </h4>
+                <span className="text-xs text-[var(--text-secondary)]">
+                  {fb?.ride_type || 'Auto Rickshaw (Metered)'} • Government Notified Tariff
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Estimate</span>
+              <span className="text-2xl font-black text-emerald-500">
+                {currencySym}{lowFare} – {currencySym}{highFare}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-[var(--border-color)] text-xs">
+            <div>
+              <span className="text-[10px] text-[var(--text-secondary)] block">Minimum Fare</span>
+              <span className="font-bold text-[var(--text-primary)]">{currencySym}{fb?.min_fare ?? 30}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-[var(--text-secondary)] block">Rate per km</span>
+              <span className="font-bold text-[var(--text-primary)]">{currencySym}{fb?.per_km ?? 15} / km</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-[var(--text-secondary)] block">Route Distance</span>
+              <span className="font-bold text-[var(--text-primary)]">{comparison.distanceKm} km (~{comparison.durationMins} min)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-center text-xs text-[var(--text-secondary)] font-medium">
+          Actual fare is shown in the app and may differ due to live demand, traffic, tolls and taxes.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -499,19 +592,14 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
         <div className="pt-2 flex items-end justify-between">
           <div>
             <span className="text-[11px] font-medium text-slate-400 block">
-              {hasAnyLivePrice ? 'Lowest Live Quote (Direct Verified)' : 'Lowest Estimated Fare (Configured Tariffs)'}
+              Lowest Estimated Fare (Statutory Rate Cards)
             </span>
             <div className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
               <span>{cheapestProvider?.provider}</span>
               {cheapestProvider && (
-                <>
-                  <span className="text-[var(--text-primary)] font-bold text-lg">
-                    {activeSym}{cheapestProvider.fareMin ?? Math.round((cheapestProvider.actualFare || cheapestProvider.estimatedFare || 100) * 0.94)} – {activeSym}{cheapestProvider.fareMax ?? Math.round((cheapestProvider.actualFare || cheapestProvider.estimatedFare || 100) * 1.08)}
-                  </span>
-                  <span className="text-[11px] font-medium text-slate-300">
-                    (~{activeSym}{cheapestProvider.actualFare || cheapestProvider.estimatedFare})
-                  </span>
-                </>
+                <span className="text-[var(--text-primary)] font-bold text-lg">
+                  Estimate: {activeSym}{cheapestProvider.low ?? cheapestProvider.fareMin} – {activeSym}{cheapestProvider.high ?? cheapestProvider.fareMax}
+                </span>
               )}
             </div>
           </div>
@@ -671,12 +759,9 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           const isBike = vTypeLower.includes('bike') || vTypeLower.includes('moto');
           const isAuto = vTypeLower.includes('auto') || vTypeLower.includes('tuk');
 
-          // Dynamically compute exact in-between live rates according to demand and surge for every transport
-          const liveMin = p.fareMin ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 0.96 : Math.max(0.88, 0.95 - (sMult - 1.0) * 0.07 * (isBike ? 0.85 : isAuto ? 0.92 : 1.0)))) : (p.predictedFareMin ?? Math.round((p.predictedFare || 250) * 0.94)));
-          const liveMax = p.fareMax ?? (liveFare !== null ? Math.round(liveFare * (isZeroSurge ? 1.04 : Math.min(1.22, 1.06 + (sMult - 1.0) * 0.12 * (isBike ? 0.85 : isAuto ? 0.92 : 1.0)))) : (p.predictedFareMax ?? Math.round((p.predictedFare || 250) * 1.06)));
-
-          const currentPointFare = liveFare !== null ? liveFare : (p.predictedFare || Math.round((liveMin + liveMax) / 2));
-          const inBetweenPercent = Math.max(10, Math.min(90, Math.round(((currentPointFare - liveMin) / Math.max(1, liveMax - liveMin)) * 100)));
+          // Statutorily computed fare range (Estimate)
+          const liveMin = p.low ?? p.fareMin ?? Math.round((p.estimatedFare || 100) * 0.9);
+          const liveMax = p.high ?? p.fareMax ?? Math.round((p.estimatedFare || 100) * 1.2);
 
           const demandStatus = isZeroSurge
             ? { label: 'Zero-Surge Regulated', badgeClass: 'text-amber-500 bg-amber-500/15 border-amber-500/30', barGradient: 'from-amber-400 via-emerald-400 to-emerald-500' }
@@ -686,7 +771,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                 ? { label: 'Moderate Demand', badgeClass: 'text-amber-500 bg-amber-500/15 border-amber-500/30', barGradient: 'from-emerald-400 via-amber-400 to-amber-500' }
                 : { label: 'Standard Demand', badgeClass: 'text-emerald-500 bg-emerald-500/15 border-emerald-500/30', barGradient: 'from-emerald-500 to-teal-500' };
 
-          const typicalRange = p.typicalFareRange || `${sym}${p.predictedFareMin ?? Math.round((p.predictedFare || 250) * 0.94)}–${sym}${p.predictedFareMax ?? Math.round((p.predictedFare || 250) * 1.06)}`;
+          const typicalRange = `${sym}${liveMin}–${sym}${liveMax}`;
 
           return (
             <div
@@ -751,6 +836,15 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                             <CheckCircle2 size={10} className="text-emerald-400" /> Verified Direct
                           </span>
                         )}
+                        {p.rate_card_verified_at && (
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border flex items-center gap-0.5 ${
+                            p.is_verified
+                              ? 'bg-emerald-950 text-emerald-400 border-emerald-500/40'
+                              : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                          }`}>
+                            {p.is_verified ? '✓ Verified' : '⚠ Unverified'} Rate Card ({p.rate_card_verified_at})
+                          </span>
+                        )}
                         {p.suitabilityLevel && (
                           <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold flex items-center gap-0.5 ${
                             p.suitabilityLevel === 'HIGH'
@@ -792,49 +886,27 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
                   </div>
 
-                  {/* Real-time In-Between Live Pricing Block */}
+                  {/* Regulated Fare Range Block (Always Range, Labeled Estimate) */}
                   <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
-                    {hasLivePrice ? (
-                      <div className="text-left sm:text-right">
-                        <div className="text-xl sm:text-2xl font-black text-[var(--text-primary)] flex items-baseline sm:justify-end gap-1.5 tracking-tight">
-                          <span className="text-emerald-600 dark:text-emerald-400">{sym}{liveMin}</span>
-                          <span className="text-xs sm:text-sm font-bold text-[var(--text-secondary)]">to</span>
-                          <span className="text-emerald-600 dark:text-emerald-400">{sym}{liveMax}</span>
-                        </div>
-                        <div className="flex items-center sm:justify-end gap-1.5 mt-0.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            LIVE IN-BETWEEN RATE
-                          </span>
-                          <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-primary)] px-1.5 py-0.5 rounded border border-[var(--border-color)]">
-                            Est: ~{sym}{liveFare}
-                          </span>
-                          <span className={`text-[10px] font-medium ${isStale ? 'text-amber-500 font-bold' : 'text-[var(--text-secondary)]'}`}>
-                            {age <= 3 ? 'Updated just now' : `Updated ${age}s ago`}
-                          </span>
-                        </div>
+                    <div className="text-left sm:text-right space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Estimate
+                      </span>
+                      <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                        {sym}{liveMin} – {sym}{liveMax}
                       </div>
-                    ) : (
-                      <div className="text-left sm:text-right space-y-0.5">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30 inline-block">
-                          ESTIMATED FARE · LIVE QUOTE UNAVAILABLE
-                        </span>
-                        <div className="text-base sm:text-lg font-black text-[var(--text-primary)]">
-                          Estimated fare: {typicalRange}
-                        </div>
-                        <span className="text-[9px] text-amber-500/90 font-medium block">
-                          Estimated fare — not a live provider price.
-                        </span>
-                      </div>
-                    )}
+                      <span className="text-[10px] text-[var(--text-secondary)] font-medium block">
+                        {p.surgeMultiplier > 1.0 ? `Surge ${p.surgeMultiplier}x applied` : 'Standard rate card band'}
+                      </span>
+                    </div>
 
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={(e) => handleBook(p, e)}
-                        className={`flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
                         title={`Open ${brand.appName}`}
                       >
-                        <span>Book</span>
+                        <span>Open in app</span>
                         <ArrowUpRight size={13} />
                       </button>
 
@@ -852,52 +924,45 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                   </div>
                 </div>
 
-                {/* Live Demand & Surge In-Between Rate Bar for Every Transport */}
+                {/* Demand & Surge Range Bar */}
                 <div className="p-2.5 rounded-xl bg-[var(--bg-primary)]/70 border border-[var(--border-color)] space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] font-semibold flex-wrap gap-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1">
                         <Zap size={11} className={sMult > 1.0 ? 'text-amber-500' : 'text-emerald-500'} />
-                        {p.vehicleType} Demand & Surge Estimate:
+                        {p.vehicleType} Estimate Range:
                       </span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${demandStatus.badgeClass}`}>
                         {isZeroSurge ? 'Zero Surge Guaranteed' : `${sMult}x Surge • ${demandStatus.label}`}
                       </span>
+                      {p.legal_surge_cap && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold border border-slate-700 bg-slate-800 text-slate-300">
+                          Legal Cap: {p.legal_surge_cap}x
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] text-[var(--text-secondary)]">
-                      Estimated range: <strong className="text-[var(--text-primary)]">{sym}{liveMin} – {sym}{liveMax}</strong>
+                      Estimate: <strong className="text-[var(--text-primary)]">{sym}{liveMin} – {sym}{liveMax}</strong>
                     </div>
                   </div>
 
-                  {/* Meter Track with Live Indicator Position */}
-                  <div className="relative pt-3 pb-1">
+                  <div className="relative pt-1 pb-1">
                     <div className="h-2 w-full bg-[var(--bg-secondary)] rounded-full overflow-hidden relative border border-[var(--border-color)]">
                       <div 
-                        className="h-full bg-[var(--accent-color)] opacity-80 rounded-full"
+                        className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-indigo-500 opacity-80 rounded-full"
                         style={{ width: '100%' }}
                       />
-                    </div>
-                    <div 
-                      className="absolute top-0 flex flex-col items-center -translate-x-1/2 transition-all duration-300 pointer-events-none"
-                      style={{ left: `${inBetweenPercent}%` }}
-                    >
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs border border-slate-700 dark:border-slate-300">
-                        {sym}{currentPointFare}
-                      </span>
-                      <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-slate-900 mt-0.5" />
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center text-[9px] font-bold text-[var(--text-secondary)] px-0.5">
-                    <span>Min Est: {sym}{liveMin}</span>
+                    <span>Low: {sym}{liveMin}</span>
                     <span className="text-[10px] font-medium text-[var(--text-secondary)]/90">
                       {isZeroSurge 
                         ? 'Government meter standard • No peak surcharge'
-                        : sMult > 1.15 
-                          ? `Surge estimate: tariff band scaled by ${sMult}x demand`
-                          : 'Normal demand: rates within regular traffic band'}
+                        : `Surge window strictly capped by state transport regulations`}
                     </span>
-                    <span>Max Est: {sym}{liveMax}</span>
+                    <span>High: {sym}{liveMax}</span>
                   </div>
                 </div>
 
@@ -1272,12 +1337,10 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
         </div>
       )}
 
-      <div className="p-3 bg-[var(--bg-secondary)]/70 border border-[var(--border-color)] rounded-xl flex items-start sm:items-center gap-2.5 text-[11px] text-[var(--text-secondary)]">
-        <AlertCircle size={15} className="text-indigo-500 shrink-0 mt-0.5 sm:mt-0" />
-        <span className="leading-relaxed">
-          <strong>Note:</strong> These route-aware estimates use configured fare information. Provider prices may differ based on local availability, demand, traffic, and current fare rules.
-        </span>
-      </div>
+      {/* Mandatory Legal Disclaimer Footer */}
+      <footer className="p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-center text-xs text-[var(--text-secondary)] font-medium">
+        Actual fare is shown in the app and may differ due to live demand, traffic, tolls and taxes.
+      </footer>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { MapView } from './components/MapView';
 import { RideComparison } from './components/RideComparison';
 import { PlatformAnalyticsDashboard } from './components/PlatformAnalyticsDashboard';
 import { InternalMLDashboard } from './components/InternalMLDashboard';
+import { RateCardAdmin } from './components/RateCardAdmin';
 import { FareSurgeTracker } from './components/FareSurgeTracker';
 import { FareIntelligence } from './components/FareIntelligence';
 import { About } from './components/About';
@@ -47,10 +48,12 @@ function App() {
   });
   const [showFareIntelligence, setShowFareIntelligence] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
-  const [adminTab, setAdminTab] = useState<'analytics' | 'ml'>(() => {
-    if (typeof window === 'undefined') return 'analytics';
+  const [adminTab, setAdminTab] = useState<'rate-cards' | 'analytics' | 'ml'>(() => {
+    if (typeof window === 'undefined') return 'rate-cards';
     const params = new URLSearchParams(window.location.search);
-    return (params.get('admin') === 'ml' || params.get('tab') === 'ml') ? 'ml' : 'analytics';
+    if (params.get('admin') === 'ml' || params.get('tab') === 'ml') return 'ml';
+    if (params.get('tab') === 'analytics') return 'analytics';
+    return 'rate-cards';
   });
   const [loading, setLoading] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
@@ -117,7 +120,7 @@ function App() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  const handleSearch = useCallback(async (source: LocationInfo, dest: LocationInfo) => {
+  const handleSearch = useCallback(async (source: LocationInfo, dest: LocationInfo, departAt?: string) => {
     lastSearchedRoute.current = `${source.lat},${source.lng}->${dest.lat},${dest.lng}`;
     const straightLineKm = haversineKm(source.lat, source.lng, dest.lat, dest.lng);
     if (straightLineKm > MAX_STRAIGHT_LINE_KM) {
@@ -140,431 +143,146 @@ function App() {
     setSearchId(null);
 
     try {
-      const params = new URLSearchParams({
-        start: `${source.lng},${source.lat}`,
-        end: `${dest.lng},${dest.lat}`,
-        sourceName: source.label,
-        destName: dest.label
+      // 1. Query Statutory Fare & Availability Engine (/api/estimate)
+      const estimateRes = await apiFetch('/api/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickup: { lat: source.lat, lng: source.lng, address: source.label },
+          drop: { lat: dest.lat, lng: dest.lng, address: dest.label },
+          depart_at: departAt || new Date().toISOString()
+        })
       });
-      if (source.address) params.set('sourceAddress', JSON.stringify(source.address));
-      if (dest.address) params.set('destAddress', JSON.stringify(dest.address));
 
-      const response = await apiFetch(`/api/route?${params.toString()}`);
-      const result = await response.json();
-      setSearchId(result.searchId || 1);
-      setRouteGeometry(result.geometry as RouteGeometry);
-      setComparison(result.comparison);
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : '';
-      const isApiValidationError =
-        errMsg.toLowerCase().includes('300') ||
-        errMsg.toLowerCase().includes('exceeds') ||
-        errMsg.toLowerCase().includes('distance') ||
-        errMsg.toLowerCase().includes('limit');
-
-      if (isApiValidationError) {
-        setDistanceError(errMsg);
+      if (estimateRes.status === 422) {
+        const errPayload = await estimateRes.json().catch(() => ({}));
+        const msg = errPayload.detail?.message || errPayload.message || 'Ride services are not available in this area.';
+        setDistanceError(msg);
+        setComparison(null);
         setLoading(false);
         return;
       }
 
-      setDistanceError(
-        `Live fare search could not be completed: ${errMsg || 'the backend service is unavailable'}. ` +
-        'Check that the backend is running and that /api routes are reachable. No fabricated or unverified prices were added.'
-      );
-      setComparison(null);
-      setRouteGeometry(null);
-      setSearchId(null);
-      setLoading(false);
-      return;
+      if (!estimateRes.ok) {
+        const errPayload = await estimateRes.json().catch(() => ({}));
+        const msg = errPayload.detail?.message || errPayload.detail || errPayload.message || 'Failed to estimate ride fares.';
+        setDistanceError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        setComparison(null);
+        setLoading(false);
+        return;
+      }
 
-      let distKm = Math.max(1.0, parseFloat((straightLineKm * 1.25).toFixed(1)));
-      let durMin = Math.max(5, Math.round((distKm / 22) * 60));
-      let routeGeom: RouteGeometry = {
-        type: "LineString",
-        coordinates: [
-          [source.lng, source.lat],
-          [dest.lng, dest.lat]
+      const data = await estimateRes.json();
+
+      const providersList: RideProviderDetails[] = (data.available_services || []).map((s: any) => ({
+        provider: s.service,
+        vehicleType: s.vehicle_category || 'Cab',
+        distanceKm: data.distance_km,
+        etaMinutes: s.eta_minutes || 5,
+        actualFare: null,
+        estimatedFare: Math.round((s.low + s.high) / 2),
+        fareMin: s.low,
+        fareMax: s.high,
+        fare_min: s.low,
+        fare_max: s.high,
+        low: s.low,
+        high: s.high,
+        currency: s.currency,
+        currencySymbol: s.currency_symbol || '₹',
+        surgeMultiplier: s.surge_high || 1.0,
+        legal_surge_cap: s.legal_surge_cap,
+        costPerKm: Math.round(s.low / Math.max(1, data.distance_km)),
+        costPerMin: Math.round(s.low / Math.max(1, data.duration_min)),
+        baseFare: 0,
+        distanceFare: 0,
+        durationFare: 0,
+        platformFee: 0,
+        tollEstimate: 0,
+        appDeepLink: s.deeplink,
+        deeplink: s.deeplink,
+        webLink: s.web_link,
+        isCheapest: s.is_cheapest,
+        isFastest: s.is_fastest,
+        isMostEfficient: false,
+        isBestValue: s.is_cheapest,
+        rate_card_verified_at: s.rate_card_verified_at,
+        is_verified: s.is_verified,
+        eligibility: 'DIRECT'
+      }));
+
+      const compResult: ComparisonResult = {
+        distanceKm: data.distance_km,
+        durationMins: data.duration_min,
+        detectedCity: data.region_name || data.region,
+        state: data.state,
+        country: data.country,
+        currency: providersList[0]?.currency || 'INR',
+        currencySymbol: providersList[0]?.currencySymbol || '₹',
+        isServiceable: data.reason_code !== 'OUT_OF_COVERAGE',
+        message: data.notice || (data.fallback?.type === 'auto' ? data.fallback.message : undefined),
+        notice: data.notice,
+        reason_code: data.reason_code,
+        fallback: data.fallback,
+        disclaimer: data.disclaimer || 'Actual fare is shown in the app and may differ due to live demand, traffic, tolls and taxes.',
+        surgeRuleName: data.available_services?.[0]?.surge_period || 'Statutory Fare Engine',
+        straightLineDistance: data.distance_km,
+        detourDistance: 0,
+        pricingRegime: 'Regulated Transport Rate Cards & Surge Caps',
+        fareSpread: providersList.length > 1
+          ? Math.max(0, (providersList[providersList.length - 1].high || 0) - (providersList[0].low || 0))
+          : 0,
+        spreadPercentage: 0,
+        providers: providersList,
+        directProviders: providersList,
+        recommendations: {
+          cheapest: providersList[0]?.provider || '',
+          fastest: providersList.find(p => p.isFastest)?.provider || providersList[0]?.provider || '',
+          mostEfficient: providersList[0]?.provider || '',
+          bestValue: providersList[0]?.provider || '',
+          recommendationReason: 'Prices estimated from statutory rate cards and legal aggregator caps.',
+          distanceAdvantage: '',
+          timeAdvantage: '',
+          costAdvantage: ''
+        },
+        insights: [
+          `Fares computed from verified rate cards under ${data.region_name || 'Regional'} transport guidelines.`,
+          `Legal surge capped strictly at ${data.legal_surge_cap || 2.0}x base rate.`
         ]
       };
 
+      setComparison(compResult);
+
+      // 2. Fetch turn-by-turn geometry for the map
       try {
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${source.lng},${source.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
-        const osrmRes = await fetch(osrmUrl);
-        if (osrmRes.ok) {
-          const osrmData = (await osrmRes.json()) as {
-            routes?: Array<{ distance: number; duration: number; geometry: RouteGeometry }>;
-          };
-          const routes = osrmData.routes || [];
-          const first = routes[0];
-          if (first) {
-            distKm = Math.max(0.5, parseFloat((first.distance / 1000).toFixed(1)));
-            durMin = Math.max(3, Math.round(first.duration / 60));
-            routeGeom = first.geometry;
+        const routeRes = await apiFetch(`/api/route?start=${source.lng},${source.lat}&end=${dest.lng},${dest.lat}`);
+        if (routeRes.ok) {
+          const routeData = await routeRes.json();
+          if (routeData.geometry) {
+            setRouteGeometry(routeData.geometry as RouteGeometry);
           }
         }
       } catch {
-        // Fall back to straight-line geometry
+        setRouteGeometry({
+          type: 'LineString',
+          coordinates: [
+            [source.lng, source.lat],
+            [dest.lng, dest.lat]
+          ]
+        });
       }
-
-      // ML Time-of-Day Diurnal Surge & Demand Analysis
-      const currentHour = new Date().getHours();
-      let mlSurgeMultiplier = 1.0;
-      let mlDemandLevel = 'NORMAL';
-      let mlSurgeRule = 'Standard Traffic';
-      let mlClusterLabel = 'Standard City Transit';
-      let mlClusterId = 1;
-
-      if (currentHour >= 8 && currentHour < 11) {
-        mlSurgeMultiplier = 1.35;
-        mlDemandLevel = 'HIGH';
-        mlSurgeRule = 'Morning Peak Rush';
-        mlClusterLabel = 'Peak Hour Surge';
-        mlClusterId = 0;
-      } else if (currentHour >= 17 && currentHour < 21) {
-        mlSurgeMultiplier = 1.45;
-        mlDemandLevel = 'HIGH';
-        mlSurgeRule = 'Evening Peak Commute';
-        mlClusterLabel = 'Peak Hour Surge';
-        mlClusterId = 0;
-      } else if (currentHour >= 23 || currentHour < 5) {
-        mlSurgeMultiplier = 1.20;
-        mlDemandLevel = 'MODERATE';
-        mlSurgeRule = 'Night Owl Transit';
-        mlClusterLabel = 'Night Transit Window';
-        mlClusterId = 3;
-      } else {
-        mlSurgeMultiplier = 1.05;
-        mlDemandLevel = 'NORMAL';
-        mlSurgeRule = 'Off-Peak Regular Flow';
-        mlClusterLabel = 'Standard City Transit';
-        mlClusterId = 1;
-      }
-
-      // Agentic AI Route Classification
-      const fullText = `${source.label} ${dest.label}`.toLowerCase();
-      const isAirport = ['airport', 'cial', 'kia', 'kempegowda', 'dabolim', 'mopa', 'heathrow', 'sfo', 'jfk', 'dxb'].some(k => fullText.includes(k));
-      const isOutstationDest = ['munnar', 'thekkady', 'vagamon', 'alappuzha', 'alleppey', 'coorg', 'ooty', 'nandi hills', 'mysore', 'pune', 'lonavala', 'dudhsagar', 'idukki', 'wayanad'].some(k => fullText.includes(k));
-
-      let routeType: 'LOCAL' | 'SHORT_DISTANCE' | 'MEDIUM_DISTANCE' | 'LONG_DISTANCE' | 'INTERCITY' | 'OUTSTATION' | 'AIRPORT_TRANSFER' = 'LOCAL';
-      let classificationReason = 'Short urban intra-city commute.';
-
-      if (isAirport) {
-        routeType = 'AIRPORT_TRANSFER';
-        classificationReason = 'Airport transfer corridor. Prioritizing luggage-capable, highway-cleared fleet.';
-      } else if (isOutstationDest || distKm >= 75) {
-        routeType = 'OUTSTATION';
-        classificationReason = `Long-distance outstation tourist / hill route detected (${distKm} km). Local municipal transit and bike taxis are prohibited.`;
-      } else if (distKm > 40) {
-        routeType = 'INTERCITY';
-        classificationReason = `Intercity corridor across administrative districts (${distKm} km). Highway-capable cabs required.`;
-      } else if (distKm > 20) {
-        routeType = 'MEDIUM_DISTANCE';
-        classificationReason = `Suburban perimeter transit (${distKm} km). Cabs and autos eligible; bike taxis limited.`;
-      } else if (distKm > 10) {
-        routeType = 'SHORT_DISTANCE';
-        classificationReason = `Short intra-city trip (${distKm} km). All standard vehicle types eligible.`;
-      }
-
-      const isBikeEligible = distKm <= 18 && routeType !== 'OUTSTATION' && routeType !== 'INTERCITY' && routeType !== 'AIRPORT_TRANSFER';
-      const isAutoEligible = distKm <= 32 && routeType !== 'OUTSTATION' && routeType !== 'INTERCITY';
-
-      const buildProvider = (
-        name: string,
-        vType: string,
-        base: number,
-        perKmRate: number,
-        perMinRate: number,
-        badges: { isCheapest?: boolean; isFastest?: boolean; isMostEfficient?: boolean; isBestValue?: boolean } = {},
-        eligibilityStatus: 'DIRECT' | 'PARTIAL' | 'UNSUPPORTED' = 'DIRECT',
-        eligibilityReasonText = '✓ Suitable for this route'
-      ): RideProviderDetails => {
-        const encodedPickup = encodeURIComponent(source.label);
-        const encodedDestination = encodeURIComponent(dest.label);
-        const providerKey = name.toLowerCase();
-        const bookingLinks = providerKey.includes('uber')
-          ? {
-              app: `uber://?action=setPickup&pickup[formatted_address]=${encodedPickup}&dropoff[formatted_address]=${encodedDestination}`,
-              web: `https://m.uber.com/ul/?action=setPickup&pickup[formatted_address]=${encodedPickup}&dropoff[formatted_address]=${encodedDestination}`
-            }
-          : providerKey.includes('ola')
-          ? {
-              app: `olacabs://app/launch?pickup_name=${encodedPickup}&drop_name=${encodedDestination}`,
-              web: `https://book.olacabs.com/?pickup_name=${encodedPickup}&drop_name=${encodedDestination}`
-            }
-          : providerKey.includes('rapido')
-          ? {
-              app: `rapido://open?pickup=${encodedPickup}&drop=${encodedDestination}`,
-              web: `https://rapido.bike/book?pickup=${encodedPickup}&drop=${encodedDestination}`
-            }
-          : providerKey.includes('lyft')
-          ? { app: 'lyft://', web: 'https://www.lyft.com/rider' }
-          : providerKey.includes('grab')
-          ? { app: 'grab://open', web: 'https://www.grab.com/' }
-          : providerKey.includes('bolt')
-          ? { app: 'bolt://', web: 'https://bolt.eu/' }
-          : providerKey.includes('namma yatri')
-          ? { app: 'namma yatri://', web: 'https://nammayatri.in/' }
-          : providerKey.includes('kerala savari')
-          ? { app: '', web: 'https://keralartc.com/' }
-          : providerKey.includes('taxi') || providerKey.includes('gtdc')
-          ? { app: '', web: 'https://www.google.com/maps/search/taxi' }
-          : { app: '', web: 'https://www.google.com/maps/dir/?api=1' };
-        const isBike = vType.toLowerCase().includes('bike');
-        const isAuto = vType.toLowerCase().includes('auto');
-        const isZeroSurge = Boolean(badges.isBestValue && isAuto);
-        const effectiveSurge = isZeroSurge ? 1.0 : mlSurgeMultiplier;
-
-        const dFare = Math.round(distKm * perKmRate);
-        const tFare = Math.round(durMin * perMinRate);
-        const pFee = 5;
-
-        // Base rate without surge (ML baseline reference)
-        const baselineFare = Math.round(base + dFare + tFare + pFee);
-        // Current actual point fare applying dynamic demand surge
-        const total = Math.round((base + dFare + tFare) * effectiveSurge + pFee);
-
-        // ML Demand & Surge dynamic in-between rate spread:
-        let downPct: number;
-        let upPct: number;
-        if (isZeroSurge) {
-          downPct = 0.04;
-          upPct = 0.05;
-        } else {
-          const sExcess = Math.max(0, effectiveSurge - 1.0);
-          if (isBike) {
-            downPct = Math.min(0.10, (0.05 + sExcess * 0.07) * 0.85);
-            upPct = Math.min(0.18, (0.06 + sExcess * 0.12) * 0.85);
-          } else if (isAuto) {
-            downPct = Math.min(0.11, (0.05 + sExcess * 0.07) * 0.92);
-            upPct = Math.min(0.19, (0.06 + sExcess * 0.12) * 0.92);
-          } else {
-            downPct = Math.min(0.12, 0.05 + sExcess * 0.07);
-            upPct = Math.min(0.22, 0.06 + sExcess * 0.14);
-          }
-        }
-
-        const fMin = Math.round(total * (1 - downPct));
-        const fMax = Math.max(fMin + (isBike ? 3 : isAuto ? 5 : 12), Math.round(total * (1 + upPct)));
-        const predDiffPct = Math.round(((total - baselineFare) / Math.max(1, baselineFare)) * 100);
-
-        return {
-          provider: name,
-          vehicleType: vType,
-          distanceKm: distKm,
-          etaMinutes: Math.max(2, Math.round(durMin * (isBike ? 0.18 : isAuto ? 0.22 : 0.25) + 2)),
-          actualFare: null,
-          estimatedFare: total,
-          fareMin: fMin,
-          fareMax: fMax,
-          fare_min: fMin,
-          fare_max: fMax,
-          predictedFare: baselineFare,
-          predictedFareMin: Math.round(baselineFare * 0.94),
-          predictedFareMax: Math.round(baselineFare * 1.06),
-          typicalFareRange: `₹${Math.round(baselineFare * 0.94)} - ₹${Math.round(baselineFare * 1.06)}`,
-          predictionDiff: total - baselineFare,
-          predictionDiffPct: predDiffPct,
-          demandLevel: isZeroSurge ? 'NORMAL' : mlDemandLevel,
-          priceTrend: mlSurgeMultiplier > 1.2 ? 'INCREASING' : 'STABLE',
-          priceAnomaly: predDiffPct > 18 ? 'Above normal' : 'Normal',
-          anomalyReason: effectiveSurge >= 1.3 ? 'Peak demand surge applied by provider algorithms' : 'Normal pricing regime',
-          mlInsight: effectiveSurge >= 1.3 ? `Current fare reflects ${effectiveSurge}x demand pressure. Auto offers regulated bracket.` : 'Fares align with the estimated typical range.',
-          confidenceLevel: 'HIGH',
-          confidenceScore: 0.93,
-          smartScore: badges.isBestValue ? 96 : badges.isCheapest ? 94 : 88,
-          currency: 'INR',
-          currencySymbol: '₹',
-          surgeMultiplier: effectiveSurge,
-          zeroSurge: isZeroSurge,
-          clusterId: mlClusterId,
-          clusterLabel: mlClusterLabel,
-          costPerKm: parseFloat((total / distKm).toFixed(1)),
-          costPerMin: parseFloat((total / durMin).toFixed(1)),
-          baseFare: base,
-          distanceFare: dFare,
-          durationFare: tFare,
-          platformFee: pFee,
-          tollEstimate: 0,
-          appDeepLink: bookingLinks.app,
-          webLink: bookingLinks.web,
-          isCheapest: Boolean(badges.isCheapest),
-          isFastest: Boolean(badges.isFastest),
-          isMostEfficient: Boolean(badges.isMostEfficient),
-          isBestValue: Boolean(badges.isBestValue),
-          isLive: false,
-          liveAvailable: false,
-          eligibility: eligibilityStatus,
-          eligibilityReason: eligibilityReasonText,
-          suitabilityLevel: eligibilityStatus === 'DIRECT' ? 'HIGH' : 'UNSUITABLE',
-          suitabilityScore: eligibilityStatus === 'DIRECT' ? 0.95 : 0.0,
-          routeSupported: eligibilityStatus === 'DIRECT',
-          coverageConfidence: 'HIGH',
-          vehicleSuitabilityConfidence: 'HIGH',
-          evaluationExplanations: [eligibilityReasonText]
-        };
-      };
-
-      const directCandidates: RideProviderDetails[] = [];
-      const excludedCandidates: RideProviderDetails[] = [];
-
-      // Rapido Bike
-      if (isBikeEligible) {
-        directCandidates.push(buildProvider('Rapido Bike', 'Bike', 20, 8.5, 0.8, {}, 'DIRECT', '✓ Highly suitable for short urban travel'));
-      } else {
-        excludedCandidates.push(buildProvider(
-          'Rapido Bike', 'Bike', 20, 8.5, 0.8, {}, 'UNSUPPORTED',
-          `✕ Rapido Bike is not considered for this journey because the service/vehicle type does not support ${distKm} km ${routeType.toLowerCase()} routes.`
-        ));
-      }
-
-      // Rapido Auto
-      if (isAutoEligible) {
-        directCandidates.push(buildProvider('Rapido Auto', 'Auto', 25, 11.5, 1.0, {}, 'DIRECT', '✓ Practical for short-to-medium city trips'));
-      } else {
-        excludedCandidates.push(buildProvider(
-          'Rapido Auto', 'Auto', 25, 11.5, 1.0, {}, 'UNSUPPORTED',
-          `✕ Auto rickshaws are restricted to local municipal perimeters and cannot operate on ${distKm} km ${routeType.toLowerCase()} routes.`
-        ));
-      }
-
-      // Standard Cabs & Outstation Cabs
-      if (routeType === 'OUTSTATION' || routeType === 'INTERCITY') {
-        directCandidates.push(buildProvider('Uber Intercity', 'Cab', 450, 17.0, 1.5, { isBestValue: true }, 'DIRECT', '✓ Dedicated intercity fleet with experienced highway drivers and luggage capacity'));
-        directCandidates.push(buildProvider('Ola Outstation', 'Cab', 500, 17.5, 1.2, {}, 'DIRECT', '✓ Outstation cab tier certified for long-distance highway routes'));
-        directCandidates.push(buildProvider('Tourist Taxi (Regulated)', 'Cab', 600, 18.0, 0.0, { isMostEfficient: true }, 'DIRECT', '✓ Tourism-registered commercial chauffeur certified for high-range terrain'));
-      } else {
-        directCandidates.push(buildProvider('Uber Go', 'Cab', 42, 14.5, 1.5, { isMostEfficient: true }, 'DIRECT', '✓ Reliable urban cab for intra-city transit'));
-        directCandidates.push(buildProvider('Ola Mini', 'Cab', 40, 14.0, 1.4, {}, 'DIRECT', '✓ Compact city cab'));
-        directCandidates.push(buildProvider('Uber Premier', 'Cab', 75, 19.5, 2.2, {}, 'DIRECT', '✓ Premium sedan with top-rated drivers'));
-      }
-
-      // Mark badges ONLY on directCandidates
-      if (directCandidates.length > 0) {
-        const sortedByPrice = [...directCandidates].sort((a, b) => (a.actualFare || a.estimatedFare) - (b.actualFare || b.estimatedFare));
-        const sortedByEta = [...directCandidates].sort((a, b) => a.etaMinutes - b.etaMinutes);
-        sortedByPrice[0].isCheapest = true;
-        sortedByEta[0].isFastest = true;
-      }
-
-      const activeProviders = directCandidates.length > 0 ? directCandidates : excludedCandidates;
-      const minFare = activeProviders[0].actualFare || activeProviders[0].estimatedFare;
-      const maxFare = activeProviders[activeProviders.length - 1].actualFare || activeProviders[activeProviders.length - 1].estimatedFare;
-      const fareSpread = Math.max(0, maxFare - minFare);
-      const spreadPercentage = Math.round((fareSpread / Math.max(1, minFare)) * 100);
-
-      const cheapestDirect = directCandidates.find(p => p.isCheapest)?.provider || directCandidates[0]?.provider || 'No direct options';
-      const recommendedDirect = directCandidates.find(p => p.isMostEfficient)?.provider || directCandidates[0]?.provider || 'No direct options';
-
-      // Multimodal suggestion
-      const multimodalOpt = (routeType === 'OUTSTATION' || routeType === 'INTERCITY' || distKm > 45) ? {
-        type: 'MULTIMODAL',
-        title: `Multimodal Route: Local Cab + Express Transit`,
-        summary: `Combine a short local cab to the regional transit terminal with an express service directly to destination.`,
-        total_distance_km: distKm,
-        total_duration_mins: Math.round(durMin * 1.1 + 15),
-        total_estimated_fare: Math.round(distKm * 8 + 120),
-        currency_symbol: '₹',
-        transfer_count: 1,
-        recommendation_note: 'Never hide transfers: this option saves up to 45% compared to a dedicated outstation cab.',
-        legs: [
-          {
-            leg_number: 1,
-            mode: 'Local Cab / Auto',
-            provider: 'Local Taxi / Uber Go',
-            vehicle_type: 'Cab',
-            from_location: source.label.split(',')[0],
-            to_location: 'Central Transit Terminal',
-            distance_km: Math.round(Math.min(18, distKm * 0.15)),
-            duration_mins: Math.round(Math.min(35, durMin * 0.2)),
-            estimated_fare: 180,
-            currency_symbol: '₹',
-            instructions: `Take a local ride to Central Transit Terminal.`
-          },
-          {
-            leg_number: 2,
-            mode: 'Intercity Express',
-            provider: 'State RTC Express / Intercity Coach',
-            vehicle_type: 'Express Bus',
-            from_location: 'Central Transit Terminal',
-            to_location: dest.label.split(',')[0],
-            distance_km: Math.round(distKm * 0.85),
-            duration_mins: Math.round(durMin * 0.9),
-            estimated_fare: Math.round(distKm * 7),
-            currency_symbol: '₹',
-            instructions: `Board the express service directly to ${dest.label.split(',')[0]}.`
-          }
-        ]
-      } : undefined;
-
-      const agentReasoningObj = {
-        headline: (routeType === 'OUTSTATION' || routeType === 'INTERCITY' || distKm > 60)
-          ? `Long-distance ${routeType.toLowerCase()} route detected (${distKm} km). Local bikes & autos excluded before price ranking.`
-          : `Local urban route validated (${distKm} km). All standard vehicle types eligible.`,
-        routeClassification: routeType,
-        routeDistanceKm: distKm,
-        auditSummary: (routeType === 'OUTSTATION' || routeType === 'INTERCITY' || distKm > 60)
-          ? `RideCompare evaluated ${directCandidates.length + excludedCandidates.length} options. Rapido Bike and local autos were excluded because 2/3-wheelers do not support long-distance highway routes. Prioritizing ${directCandidates.length} verified direct outstation cabs.`
-          : `All urban providers (Bikes, Autos, Cabs) operate within this local transit zone.`,
-        feasibleDirectCount: directCandidates.length,
-        excludedCount: excludedCandidates.length,
-        partialCount: 0,
-        cheapestDirect: cheapestDirect,
-        recommendedDirect: recommendedDirect,
-        rapidoBikeExcluded: !isBikeEligible,
-        exclusionHighlights: excludedCandidates.map(e => `${e.provider}: ${e.eligibilityReason}`)
-      };
-
-      setSearchId(Date.now());
-      setRouteGeometry(routeGeom);
-      setComparison({
-        distanceKm: distKm,
-        durationMins: durMin,
-        straightLineDistance: parseFloat(straightLineKm.toFixed(1)),
-        detourDistance: parseFloat(Math.max(0, distKm - straightLineKm).toFixed(1)),
-        detectedCity: routeType === 'OUTSTATION' ? 'Intercity Corridor' : 'Local Route',
-        surgeRuleName: mlSurgeRule,
-        pricingRegime: mlClusterLabel,
-        isServiceable: true,
-        message: 'Real-time estimated fare comparison',
-        fareSpread: fareSpread,
-        spreadPercentage: spreadPercentage,
-        providers: activeProviders,
-        directProviders: directCandidates,
-        excludedProviders: excludedCandidates,
-        partialProviders: [],
-        multimodalOption: multimodalOpt,
-        agentReasoning: agentReasoningObj,
-        routeClassification: {
-          origin_label: source.label,
-          destination_label: dest.label,
-          distance_km: distKm,
-          duration_mins: durMin,
-          route_type: routeType,
-          classification_reason: classificationReason
-        },
-        recommendations: {
-          cheapest: cheapestDirect,
-          fastest: directCandidates.find(p => p.isFastest)?.provider || cheapestDirect,
-          mostEfficient: recommendedDirect,
-          bestValue: directCandidates.find(p => p.isBestValue)?.provider || recommendedDirect,
-          recommended: recommendedDirect,
-          recommendationReason: agentReasoningObj.headline,
-          distanceAdvantage: `Direct route distance: ${distKm} km (${routeType})`,
-          timeAdvantage: `Estimated travel duration: ~${durMin} mins`,
-          costAdvantage: `Verified direct choices evaluated before price comparison.`
-        },
-        insights: [
-          `Distance calculated along real driving road network (${distKm} km).`,
-          `Route feasibility: ${agentReasoningObj.headline}`,
-          !isBikeEligible ? `⚠️ Rapido Bike taxi excluded from direct rides (unsuitable for ${distKm} km ${routeType.toLowerCase()} travel).` : `All standard urban modes available for this distance.`,
-          `Current pricing regime: ${mlClusterLabel} (${mlSurgeRule} at ${mlSurgeMultiplier}x).`
-        ]
-      });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '';
+      setDistanceError(
+        `Fare search could not be completed: ${errMsg || 'the service is unavailable'}. ` +
+        'Please check that the backend is running.'
+      );
+      setComparison(null);
+      setRouteGeometry(null);
     } finally {
       setLoading(false);
     }
   }, []);
+
 
   useEffect(() => {
     if (sourceLoc && destLoc) {
@@ -661,26 +379,29 @@ function App() {
           <FareSurgeTracker />
         ) : showAdmin ? (
           <div className="space-y-4">
-            {adminTab === 'analytics' ? (
-              <div className="space-y-4">
-                <div className="glass-panel p-6 rounded-2xl">
-                  <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--border-color)]">
-                    <div>
-                      <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">Platform Analytics</h2>
-                      <p className="text-xs text-[var(--text-secondary)] font-medium">Aggregated search volumes, pricing spread, and provider utilization.</p>
-                    </div>
-                    <button
-                      onClick={() => setShowAdmin(false)}
-                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1 cursor-pointer"
-                    >
-                      ← Return to Fare Comparison
-                    </button>
-                  </div>
-                  <PlatformAnalyticsDashboard />
-                </div>
-
-                {/* Discrete Developer/Admin Gate (Hidden from ordinary consumer flows) */}
-                <div className="flex justify-center pt-2">
+            <div className="glass-panel p-6 rounded-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-[var(--border-color)] gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setAdminTab('rate-cards')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      adminTab === 'rate-cards'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)] hover:text-white'
+                    }`}
+                  >
+                    Statutory Rate Cards & Statuses
+                  </button>
+                  <button
+                    onClick={() => setAdminTab('analytics')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      adminTab === 'analytics'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)] hover:text-white'
+                    }`}
+                  >
+                    Platform Analytics
+                  </button>
                   <button
                     onClick={() => {
                       const pin = window.prompt("Enter Internal Developer Passcode:");
@@ -690,18 +411,31 @@ function App() {
                         alert("Access denied. Invalid credentials.");
                       }
                     }}
-                    className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] opacity-30 hover:opacity-80 transition-opacity cursor-pointer px-3 py-1"
-                    title="Restricted Internal ML Diagnostic Benchmarks"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      adminTab === 'ml'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)] hover:text-white'
+                    }`}
                   >
-                    <Lock size={10} /> Internal Model Telemetry
+                    <Lock size={11} /> Model Telemetry
                   </button>
                 </div>
+                <button
+                  onClick={() => setShowAdmin(false)}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1 cursor-pointer"
+                >
+                  ← Return to Fare Comparison
+                </button>
               </div>
-            ) : (
-              <div className="glass-panel p-6 rounded-2xl">
-                <InternalMLDashboard onExit={() => setAdminTab('analytics')} />
-              </div>
-            )}
+
+              {adminTab === 'rate-cards' ? (
+                <RateCardAdmin />
+              ) : adminTab === 'analytics' ? (
+                <PlatformAnalyticsDashboard />
+              ) : (
+                <InternalMLDashboard onExit={() => setAdminTab('rate-cards')} />
+              )}
+            </div>
           </div>
         ) : (
           <div>

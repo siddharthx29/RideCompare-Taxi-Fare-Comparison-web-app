@@ -6,7 +6,10 @@ from typing import Generator
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from backend.app.config import settings, APP_DIR
-from backend.app.models.db_models import Base, User, Search, Analytics, Location, DemandObservation
+from backend.app.models.db_models import (
+    Base, User, Search, Analytics, Location, DemandObservation,
+    CoverageRegion, ServiceStatus, RateCard
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +67,13 @@ def check_db_health() -> bool:
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE coverage_regions ADD COLUMN last_updated DATETIME"))
+            conn.commit()
+    except Exception:
+        pass
 
     db: Session = SessionLocal()
     try:
@@ -587,6 +597,12 @@ def init_db() -> None:
             db.add_all(popular_locations)
             db.commit()
             logger.info("Initialized default seed records and popular locations into database.")
+
+        try:
+            from backend.app.services.seed_rate_cards import seed_coverage_and_rate_cards
+            seed_coverage_and_rate_cards(db)
+        except Exception as seed_err:
+            logger.warning("Could not auto-seed rate cards: %s", seed_err)
     except Exception as err:
         logger.error("Database initialization encountered an error: %s", err)
         db.rollback()

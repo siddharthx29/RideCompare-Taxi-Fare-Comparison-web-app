@@ -20,7 +20,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from backend.app.config import settings
 from backend.app.database import init_db, check_db_health
-from backend.app.routers import geocode, route, analytics, ml_endpoints, demand_endpoints, fares
+from backend.app.routers import geocode, route, analytics, ml_endpoints, demand_endpoints, fares, estimate
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("smart-fare-backend")
@@ -89,6 +89,7 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(ml_endpoints.router)
 app.include_router(demand_endpoints.router)
 app.include_router(fares.router, prefix="/api")
+app.include_router(estimate.router)
 
 PUBLIC_DIR = ROOT_DIR / "frontend" / "public"
 DIST_DIR = ROOT_DIR / "frontend" / "dist"

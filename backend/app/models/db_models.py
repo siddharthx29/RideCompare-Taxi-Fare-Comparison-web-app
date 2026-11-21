@@ -238,3 +238,65 @@ class ModelVersion(Base):
     evaluation_metrics = Column(Text, nullable=False, default='{}')
     deployed_at = Column(DateTime, nullable=True)
 
+
+class CoverageRegion(Base):
+    __tablename__ = 'coverage_regions'
+
+    region_id = Column(String(50), primary_key=True)
+    name = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=False)
+    country = Column(String(10), nullable=False)
+    legal_surge_cap = Column(Float, default=2.0)
+    auto_rickshaw_metered_available = Column(Boolean, default=True)
+    metered_auto_fare = Column(Text, default='{}')
+    intercity_enabled = Column(Boolean, default=True)
+    geofence_geojson = Column(Text, nullable=False)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ServiceStatus(Base):
+    __tablename__ = 'service_statuses'
+    __table_args__ = (
+        UniqueConstraint('region_id', 'service_name', name='uq_service_status_region_service'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    region_id = Column(String(50), nullable=False, index=True)
+    service_name = Column(String(100), nullable=False, index=True)
+    status = Column(String(30), default='active', index=True)  # 'active', 'suspended', 'unavailable'
+    status_reason = Column(Text, nullable=True)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RateCard(Base):
+    __tablename__ = 'rate_cards'
+    __table_args__ = (
+        Index('ix_rate_cards_city_service_ride', 'city', 'service', 'ride_type'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    city = Column(String(100), nullable=False, index=True)
+    state = Column(String(100), nullable=False)
+    country = Column(String(10), nullable=False)
+    service = Column(String(50), nullable=False, index=True)
+    ride_type = Column(String(50), nullable=False)
+    vehicle_category = Column(String(30), nullable=False)
+    base_fare = Column(Float, nullable=False)
+    per_km = Column(Float, nullable=False)
+    per_min = Column(Float, default=0.0)
+    booking_fee = Column(Float, default=0.0)
+    min_fare = Column(Float, default=0.0)
+    free_km = Column(Float, default=0.0)
+    long_distance_threshold = Column(Float, nullable=True)
+    long_distance_rate = Column(Float, nullable=True)
+    night_multiplier = Column(Float, default=1.0)
+    currency = Column(String(10), default='INR')
+    currency_symbol = Column(String(5), default='₹')
+    tax_pct = Column(Float, default=0.05)
+    source_url = Column(Text, nullable=True)
+    last_verified_date = Column(String(30), nullable=True)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+

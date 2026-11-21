@@ -31,6 +31,14 @@ export interface RideProviderDetails {
   distanceKm: number;
   etaMinutes: number;
 
+  // Rate Card & Fare Engine Ranges
+  low?: number;
+  high?: number;
+  rate_card_verified_at?: string;
+  is_verified?: boolean;
+  deeplink?: string;
+  legal_surge_cap?: number;
+
   // Real-time Provider Pricing (authoritative source)
   actualFare: number | null;
   estimatedFare: number;
@@ -252,4 +260,30 @@ export interface ComparisonResult {
   pickupZone?: string;
   destinationZone?: string;
   marketConditions?: MarketConditionItem[];
+  reason_code?: string;
+  is_blocked?: boolean;
+  notice?: string;
+  disclaimer?: string;
+  fallback?: {
+    type: 'auto' | 'none';
+    message?: string;
+    service?: string;
+    ride_type?: string;
+    min_fare?: number;
+    per_km?: number;
+    low?: number;
+    high?: number;
+    currency?: string;
+    estimate?: {
+      service: string;
+      ride_type: string;
+      vehicle_category?: string;
+      low: number;
+      high: number;
+      currency: string;
+      currency_symbol: string;
+      is_verified?: boolean;
+      rate_card_verified_at?: string;
+    };
+  };
 }

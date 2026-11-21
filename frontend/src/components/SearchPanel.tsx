@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { ArrowUpDown, Search, Loader2, History, Bookmark } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowUpDown, Search, Loader2, History, Bookmark, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { LocationInfo } from '../types/ride';
 import { LocationAutocompleteInput } from './LocationAutocompleteInput';
 import { reverseGeocodeLocation, suggestLocations, retrieveLocation } from '../utils/locationService';
+import { apiFetch } from '../utils/api';
 
 interface SearchPanelProps {
   selectedSource: LocationInfo | null;
   selectedDest: LocationInfo | null;
   onSourceSelect: (loc: LocationInfo | null) => void;
   onDestSelect: (loc: LocationInfo | null) => void;
-  onSearch: (source: LocationInfo, destination: LocationInfo) => void;
+  onSearch: (source: LocationInfo, destination: LocationInfo, departAt?: string) => void;
   loading: boolean;
 }
 
@@ -28,6 +29,45 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const [resolving, setResolving] = useState(false);
   const [sourceError, setSourceError] = useState<string | null>(null);
   const [destError, setDestError] = useState<string | null>(null);
+  const [departMode, setDepartMode] = useState<'now' | 'later'>('now');
+  const [departTime, setDepartTime] = useState<string>('');
+  const [coverageStatus, setCoverageStatus] = useState<{
+    covered?: boolean;
+    name?: string;
+    servicesCount?: number;
+    message?: string;
+  } | null>(null);
+
+  // Check coverage whenever pickup location changes
+  useEffect(() => {
+    if (!selectedSource?.lat || !selectedSource?.lng) {
+      setCoverageStatus(null);
+      return;
+    }
+    let isCancelled = false;
+    apiFetch(`/api/coverage?lat=${selectedSource.lat}&lng=${selectedSource.lng}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!isCancelled) {
+          if (data.covered) {
+            setCoverageStatus({
+              covered: true,
+              name: data.name,
+              servicesCount: data.active_services?.length || 0
+            });
+          } else {
+            setCoverageStatus({
+              covered: false,
+              message: data.message || "Ride services are not available in this area."
+            });
+          }
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) setCoverageStatus(null);
+      });
+    return () => { isCancelled = true; };
+  }, [selectedSource]);
   const [recentLocations, setRecentLocations] = useState<LocationInfo[]>(() => {
     try {
       const recent = JSON.parse(localStorage.getItem('ridecompare.recent-locations') || '[]');
@@ -201,7 +241,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       return;
     }
     rememberLocations([src, dst]);
-    onSearch(src, dst);
+    const departIso = departMode === 'later' && departTime ? new Date(departTime).toISOString() : undefined;
+    onSearch(src, dst, departIso);
   };
 
   return (
@@ -295,16 +336,81 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           required
         />
 
+        {/* Departure Time Selection */}
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] p-2.5 rounded-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-1.5">
+              <Clock size={13} className="text-slate-400" />
+              Departure Time
+            </span>
+            <div className="flex items-center bg-[var(--bg-primary)] p-0.5 rounded-lg border border-[var(--border-color)] text-[11px]">
+              <button
+                type="button"
+                onClick={() => { setDepartMode('now'); setDepartTime(''); }}
+                className={`px-2 py-0.5 rounded-md font-medium transition-all ${
+                  departMode === 'now'
+                    ? 'bg-[var(--accent-color)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                Now
+              </button>
+              <button
+                type="button"
+                onClick={() => setDepartMode('later')}
+                className={`px-2 py-0.5 rounded-md font-medium transition-all ${
+                  departMode === 'later'
+                    ? 'bg-[var(--accent-color)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                Later
+              </button>
+            </div>
+          </div>
+
+          {departMode === 'later' && (
+            <input
+              type="datetime-local"
+              value={departTime}
+              onChange={(e) => setDepartTime(e.target.value)}
+              className="w-full text-xs p-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] focus:outline-hidden focus:border-[var(--accent-color)]"
+            />
+          )}
+        </div>
+
+        {/* Live Coverage Availability Indicator */}
+        {coverageStatus && (
+          <div className="text-xs">
+            {coverageStatus.covered ? (
+              <div className="flex items-center gap-1.5 text-emerald-500 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg">
+                <CheckCircle2 size={14} />
+                <span>Serving {coverageStatus.name} ({coverageStatus.servicesCount} services active)</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-amber-500 font-semibold bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-lg">
+                <AlertTriangle size={15} className="shrink-0" />
+                <span>{coverageStatus.message}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Action Button */}
         <button
           type="submit"
-          disabled={loading || resolving}
-          className="w-full mt-2 py-3.5 px-4 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] active:scale-[0.99] text-white font-semibold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          disabled={loading || resolving || coverageStatus?.covered === false}
+          className="w-full mt-2 py-3.5 px-4 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] active:scale-[0.99] text-white font-semibold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading || resolving ? (
             <>
               <Loader2 size={18} className="animate-spin" />
               <span>{resolving ? 'Locating Places...' : 'Analyzing Routes & Fares...'}</span>
+            </>
+          ) : coverageStatus?.covered === false ? (
+            <>
+              <AlertTriangle size={18} />
+              <span>Ride services unavailable in this area</span>
             </>
           ) : (
             <>
