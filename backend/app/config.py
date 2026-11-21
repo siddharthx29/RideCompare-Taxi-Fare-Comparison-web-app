@@ -49,7 +49,11 @@ class Settings(BaseSettings):
         if origins:
             return list(dict.fromkeys(origins))
         if self.ENVIRONMENT.lower() in {"production", "prod"}:
-            return []
+            return [
+                "https://ridecompare.world",
+                "https://www.ridecompare.world",
+                "https://ridecompare.vercel.app"
+            ]
         return [
             "http://localhost:5173",
             "http://127.0.0.1:5173",

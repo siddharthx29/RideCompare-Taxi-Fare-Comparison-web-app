@@ -34,6 +34,8 @@ export interface RideProviderDetails {
   // Rate Card & Fare Engine Ranges
   low?: number;
   high?: number;
+  realtime_rate?: number;
+  current_surge?: number;
   rate_card_verified_at?: string;
   is_verified?: boolean;
   deeplink?: string;

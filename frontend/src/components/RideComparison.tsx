@@ -392,12 +392,22 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
     }
     if (lowercase.includes('rapido')) {
       const isAuto = vehicleType.toLowerCase().includes('auto') || lowercase.includes('auto');
+      const isCab = vehicleType.toLowerCase().includes('cab') || vehicleType.toLowerCase().includes('sedan') || lowercase.includes('cab');
       return {
-        badgeBg: 'bg-amber-400 text-zinc-950 border-amber-500',
-        brandName: 'Rapido',
+        badgeBg: 'bg-amber-400 text-zinc-950 border-amber-500 font-extrabold',
+        brandName: isCab ? 'Rapido Cabs' : isAuto ? 'Rapido Auto' : 'Rapido Bike',
         buttonClass: 'bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold',
-        icon: isAuto ? <Navigation size={18} /> : <Bike size={18} />,
-        appName: 'Rapido App'
+        icon: isCab ? <Car size={18} /> : isAuto ? <Navigation size={18} /> : <Bike size={18} />,
+        appName: isCab ? 'Rapido Cabs' : isAuto ? 'Rapido Auto' : 'Rapido Bike'
+      };
+    }
+    if (lowercase.includes('indrive')) {
+      return {
+        badgeBg: 'bg-emerald-600 text-white border-emerald-700 font-extrabold',
+        brandName: 'inDrive',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+        icon: <Car size={18} />,
+        appName: 'inDrive App'
       };
     }
     if (isGovt) {
@@ -759,9 +769,11 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           const isBike = vTypeLower.includes('bike') || vTypeLower.includes('moto');
           const isAuto = vTypeLower.includes('auto') || vTypeLower.includes('tuk');
 
-          // Statutorily computed fare range (Estimate)
+          // Statutorily computed fare range (Estimate) + Real-time Dynamic Rate
           const liveMin = p.low ?? p.fareMin ?? Math.round((p.estimatedFare || 100) * 0.9);
           const liveMax = p.high ?? p.fareMax ?? Math.round((p.estimatedFare || 100) * 1.2);
+          const realtimeRate = p.realtime_rate || p.actualFare || Math.round((liveMin + liveMax) / 2);
+          const inBetweenPercent = Math.max(8, Math.min(92, Math.round(((realtimeRate - liveMin) / Math.max(1, liveMax - liveMin)) * 100)));
 
           const demandStatus = isZeroSurge
             ? { label: 'Zero-Surge Regulated', badgeClass: 'text-amber-500 bg-amber-500/15 border-amber-500/30', barGradient: 'from-amber-400 via-emerald-400 to-emerald-500' }
@@ -886,12 +898,18 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
                   </div>
 
-                  {/* Regulated Fare Range Block (Always Range, Labeled Estimate) */}
+                  {/* Regulated Fare Range Block (Always Range + Real-time Rate) */}
                   <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
                     <div className="text-left sm:text-right space-y-0.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        Estimate
-                      </span>
+                      <div className="flex items-center sm:justify-end gap-1.5 flex-wrap">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                          Estimate
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Live: ~{sym}{realtimeRate}
+                        </span>
+                      </div>
                       <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                         {sym}{liveMin} – {sym}{liveMax}
                       </div>
@@ -946,21 +964,28 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
                   </div>
 
-                  <div className="relative pt-1 pb-1">
+                  <div className="relative pt-3 pb-1">
                     <div className="h-2 w-full bg-[var(--bg-secondary)] rounded-full overflow-hidden relative border border-[var(--border-color)]">
                       <div 
                         className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-indigo-500 opacity-80 rounded-full"
                         style={{ width: '100%' }}
                       />
                     </div>
+                    <div 
+                      className="absolute top-0 flex flex-col items-center -translate-x-1/2 transition-all duration-300 pointer-events-none"
+                      style={{ left: `${inBetweenPercent}%` }}
+                    >
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-900 text-emerald-400 dark:bg-white dark:text-slate-900 shadow-xs border border-emerald-500/40">
+                        {sym}{realtimeRate}
+                      </span>
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 mt-0.5 animate-pulse" />
+                    </div>
                   </div>
 
                   <div className="flex justify-between items-center text-[9px] font-bold text-[var(--text-secondary)] px-0.5">
                     <span>Low: {sym}{liveMin}</span>
                     <span className="text-[10px] font-medium text-[var(--text-secondary)]/90">
-                      {isZeroSurge 
-                        ? 'Government meter standard • No peak surcharge'
-                        : `Surge window strictly capped by state transport regulations`}
+                      Real-time live rate: <strong className="text-emerald-400">{sym}{realtimeRate}</strong> ({p.surgeMultiplier}x surge demand)
                     </span>
                     <span>High: {sym}{liveMax}</span>
                   </div>

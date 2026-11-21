@@ -37,6 +37,7 @@ REGIONS_DATA = [
             {"name": "Uber", "status": "active"},
             {"name": "Ola", "status": "active"},
             {"name": "Rapido", "status": "active"},
+            {"name": "inDrive", "status": "active"},
             {"name": "LocalTaxi", "status": "active"}
         ]
     },
@@ -67,7 +68,8 @@ REGIONS_DATA = [
             {"name": "Namma Yatri", "status": "active"},
             {"name": "Uber", "status": "active"},
             {"name": "Ola", "status": "active"},
-            {"name": "Rapido", "status": "active"}
+            {"name": "Rapido", "status": "active"},
+            {"name": "inDrive", "status": "active"}
         ]
     },
     {
@@ -96,6 +98,7 @@ REGIONS_DATA = [
             {"name": "Uber", "status": "active"},
             {"name": "Ola", "status": "active"},
             {"name": "Rapido", "status": "active"},
+            {"name": "inDrive", "status": "active"},
             {"name": "LocalTaxi", "status": "active"}
         ]
     },
@@ -125,6 +128,7 @@ REGIONS_DATA = [
             {"name": "Uber", "status": "active"},
             {"name": "Ola", "status": "active"},
             {"name": "Rapido", "status": "active"},
+            {"name": "inDrive", "status": "active"},
             {"name": "LocalTaxi", "status": "active"}
         ]
     },
@@ -329,6 +333,46 @@ RATE_CARDS_DATA = [
         "source_url": "https://www.olacabs.com",
         "last_verified_date": "2026-01-12", "is_verified": False
     },
+    {
+        "city": "Bengaluru", "state": "Karnataka", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Cab", "vehicle_category": "Cab",
+        "base_fare": 45.0, "per_km": 13.5, "per_min": 1.5, "booking_fee": 10.0, "min_fare": 70.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike/cabs",
+        "last_verified_date": "2026-02-01", "is_verified": True
+    },
+    {
+        "city": "Bengaluru", "state": "Karnataka", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Cab Sedan", "vehicle_category": "Cab",
+        "base_fare": 60.0, "per_km": 16.0, "per_min": 2.0, "booking_fee": 15.0, "min_fare": 90.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike/cabs",
+        "last_verified_date": "2026-02-01", "is_verified": True
+    },
+    {
+        "city": "Bengaluru", "state": "Karnataka", "country": "IN",
+        "service": "inDrive", "ride_type": "inDrive Cab", "vehicle_category": "Cab",
+        "base_fare": 40.0, "per_km": 13.0, "per_min": 1.0, "booking_fee": 0.0, "min_fare": 65.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://indrive.com",
+        "last_verified_date": "2026-01-25", "is_verified": False
+    },
+    {
+        "city": "Bengaluru", "state": "Karnataka", "country": "IN",
+        "service": "Uber", "ride_type": "Uber XL", "vehicle_category": "Cab",
+        "base_fare": 90.0, "per_km": 22.0, "per_min": 3.0, "booking_fee": 25.0, "min_fare": 140.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.uber.com/in/en/ride/",
+        "last_verified_date": "2026-01-10", "is_verified": False
+    },
+    {
+        "city": "Bengaluru", "state": "Karnataka", "country": "IN",
+        "service": "Ola", "ride_type": "Ola Prime Sedan", "vehicle_category": "Cab",
+        "base_fare": 65.0, "per_km": 17.5, "per_min": 2.2, "booking_fee": 18.0, "min_fare": 95.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.olacabs.com",
+        "last_verified_date": "2026-01-12", "is_verified": False
+    },
 
     # --- Kochi ---
     {
@@ -362,6 +406,30 @@ RATE_CARDS_DATA = [
         "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
         "source_url": "https://www.rapido.bike",
         "last_verified_date": "2026-01-20", "is_verified": False
+    },
+    {
+        "city": "Kochi", "state": "Kerala", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Cab", "vehicle_category": "Cab",
+        "base_fare": 45.0, "per_km": 13.0, "per_min": 1.5, "booking_fee": 10.0, "min_fare": 65.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike/cabs",
+        "last_verified_date": "2026-02-01", "is_verified": True
+    },
+    {
+        "city": "Kochi", "state": "Kerala", "country": "IN",
+        "service": "inDrive", "ride_type": "inDrive Cab", "vehicle_category": "Cab",
+        "base_fare": 42.0, "per_km": 12.5, "per_min": 1.0, "booking_fee": 0.0, "min_fare": 60.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://indrive.com",
+        "last_verified_date": "2026-01-25", "is_verified": False
+    },
+    {
+        "city": "Kochi", "state": "Kerala", "country": "IN",
+        "service": "Ola", "ride_type": "Ola Mini", "vehicle_category": "Cab",
+        "base_fare": 48.0, "per_km": 13.8, "per_min": 1.8, "booking_fee": 15.0, "min_fare": 70.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.olacabs.com",
+        "last_verified_date": "2026-01-12", "is_verified": False
     },
 
     # --- Mumbai ---
@@ -397,6 +465,54 @@ RATE_CARDS_DATA = [
         "source_url": "https://www.olacabs.com",
         "last_verified_date": "2026-01-10", "is_verified": False
     },
+    {
+        "city": "Mumbai", "state": "Maharashtra", "country": "IN",
+        "service": "Ola", "ride_type": "Ola Prime Sedan", "vehicle_category": "Cab",
+        "base_fare": 70.0, "per_km": 18.0, "per_min": 2.5, "booking_fee": 20.0, "min_fare": 105.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.olacabs.com",
+        "last_verified_date": "2026-01-10", "is_verified": False
+    },
+    {
+        "city": "Mumbai", "state": "Maharashtra", "country": "IN",
+        "service": "Uber", "ride_type": "Uber Premier", "vehicle_category": "Cab",
+        "base_fare": 75.0, "per_km": 18.5, "per_min": 2.5, "booking_fee": 22.0, "min_fare": 110.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.uber.com/in/en/cities/mumbai/",
+        "last_verified_date": "2026-01-10", "is_verified": False
+    },
+    {
+        "city": "Mumbai", "state": "Maharashtra", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Cab", "vehicle_category": "Cab",
+        "base_fare": 50.0, "per_km": 14.5, "per_min": 1.8, "booking_fee": 12.0, "min_fare": 75.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike/cabs",
+        "last_verified_date": "2026-02-01", "is_verified": True
+    },
+    {
+        "city": "Mumbai", "state": "Maharashtra", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Auto", "vehicle_category": "Auto",
+        "base_fare": 23.0, "per_km": 11.5, "per_min": 1.2, "booking_fee": 8.0, "min_fare": 35.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike",
+        "last_verified_date": "2026-01-15", "is_verified": False
+    },
+    {
+        "city": "Mumbai", "state": "Maharashtra", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Bike", "vehicle_category": "Bike",
+        "base_fare": 18.0, "per_km": 7.5, "per_min": 0.8, "booking_fee": 5.0, "min_fare": 25.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike",
+        "last_verified_date": "2026-01-15", "is_verified": False
+    },
+    {
+        "city": "Mumbai", "state": "Maharashtra", "country": "IN",
+        "service": "inDrive", "ride_type": "inDrive Cab", "vehicle_category": "Cab",
+        "base_fare": 45.0, "per_km": 13.5, "per_min": 1.2, "booking_fee": 0.0, "min_fare": 70.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://indrive.com",
+        "last_verified_date": "2026-01-25", "is_verified": False
+    },
 
     # --- Delhi ---
     {
@@ -413,6 +529,54 @@ RATE_CARDS_DATA = [
         "base_fare": 50.0, "per_km": 13.5, "per_min": 1.8, "booking_fee": 15.0, "min_fare": 70.0, "free_km": 0.0,
         "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
         "source_url": "https://www.uber.com/in/en/cities/delhi/",
+        "last_verified_date": "2026-01-10", "is_verified": False
+    },
+    {
+        "city": "Delhi", "state": "Delhi NCR", "country": "IN",
+        "service": "Uber", "ride_type": "Uber Premier", "vehicle_category": "Cab",
+        "base_fare": 70.0, "per_km": 17.0, "per_min": 2.2, "booking_fee": 20.0, "min_fare": 95.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.uber.com/in/en/cities/delhi/",
+        "last_verified_date": "2026-01-10", "is_verified": False
+    },
+    {
+        "city": "Delhi", "state": "Delhi NCR", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Cab", "vehicle_category": "Cab",
+        "base_fare": 45.0, "per_km": 13.0, "per_min": 1.5, "booking_fee": 10.0, "min_fare": 65.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike/cabs",
+        "last_verified_date": "2026-02-01", "is_verified": True
+    },
+    {
+        "city": "Delhi", "state": "Delhi NCR", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Auto", "vehicle_category": "Auto",
+        "base_fare": 25.0, "per_km": 9.5, "per_min": 1.2, "booking_fee": 8.0, "min_fare": 35.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike",
+        "last_verified_date": "2026-01-15", "is_verified": False
+    },
+    {
+        "city": "Delhi", "state": "Delhi NCR", "country": "IN",
+        "service": "inDrive", "ride_type": "inDrive Cab", "vehicle_category": "Cab",
+        "base_fare": 40.0, "per_km": 12.0, "per_min": 1.0, "booking_fee": 0.0, "min_fare": 60.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://indrive.com",
+        "last_verified_date": "2026-01-25", "is_verified": False
+    },
+    {
+        "city": "Delhi", "state": "Delhi NCR", "country": "IN",
+        "service": "Ola", "ride_type": "Ola Mini", "vehicle_category": "Cab",
+        "base_fare": 48.0, "per_km": 13.5, "per_min": 2.0, "booking_fee": 15.0, "min_fare": 70.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.olacabs.com",
+        "last_verified_date": "2026-01-10", "is_verified": False
+    },
+    {
+        "city": "Delhi", "state": "Delhi NCR", "country": "IN",
+        "service": "Ola", "ride_type": "Ola Prime Sedan", "vehicle_category": "Cab",
+        "base_fare": 65.0, "per_km": 16.5, "per_min": 2.2, "booking_fee": 18.0, "min_fare": 90.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.olacabs.com",
         "last_verified_date": "2026-01-10", "is_verified": False
     },
     {

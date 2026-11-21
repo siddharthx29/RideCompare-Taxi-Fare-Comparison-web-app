@@ -110,8 +110,10 @@ def test_case_a_intra_city_comparison():
     # Check range display: low <= high
     for s in services:
         assert s["low"] <= s["high"]
+        assert "realtime_rate" in s
+        assert s["low"] <= s["realtime_rate"] <= s["high"]
         assert "currency_symbol" in s
-        assert s["deeplink"].startswith(("uber://", "ola://", "rapido://", "nammayatri://", "tel:"))
+        assert s["deeplink"].startswith(("uber://", "ola://", "rapido://", "nammayatri://", "indrive://", "tel:"))
         assert s["web_link"].startswith("http")
         assert "rate_card_verified_at" in s
 

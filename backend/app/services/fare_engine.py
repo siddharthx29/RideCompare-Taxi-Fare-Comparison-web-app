@@ -72,47 +72,66 @@ async def get_route_distance_and_duration(
     return distance_km, duration_min
 
 
+def calculate_surge_window_with_realtime(
+    depart_at: Optional[datetime] = None,
+    legal_cap: float = 2.0,
+    has_rain_signal: bool = False
+) -> Tuple[float, float, float, str]:
+    """
+    Determines surge multiplier window (low, high, current_surge, period_label).
+    Legal caps are strictly respected so high never exceeds regional legal cap.
+    """
+    dt = depart_at or datetime.utcnow()
+    hour = dt.hour
+    minute = dt.minute
+    weekday = dt.weekday()
+    is_weekend = weekday >= 5
+
+    # Period classifications with real-time surge curve
+    if 8 <= hour <= 11:
+        period = "Morning Peak"
+        base_low = 1.0
+        base_high = 1.5 if not is_weekend else 1.2
+        # Dynamic curve peaking around 9:15–9:45 AM
+        peak_factor = 0.85 if hour in (9, 10) else 0.55
+        current = 1.0 + (base_high - 1.0) * peak_factor
+    elif 17 <= hour <= 21:
+        period = "Evening Peak"
+        base_low = 1.0
+        base_high = 1.6 if not is_weekend else 1.4
+        # Dynamic curve peaking around 6:30–8:00 PM
+        peak_factor = 0.90 if hour in (18, 19) else 0.60
+        current = 1.0 + (base_high - 1.0) * peak_factor
+    elif hour >= 23 or hour < 5:
+        period = "Night"
+        base_low = 1.0
+        base_high = 1.3
+        current = 1.15
+    else:
+        period = "Off-Peak"
+        base_low = 1.0
+        base_high = 1.2
+        current = 1.05
+
+    if has_rain_signal:
+        base_high += 0.3
+        current += 0.2
+
+    final_high = round(min(base_high, legal_cap), 2)
+    final_low = round(max(1.0, min(base_low, final_high)), 2)
+    final_current = round(max(final_low, min(final_high, current)), 2)
+
+    return final_low, final_high, final_current, period
+
+
 def calculate_surge_window(
     depart_at: Optional[datetime] = None,
     legal_cap: float = 2.0,
     has_rain_signal: bool = False
 ) -> Tuple[float, float, str]:
-    """
-    Determines surge multiplier window (low, high, period_label).
-    Legal caps are strictly respected so high never exceeds regional legal cap.
-    """
-    dt = depart_at or datetime.utcnow()
-    hour = dt.hour
-    weekday = dt.weekday()  # 0 is Monday, 6 is Sunday
-    is_weekend = weekday >= 5
-
-    # Period classifications
-    if 8 <= hour <= 11:
-        period = "Morning Peak"
-        base_low = 1.0
-        base_high = 1.5 if not is_weekend else 1.2
-    elif 17 <= hour <= 21:
-        period = "Evening Peak"
-        base_low = 1.0
-        base_high = 1.6 if not is_weekend else 1.4
-    elif hour >= 23 or hour < 5:
-        period = "Night"
-        base_low = 1.0
-        base_high = 1.3
-    else:
-        period = "Off-Peak"
-        base_low = 1.0
-        base_high = 1.2
-
-    # If weather / high demand event is present, widen the upper estimate
-    if has_rain_signal:
-        base_high += 0.3
-
-    # Enforce legal cap per region (e.g., 2.0x in Karnataka/Delhi, 1.5x in Maharashtra)
-    final_high = min(base_high, legal_cap)
-    final_low = max(1.0, min(base_low, final_high))
-
-    return round(final_low, 2), round(final_high, 2), period
+    """Determines surge multiplier window (low, high, period_label)."""
+    low, high, _, period = calculate_surge_window_with_realtime(depart_at, legal_cap, has_rain_signal)
+    return low, high, period
 
 
 def compute_fare_from_rate_card(
@@ -249,7 +268,7 @@ def get_service_estimates(
     dt = depart_at or datetime.utcnow()
     is_night = dt.hour >= 23 or dt.hour < 5
     legal_cap = region.legal_surge_cap or 2.0
-    surge_low, surge_high, period_name = calculate_surge_window(dt, legal_cap=legal_cap)
+    surge_low, surge_high, surge_current, period_name = calculate_surge_window_with_realtime(dt, legal_cap=legal_cap)
 
     cards = db.query(RateCard).filter(
         RateCard.city == region.name,
@@ -268,10 +287,12 @@ def get_service_estimates(
     for card in cards:
         fare_low = compute_fare_from_rate_card(card, distance_km, duration_min, surge_low, is_night)
         fare_high = compute_fare_from_rate_card(card, distance_km, duration_min, surge_high, is_night)
+        fare_current = compute_fare_from_rate_card(card, distance_km, duration_min, surge_current, is_night)
 
-        # Guarantee high is at least equal to low
+        # Guarantee high is at least equal to low and current sits within [low, high]
         if fare_high < fare_low:
             fare_high = fare_low
+        fare_current = max(fare_low, min(fare_high, fare_current))
 
         deep_link, web_link = generate_deep_link(
             card.service, pickup_lat, pickup_lng, drop_lat, drop_lng, pickup_name, drop_name
@@ -286,6 +307,8 @@ def get_service_estimates(
             "vehicle_category": card.vehicle_category,
             "low": round(fare_low),
             "high": round(fare_high),
+            "realtime_rate": round(fare_current),
+            "current_surge": surge_current,
             "currency": card.currency,
             "currency_symbol": card.currency_symbol or "₹",
             "deeplink": deep_link,
