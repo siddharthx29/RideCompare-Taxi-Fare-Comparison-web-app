@@ -1,6 +1,6 @@
 # Full dependencies for offline ML training, Jupyter notebooks, and local research
 -r requirements.txt
-numpy>=1.24.0
+numpy>=2.5.5
 pandas>=2.0.0
 scikit-learn>=1.3.0
 joblib>=1.3.0
