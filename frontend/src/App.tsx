@@ -306,9 +306,11 @@ function App() {
       }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : '';
+      const isNetworkFailure = !errMsg || errMsg.includes('Network Connection Error') || errMsg.includes('HTTP error! status: 5');
       setDistanceError(
-        `Fare search could not be completed: ${errMsg || 'the service is unavailable'}. ` +
-        'Please check that the backend is running.'
+        isNetworkFailure
+          ? `Fare search could not be completed: ${errMsg || 'the service is unavailable'}. Please check your internet connection or try again.`
+          : errMsg
       );
       setComparison(null);
       setRouteGeometry(null);
@@ -520,7 +522,7 @@ function App() {
                     <div className="max-w-[480px] flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 rounded-2xl px-4 py-3 shadow-sm animate-fade-in">
                       <span className="text-lg leading-none mt-0.5">⚠️</span>
                       <div>
-                        <p className="text-xs font-bold mb-0.5">Route Distance Limit</p>
+                        <p className="text-xs font-bold mb-0.5">Route &amp; Coverage Notice</p>
                         <p className="text-[11px] leading-relaxed">{distanceError}</p>
                       </div>
                     </div>
@@ -566,7 +568,7 @@ function App() {
                     <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 rounded-2xl px-4 py-3 shadow-sm animate-fade-in">
                       <span className="text-lg leading-none mt-0.5">⚠️</span>
                       <div>
-                        <p className="text-xs font-bold mb-0.5">Route Distance Limit</p>
+                        <p className="text-xs font-bold mb-0.5">Route &amp; Coverage Notice</p>
                         <p className="text-[11px] leading-relaxed">{distanceError}</p>
                       </div>
                     </div>

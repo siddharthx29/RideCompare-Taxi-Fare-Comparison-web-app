@@ -1,8 +1,14 @@
 
 const isBrowser = typeof window !== 'undefined';
 
-const isLocalHost = (): boolean => {
+const isCapacitorNative = (): boolean => {
   if (!isBrowser) return false;
+  const cap = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return Boolean(cap?.isNativePlatform?.());
+};
+
+const isLocalHost = (): boolean => {
+  if (!isBrowser || isCapacitorNative()) return false;
   const host = window.location.hostname;
   return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.endsWith('.localhost');
 };
@@ -11,6 +17,10 @@ const getApiBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl && envUrl.trim()) {
     return envUrl.trim().replace(/\/+$/, '');
+  }
+
+  if (isCapacitorNative()) {
+    return 'https://ridecompare.world';
   }
 
   // When deployed on Vercel or external domain:
@@ -27,7 +37,10 @@ const getErrorMessage = (payload: unknown, status: number): string => {
   if (typeof payload !== 'object' || payload === null) return fallback;
 
   const record = payload as Record<string, unknown>;
-  const message = [record.error, record.message, record.detail].find(
+  const detailObj = typeof record.detail === 'object' && record.detail !== null
+    ? (record.detail as Record<string, unknown>)
+    : null;
+  const message = [record.error, record.message, record.detail, detailObj?.message].find(
     (value): value is string => typeof value === 'string' && value.trim().length > 0
   );
   return message || fallback;

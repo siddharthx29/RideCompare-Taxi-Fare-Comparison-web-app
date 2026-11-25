@@ -12,6 +12,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.3",
+    "@capacitor/cli": "^8.6.3",
+    "@capacitor/core": "^8.6.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.20.0",
     "react": "^19.2.6",
