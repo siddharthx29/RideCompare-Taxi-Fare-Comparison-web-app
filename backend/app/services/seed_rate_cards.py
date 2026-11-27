@@ -425,6 +425,22 @@ RATE_CARDS_DATA = [
     },
     {
         "city": "Kochi", "state": "Kerala", "country": "IN",
+        "service": "Rapido", "ride_type": "Rapido Bike", "vehicle_category": "Bike",
+        "base_fare": 18.0, "per_km": 6.5, "per_min": 0.8, "booking_fee": 5.0, "min_fare": 25.0, "free_km": 0.0,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://www.rapido.bike",
+        "last_verified_date": "2026-02-01", "is_verified": True
+    },
+    {
+        "city": "Kochi", "state": "Kerala", "country": "IN",
+        "service": "Namma Yatri", "ride_type": "Namma Yatri Auto", "vehicle_category": "Auto",
+        "base_fare": 30.0, "per_km": 15.0, "per_min": 0.0, "booking_fee": 0.0, "min_fare": 30.0, "free_km": 1.5,
+        "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
+        "source_url": "https://nammayatri.in",
+        "last_verified_date": "2026-02-01", "is_verified": True
+    },
+    {
+        "city": "Kochi", "state": "Kerala", "country": "IN",
         "service": "Ola", "ride_type": "Ola Mini", "vehicle_category": "Cab",
         "base_fare": 48.0, "per_km": 13.8, "per_min": 1.8, "booking_fee": 15.0, "min_fare": 70.0, "free_km": 0.0,
         "night_multiplier": 1.25, "currency": "INR", "currency_symbol": "₹", "tax_pct": 0.05,
