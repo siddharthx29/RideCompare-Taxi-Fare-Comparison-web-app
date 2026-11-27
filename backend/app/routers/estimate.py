@@ -200,9 +200,14 @@ async def estimate_fares(payload: EstimateRequest, db: Session = Depends(get_db)
 
 
 @router.get("/coverage")
-async def get_coverage(lat: float = Query(...), lng: float = Query(...), db: Session = Depends(get_db)):
+async def get_coverage(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    address: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     """Returns the services active at the given GPS or geocoded coordinate."""
-    region = resolve_region(lat, lng, db=db)
+    region = resolve_region(lat, lng, address=address, db=db)
     if not region:
         return {
             "covered": False,

@@ -73,11 +73,43 @@ def resolve_region(
         except Exception as e:
             logger.warning("Error parsing geofence for %s: %s", region.region_id, e)
 
-    # Secondary fallback for named addresses if slightly outside exact polygon boundary
-    if address:
-        norm_address = address.lower()
+    # Secondary fallback: check configured service_coverage bounds & city aliases
+    # Only matches regions that actually exist in CoverageRegion (with active cab/ride services)
+    try:
+        from backend.app.services.serviceability import SERVICE_REGIONS, _point_in_region, _normalize
+    except Exception:
+        SERVICE_REGIONS = {}
+        _point_in_region = None
+        _normalize = lambda v: str(v or "").lower().strip()
+
+    norm_address = _normalize(address) if address else ""
+    region_by_name = {r.name.lower(): r for r in regions}
+    region_alias_map = {
+        "bengaluru": "bangalore",
+        "bangalore": "bengaluru",
+    }
+
+    if SERVICE_REGIONS and _point_in_region is not None:
+        for cfg_name, cfg in SERVICE_REGIONS.items():
+            if not cfg.get("providers"):
+                continue
+            if _point_in_region(cfg, lat, lng):
+                db_region = region_by_name.get(cfg_name.lower()) or region_by_name.get(
+                    region_alias_map.get(cfg_name.lower(), "")
+                )
+                if db_region is not None:
+                    return db_region
+
+    # Tertiary fallback for named addresses if slightly outside exact polygon boundary
+    if norm_address:
         for region in regions:
-            if region.name.lower() in norm_address:
+            aliases = [region.name.lower()]
+            cfg = SERVICE_REGIONS.get(region.name) or SERVICE_REGIONS.get(
+                "Bangalore" if region.region_id == "bengaluru" else ""
+            )
+            if cfg:
+                aliases.extend(_normalize(a) for a in cfg.get("city_aliases", []))
+            if any(alias and alias in norm_address for alias in aliases):
                 # Confirm coarse bounds
                 try:
                     geom = json.loads(region.geofence_geojson)

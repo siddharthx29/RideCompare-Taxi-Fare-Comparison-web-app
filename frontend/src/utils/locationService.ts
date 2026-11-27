@@ -665,6 +665,63 @@ export async function reverseGeocodeLocation(
 }
 
 /**
+ * Detects approximate location via IP geolocation providers as a fallback when browser GPS is unavailable.
+ */
+export async function detectIpLocation(): Promise<{ lat: number; lng: number; label?: string } | null> {
+  const providers: Array<{ url: string; parse: (d: Record<string, unknown>) => { lat: number; lng: number; label?: string } | null }> = [
+    {
+      url: 'https://get.geojs.io/v1/ip/geo.json',
+      parse: (d) => {
+        const lat = Number(d.latitude);
+        const lng = Number(d.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        const label = [d.city, d.region, d.country].filter(Boolean).join(', ');
+        return { lat, lng, label: label || undefined };
+      }
+    },
+    {
+      url: 'https://ipapi.co/json/',
+      parse: (d) => {
+        const lat = Number(d.latitude);
+        const lng = Number(d.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        const label = [d.city, d.region, d.country_name].filter(Boolean).join(', ');
+        return { lat, lng, label: label || undefined };
+      }
+    },
+    {
+      url: 'https://ipinfo.io/json',
+      parse: (d) => {
+        if (typeof d.loc !== 'string' || !d.loc.includes(',')) return null;
+        const [latStr, lngStr] = d.loc.split(',');
+        const lat = Number(latStr);
+        const lng = Number(lngStr);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        const label = [d.city, d.region, d.country].filter(Boolean).join(', ');
+        return { lat, lng, label: label || undefined };
+      }
+    }
+  ];
+
+  for (const provider of providers) {
+    try {
+      const controller = new AbortController();
+      const tid = window.setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(provider.url, { signal: controller.signal });
+      window.clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        const parsed = provider.parse(data);
+        if (parsed) return parsed;
+      }
+    } catch {
+      // Try next IP geolocation provider
+    }
+  }
+  return null;
+}
+
+/**
  * Backward-compatible searchLocations helper (for any callers expecting GeocodeResult[])
  */
 export async function searchLocations(

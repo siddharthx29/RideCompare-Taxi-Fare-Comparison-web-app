@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowUpDown, Search, Loader2, History, Bookmark, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { LocationInfo } from '../types/ride';
 import { LocationAutocompleteInput } from './LocationAutocompleteInput';
-import { reverseGeocodeLocation, suggestLocations, retrieveLocation } from '../utils/locationService';
+import { reverseGeocodeLocation, suggestLocations, retrieveLocation, detectIpLocation } from '../utils/locationService';
 import { apiFetch } from '../utils/api';
 
 interface SearchPanelProps {
@@ -63,7 +63,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       return;
     }
     let isCancelled = false;
-    apiFetch(`/api/coverage?lat=${selectedSource.lat}&lng=${selectedSource.lng}`)
+    const addressParam = selectedSource.label ? `&address=${encodeURIComponent(selectedSource.label)}` : '';
+    apiFetch(`/api/coverage?lat=${selectedSource.lat}&lng=${selectedSource.lng}${addressParam}`)
       .then(res => res.json())
       .then(data => {
         if (!isCancelled) {
@@ -171,41 +172,59 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     return null;
   };
 
-  const handleCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+  const applyCoordsAsSource = async (latitude: number, longitude: number, fallbackLabel?: string) => {
+    try {
+      const revResult = await reverseGeocodeLocation(latitude, longitude);
+      const isGenericCoordLabel = revResult?.label?.startsWith('Location (');
+      const locationData: LocationInfo =
+        revResult && !(isGenericCoordLabel && fallbackLabel)
+          ? revResult
+          : {
+              label: fallbackLabel || revResult?.label || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+              lat: latitude,
+              lng: longitude,
+              address: revResult?.address || {}
+            };
+      onSourceSelect(locationData);
+      setSourceInput(locationData.label);
+      setSourceError(null);
+    } catch {
+      const fallback: LocationInfo = {
+        label: fallbackLabel || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+        lat: latitude,
+        lng: longitude
+      };
+      onSourceSelect(fallback);
+      setSourceInput(fallback.label);
+      setSourceError(null);
+    }
+  };
+
+  const handleCurrentLocation = async () => {
+    setGeolocating(true);
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      const ipLoc = await detectIpLocation();
+      if (ipLoc) {
+        await applyCoordsAsSource(ipLoc.lat, ipLoc.lng, ipLoc.label);
+      } else {
+        setSourceError('Unable to detect your location automatically. Please search your pickup area.');
+      }
+      setGeolocating(false);
       return;
     }
 
-    setGeolocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const revResult = await reverseGeocodeLocation(latitude, longitude);
-          const locationData: LocationInfo = revResult || {
-            label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
-            lat: latitude,
-            lng: longitude
-          };
-
-          onSourceSelect(locationData);
-          setSourceInput(locationData.label);
-          setSourceError(null);
-        } catch {
-          const fallback: LocationInfo = {
-            label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
-            lat: latitude,
-            lng: longitude
-          };
-          onSourceSelect(fallback);
-          setSourceInput(fallback.label);
-          setSourceError(null);
-        } finally {
-          setGeolocating(false);
-        }
+        await applyCoordsAsSource(position.coords.latitude, position.coords.longitude);
+        setGeolocating(false);
       },
-      () => {
+      async () => {
+        const ipLoc = await detectIpLocation();
+        if (ipLoc) {
+          await applyCoordsAsSource(ipLoc.lat, ipLoc.lng, ipLoc.label);
+        } else {
+          setSourceError('Location permission denied or unavailable. Please search your pickup area.');
+        }
         setGeolocating(false);
       },
       { enableHighAccuracy: true, timeout: 6000 }
@@ -365,22 +384,20 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
               <button
                 type="button"
                 onClick={() => { setDepartMode('now'); setDepartTime(''); }}
-                className={`px-2 py-0.5 rounded-md font-medium transition-all ${
-                  departMode === 'now'
-                    ? 'bg-[var(--accent-color)] text-white shadow-xs'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
+                className={`px-2 py-0.5 rounded-md font-medium transition-all ${departMode === 'now'
+                  ? 'bg-[var(--accent-color)] text-white shadow-xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
               >
                 Now
               </button>
               <button
                 type="button"
                 onClick={() => setDepartMode('later')}
-                className={`px-2 py-0.5 rounded-md font-medium transition-all ${
-                  departMode === 'later'
-                    ? 'bg-[var(--accent-color)] text-white shadow-xs'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
+                className={`px-2 py-0.5 rounded-md font-medium transition-all ${departMode === 'later'
+                  ? 'bg-[var(--accent-color)] text-white shadow-xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
               >
                 Later
               </button>

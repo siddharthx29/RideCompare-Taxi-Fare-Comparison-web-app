@@ -60,7 +60,7 @@ REGIONS_DATA = [
         "geofence": {
             "type": "Polygon",
             "coordinates": [[
-                [76.10, 9.80], [76.45, 9.80], [76.45, 10.20], [76.10, 10.20], [76.10, 9.80]
+                [75.90, 9.65], [76.65, 9.65], [76.65, 10.30], [75.90, 10.30], [75.90, 9.65]
             ]]
         },
         "services": [
@@ -678,6 +678,10 @@ def seed_coverage_and_rate_cards(db: Session) -> Dict[str, int]:
             )
             db.add(reg)
             regions_added += 1
+        else:
+            new_geojson = json.dumps(reg_data["geofence"])
+            if existing.geofence_geojson != new_geojson:
+                existing.geofence_geojson = new_geojson
 
         for svc in reg_data.get("services", []):
             st = db.query(ServiceStatus).filter(

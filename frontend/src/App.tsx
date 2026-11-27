@@ -11,7 +11,7 @@ import type { MapSelectionMode } from './components/MapView';
 import { Download, X, Search, BarChart3, Home, Lock } from 'lucide-react';
 import type { ComparisonResult, LocationInfo, RouteGeometry, RideProviderDetails } from './types/ride';
 import { apiFetch } from './utils/api';
-import { reverseGeocodeLocation } from './utils/locationService';
+import { reverseGeocodeLocation, detectIpLocation } from './utils/locationService';
 
 const PlatformAnalyticsDashboard = lazy(() =>
   import('./components/PlatformAnalyticsDashboard').then((m) => ({ default: m.PlatformAnalyticsDashboard }))
@@ -123,13 +123,16 @@ function App() {
     setSelectedCity('Near Me');
     try {
       const resolved = await reverseGeocodeLocation(latitude, longitude);
+      const isGenericCoordLabel = resolved?.label?.startsWith('Location (');
       setSourceLoc(
-        resolved || {
-          label: fallbackLabel || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
-          lat: latitude,
-          lng: longitude,
-          address: {}
-        }
+        resolved && !(isGenericCoordLabel && fallbackLabel)
+          ? resolved
+          : {
+              label: fallbackLabel || resolved?.label || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+              lat: latitude,
+              lng: longitude,
+              address: resolved?.address || {}
+            }
       );
     } catch {
       setSourceLoc({
@@ -143,22 +146,9 @@ function App() {
 
   const detectCurrentLocation = useCallback(() => {
     const fallbackToIp = async () => {
-      try {
-        const controller = new AbortController();
-        const tid = window.setTimeout(() => controller.abort(), 3500);
-        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
-        window.clearTimeout(tid);
-        if (res.ok) {
-          const data = await res.json();
-          const lat = Number(data.latitude);
-          const lng = Number(data.longitude);
-          if (Number.isFinite(lat) && Number.isFinite(lng)) {
-            const label = [data.city, data.region, data.country_name].filter(Boolean).join(', ');
-            await applyDetectedLocation(lat, lng, label || undefined);
-          }
-        }
-      } catch {
-        // Silent fallback if IP lookup unavailable
+      const ipLoc = await detectIpLocation();
+      if (ipLoc) {
+        await applyDetectedLocation(ipLoc.lat, ipLoc.lng, ipLoc.label);
       }
     };
 
@@ -332,9 +322,13 @@ function App() {
       const providersList: RideProviderDetails[] = (data.available_services || []).map((s: any) => {
         const baseService = String(s.service || 'Ride').trim();
         const rideType = String(s.ride_type || s.vehicle_category || 'Cab').trim();
-        const displayName = baseService.toLowerCase().includes(rideType.toLowerCase())
-          ? baseService
-          : `${baseService} ${rideType}`;
+        const baseLower = baseService.toLowerCase();
+        const rideLower = rideType.toLowerCase();
+        const displayName = rideLower.includes(baseLower)
+          ? rideType
+          : baseLower.includes(rideLower)
+            ? baseService
+            : `${baseService} ${rideType}`;
         return {
         provider: displayName,
         vehicleType: s.vehicle_category || 'Cab',
