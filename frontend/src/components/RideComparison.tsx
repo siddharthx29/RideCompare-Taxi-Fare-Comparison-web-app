@@ -800,8 +800,9 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
             </p>
           </div>
         )}
-        {sortedProviders.map((p) => {
-          const isExpanded = expandedProvider === p.provider;
+        {sortedProviders.map((p, idx) => {
+          const cardKey = `${p.provider}-${p.vehicleType}-${idx}`;
+          const isExpanded = expandedProvider === cardKey;
           const hasLivePrice = p.liveAvailable !== false && p.actualFare !== null && p.actualFare !== undefined;
           const liveFare = p.actualFare;
           const brand = getProviderBrand(p.provider, p.vehicleType, p.isGovernmentBacked);
@@ -835,8 +836,8 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
 
           return (
             <div
-              key={p.provider}
-              onClick={() => toggleExpand(p.provider)}
+              key={cardKey}
+              onClick={() => toggleExpand(cardKey)}
               className={`bg-[var(--bg-secondary)] border rounded-xl transition-all cursor-pointer hover:border-[var(--accent-color)]/50 overflow-hidden ${
                 p.isBestValue
                   ? 'border-[var(--accent-color)]/40'
@@ -981,7 +982,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleExpand(p.provider);
+                          toggleExpand(cardKey);
                         }}
                         className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-lg cursor-pointer"
                         title="View fare details"

@@ -1,4 +1,4 @@
-import { Sun, Moon, BarChart3, CarFront } from 'lucide-react';
+import { BarChart3, CarFront } from 'lucide-react';
 
 interface NavbarProps {
   darkMode: boolean;
@@ -129,10 +129,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={toggleDarkMode}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] cursor-pointer"
+            className="flex h-9 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--bg-secondary)] px-2.5 text-[var(--text-primary)] cursor-pointer"
             aria-label="Toggle dark/light mode"
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {darkMode ? <Sun size={16} className="text-[#ffb68e]" /> : <Moon size={16} className="text-slate-700" />}
+            <img
+              src="/icons/theme-toggle.png"
+              alt="Theme toggle"
+              className={`h-5 w-auto object-contain transition-transform ${darkMode ? 'invert' : ''}`}
+            />
           </button>
         </div>
       </div>

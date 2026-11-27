@@ -4,6 +4,7 @@ import { SearchPanel } from './components/SearchPanel';
 import { MapView } from './components/MapView';
 import { RideComparison } from './components/RideComparison';
 import { About } from './components/About';
+import { AppleCarBackdrop } from './components/AppleCarBackdrop';
 import { RoutesIndexPage, RouteDetailPage, BlogIndexPage, BlogPostPage, ProgrammaticLandingPage } from './components/SeoPages';
 import { findProgrammaticPage } from './data/seoData';
 import type { MapSelectionMode } from './components/MapView';
@@ -32,6 +33,19 @@ const SeoAdminDashboard = lazy(() =>
 );
 
 const MAX_STRAIGHT_LINE_KM = 240;
+
+const SUPPORTED_CITIES: { name: string; coords: [number, number] }[] = [
+  { name: 'Kochi', coords: [9.9312, 76.2673] },
+  { name: 'Bangalore', coords: [12.9716, 77.5946] },
+  { name: 'Mumbai', coords: [19.0760, 72.8777] },
+  { name: 'Goa', coords: [15.4909, 73.8278] },
+  { name: 'Kolkata', coords: [22.5726, 88.3639] },
+  { name: 'London', coords: [51.5074, -0.1278] },
+  { name: 'San Francisco', coords: [37.7749, -122.4194] },
+  { name: 'Dubai', coords: [25.2048, 55.2708] },
+  { name: 'Singapore', coords: [1.3521, 103.8198] },
+  { name: 'Tokyo', coords: [35.6762, 139.6503] },
+];
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -98,13 +112,98 @@ function App() {
   const [searchId, setSearchId] = useState<number | null>(null);
   const [sourceLoc, setSourceLoc] = useState<LocationInfo | null>(null);
   const [destLoc, setDestLoc] = useState<LocationInfo | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+  const [currentLocationCoords, setCurrentLocationCoords] = useState<[number, number] | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string>('Near Me');
   const [mapSelectionMode, setMapSelectionMode] = useState<MapSelectionMode>(null);
+
+  const applyDetectedLocation = useCallback(async (latitude: number, longitude: number, fallbackLabel?: string) => {
+    setMapCenter([latitude, longitude]);
+    setCurrentLocationCoords([latitude, longitude]);
+    setSelectedCity('Near Me');
+    try {
+      const resolved = await reverseGeocodeLocation(latitude, longitude);
+      setSourceLoc(
+        resolved || {
+          label: fallbackLabel || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+          lat: latitude,
+          lng: longitude,
+          address: {}
+        }
+      );
+    } catch {
+      setSourceLoc({
+        label: fallbackLabel || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+        lat: latitude,
+        lng: longitude,
+        address: {}
+      });
+    }
+  }, []);
+
+  const detectCurrentLocation = useCallback(() => {
+    const fallbackToIp = async () => {
+      try {
+        const controller = new AbortController();
+        const tid = window.setTimeout(() => controller.abort(), 3500);
+        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+        window.clearTimeout(tid);
+        if (res.ok) {
+          const data = await res.json();
+          const lat = Number(data.latitude);
+          const lng = Number(data.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            const label = [data.city, data.region, data.country_name].filter(Boolean).join(', ');
+            await applyDetectedLocation(lat, lng, label || undefined);
+          }
+        }
+      } catch {
+        // Silent fallback if IP lookup unavailable
+      }
+    };
+
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      void fallbackToIp();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        void applyDetectedLocation(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => {
+        void fallbackToIp();
+      },
+      { enableHighAccuracy: true, timeout: 6000 }
+    );
+  }, [applyDetectedLocation]);
+
+  useEffect(() => {
+    detectCurrentLocation();
+  }, [detectCurrentLocation]);
   const [routeGeometry, setRouteGeometry] = useState<RouteGeometry | null>(null);
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [searchPanelKey, setSearchPanelKey] = useState(0);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const lastSearchedRoute = useRef('');
+
+  useEffect(() => {
+    const elements = document.querySelectorAll('.scroll-reveal');
+    if (!elements.length || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [currentPath, comparison, showAbout, showAdmin, showFareIntelligence, showSurgeTracker]);
 
   const handleMapLocationSelect = useCallback(async (
     mode: Exclude<MapSelectionMode, null>,
@@ -230,8 +329,14 @@ function App() {
 
       const data = await estimateRes.json();
 
-      const providersList: RideProviderDetails[] = (data.available_services || []).map((s: any) => ({
-        provider: s.service,
+      const providersList: RideProviderDetails[] = (data.available_services || []).map((s: any) => {
+        const baseService = String(s.service || 'Ride').trim();
+        const rideType = String(s.ride_type || s.vehicle_category || 'Cab').trim();
+        const displayName = baseService.toLowerCase().includes(rideType.toLowerCase())
+          ? baseService
+          : `${baseService} ${rideType}`;
+        return {
+        provider: displayName,
         vehicleType: s.vehicle_category || 'Cab',
         distanceKm: data.distance_km,
         etaMinutes: s.eta_minutes || 5,
@@ -266,7 +371,8 @@ function App() {
         rate_card_verified_at: s.rate_card_verified_at,
         is_verified: s.is_verified,
         eligibility: 'DIRECT'
-      }));
+      };
+      });
 
       const compResult: ComparisonResult = {
         distanceKm: data.distance_km,
@@ -386,11 +492,7 @@ function App() {
 
   return (
     <div className="relative min-h-screen flex flex-col transition-all">
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#ff7043]/15 blur-3xl" />
-        <div className="absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-indigo-500/15 blur-3xl" />
-        <div className="absolute -bottom-24 left-1/3 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
-      </div>
+      <AppleCarBackdrop darkMode={darkMode} />
       <Navbar
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
@@ -533,7 +635,45 @@ function App() {
         ) : (
           <div>
             {!comparison && !loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start py-3 md:py-12 animate-fade-in">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  <button
+                    type="button"
+                    onClick={detectCurrentLocation}
+                    className={`inline-flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                      selectedCity === 'Near Me'
+                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)] text-white'
+                        : 'border-[var(--glass-border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:border-[var(--accent-color)]'
+                    }`}
+                  >
+                    <img
+                      src="/icons/location-pin.png"
+                      alt=""
+                      className={`h-3.5 w-3.5 object-contain ${selectedCity === 'Near Me' || darkMode ? 'invert' : ''}`}
+                    />
+                    <span>My Location</span>
+                  </button>
+                  {SUPPORTED_CITIES.map((city) => (
+                    <button
+                      key={city.name}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCity(city.name);
+                        setMapCenter(city.coords);
+                        setSourceLoc(null);
+                        setDestLoc(null);
+                      }}
+                      className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                        selectedCity === city.name
+                          ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-[var(--accent-color)]'
+                          : 'border-[var(--glass-border)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start py-2 md:py-8 animate-fade-in">
                 <div className="md:col-span-6 space-y-6">
                   <div className="space-y-4">
                     <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-semibold tracking-wide bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)]">
@@ -576,12 +716,103 @@ function App() {
                   <MapView
                     sourceCoords={sourceLoc ? [sourceLoc.lat, sourceLoc.lng] : null}
                     destCoords={destLoc ? [destLoc.lat, destLoc.lng] : null}
+                    centerCoords={mapCenter}
+                    currentLocationCoords={currentLocationCoords}
+                    onLocateMe={detectCurrentLocation}
                     routeGeometry={null}
                     selectionMode={mapSelectionMode}
                     onSelectionModeChange={setMapSelectionMode}
                     onMapLocationSelect={handleMapLocationSelect}
                   />
                 </div>
+              </div>
+
+              {/* Scroll-Driven Highlights & Popular Routes (RLabz / Apple-style reveal) */}
+              <section className="scroll-reveal pt-10 md:pt-16 space-y-6">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-color)]">
+                      Smart Urban Mobility
+                    </span>
+                    <h3 className="mt-1 text-2xl md:text-3xl font-bold text-[var(--text-primary)]">
+                      Built for transparent everyday rides.
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigateTo('/compare-cab-fares/')}
+                    className="rounded-full border border-[var(--glass-border)] bg-[var(--bg-secondary)] px-4 py-2 text-xs font-bold text-[var(--text-primary)] hover:border-[var(--accent-color)] cursor-pointer"
+                  >
+                    Explore All Cities →
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="glass-panel rounded-2xl p-5 space-y-2 transition-transform duration-300 hover:-translate-y-1">
+                    <span className="text-xs font-bold text-[var(--accent-color)]">01 · ZERO SCRAPING</span>
+                    <h4 className="text-base font-bold text-[var(--text-primary)]">Statutory Rate Cards</h4>
+                    <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                      Every fare range is calculated from verified regional base rates, per-km tariffs, and legal surge caps.
+                    </p>
+                  </div>
+                  <div className="glass-panel rounded-2xl p-5 space-y-2 transition-transform duration-300 hover:-translate-y-1">
+                    <span className="text-xs font-bold text-emerald-400">02 · SAVE ON SURGE</span>
+                    <h4 className="text-base font-bold text-[var(--text-primary)]">Zero-Surge Alternatives</h4>
+                    <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                      Compare Uber, Ola, and Rapido side by side with Namma Yatri, Kerala Savari, GoaMiles, and Yatri Sathi.
+                    </p>
+                  </div>
+                  <div className="glass-panel rounded-2xl p-5 space-y-2 transition-transform duration-300 hover:-translate-y-1">
+                    <span className="text-xs font-bold text-[var(--accent-blue)]">03 · ONE-TAP LAUNCH</span>
+                    <h4 className="text-base font-bold text-[var(--text-primary)]">Prefilled App Deep Links</h4>
+                    <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                      Jump straight into supported ride apps with your pickup and destination coordinates already filled in.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="scroll-reveal pt-6 pb-4 space-y-4">
+                <h3 className="text-lg font-bold text-[var(--text-primary)]">Popular Fare Guides</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <a
+                    href="/routes/kochi-airport-to-alappuzha-taxi-fare"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/routes/kochi-airport-to-alappuzha-taxi-fare'); }}
+                    className="glass-panel rounded-2xl p-4 hover:border-[var(--accent-color)] transition-all hover:-translate-y-0.5"
+                  >
+                    <span className="text-[10px] font-bold uppercase text-[var(--accent-color)]">Kerala Route</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">Kochi Airport → Alappuzha</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">83 km · Est. ₹1,850 – ₹2,850</p>
+                  </a>
+                  <a
+                    href="/cab-fare/bangalore/"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/cab-fare/bangalore/'); }}
+                    className="glass-panel rounded-2xl p-4 hover:border-[var(--accent-color)] transition-all hover:-translate-y-0.5"
+                  >
+                    <span className="text-[10px] font-bold uppercase text-[var(--accent-color)]">Bangalore</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">Bangalore Cab &amp; Auto Fares</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">Namma Yatri, Uber, Ola, KSTDC</p>
+                  </a>
+                  <a
+                    href="/cab-fare/goa/"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/cab-fare/goa/'); }}
+                    className="glass-panel rounded-2xl p-4 hover:border-[var(--accent-color)] transition-all hover:-translate-y-0.5"
+                  >
+                    <span className="text-[10px] font-bold uppercase text-[var(--accent-color)]">Goa</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">GoaMiles &amp; Tourist Taxis</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">Dabolim (GOI) &amp; Mopa (GOX)</p>
+                  </a>
+                  <a
+                    href="/blog/uber-vs-ola-vs-rapido-in-kerala"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/blog/uber-vs-ola-vs-rapido-in-kerala'); }}
+                    className="glass-panel rounded-2xl p-4 hover:border-[var(--accent-color)] transition-all hover:-translate-y-0.5"
+                  >
+                    <span className="text-[10px] font-bold uppercase text-[var(--accent-color)]">Guide</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">Uber vs Ola vs Rapido in Kerala</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">Price &amp; airport pickup rules</p>
+                  </a>
+                </div>
+              </section>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start animate-fade-in">

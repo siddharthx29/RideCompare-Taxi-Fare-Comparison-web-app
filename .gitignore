@@ -68,3 +68,11 @@ ml/data/processed/
 
 .vercel
 .env*
+!.env.example
+*.jks
+*.keystore
+key.properties
+local.properties
+mobile_app/.dart_tool/
+mobile_app/build/
+frontend/android/app/build/

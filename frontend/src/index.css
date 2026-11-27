@@ -176,6 +176,26 @@ h1, h2, h3, h4 {
   animation: pinDrop 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* RLabz / Apple-Style Scroll Reveal */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.985);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 /* Leaflet Map Visual Overrides */
 .leaflet-container {
   background-color: var(--bg-secondary) !important;

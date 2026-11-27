@@ -8,6 +8,9 @@ export type MapSelectionMode = 'pickup' | 'destination' | null;
 interface MapViewProps {
   sourceCoords: [number, number] | null;
   destCoords: [number, number] | null;
+  centerCoords?: [number, number] | null;
+  currentLocationCoords?: [number, number] | null;
+  onLocateMe?: () => void;
   routeGeometry: RouteGeometry | null;
   distanceKm?: number;
   durationMins?: number;
@@ -27,6 +30,9 @@ interface PendingSelection {
 export const MapView: React.FC<MapViewProps> = ({
   sourceCoords,
   destCoords,
+  centerCoords = null,
+  currentLocationCoords = null,
+  onLocateMe,
   routeGeometry,
   distanceKm,
   durationMins,
@@ -117,6 +123,23 @@ export const MapView: React.FC<MapViewProps> = ({
 
     const bounds: L.LatLngBounds = L.latLngBounds([]);
 
+    // Current user GPS marker (blue pulsing dot)
+    if (currentLocationCoords) {
+      const gpsIcon = L.divIcon({
+        html: `
+          <div class="relative flex items-center justify-center w-6 h-6">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-50 animate-ping"></span>
+            <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-sky-500 border-2 border-white shadow-md"></span>
+          </div>
+        `,
+        className: 'custom-gps-icon',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+      const gpsMarker = L.marker(currentLocationCoords, { icon: gpsIcon, interactive: false }).addTo(map);
+      markersRef.current.push(gpsMarker);
+    }
+
     // Add source marker
     const displayedSourceCoords = pendingSelection?.mode === 'pickup'
       ? pendingSelection.coords
@@ -190,13 +213,15 @@ export const MapView: React.FC<MapViewProps> = ({
       }
     }
 
-    // Fit map bounds to show full route
+    // Fit map bounds to show full route, or pan to selected city/current location
     if (bounds.isValid()) {
       map.fitBounds(bounds, {
         padding: [50, 50],
         maxZoom: 15,
         animate: false
       });
+    } else if (centerCoords) {
+      map.setView(centerCoords, 12.5, { animate: true });
     }
     const handleMapClick = (event: L.LeafletMouseEvent) => {
       if (!onMapLocationSelect) return;
@@ -216,7 +241,7 @@ export const MapView: React.FC<MapViewProps> = ({
     return () => {
       map.off('click', handleMapClick);
     };
-  }, [sourceCoords, destCoords, routeGeometry, distanceKm, durationMins, selectionMode, onSelectionModeChange, onMapLocationSelect, pendingSelection]);
+  }, [sourceCoords, destCoords, centerCoords, currentLocationCoords, routeGeometry, distanceKm, durationMins, selectionMode, onSelectionModeChange, onMapLocationSelect, pendingSelection]);
 
   return (
     <div className="relative w-full h-[240px] md:h-full min-h-[220px] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-md transition-all">
@@ -257,6 +282,16 @@ export const MapView: React.FC<MapViewProps> = ({
           >
             {selectionMode === 'destination' ? 'Tap map for Drop (B)' : 'Pin Drop (B)'}
           </button>
+          {onLocateMe && (
+            <button
+              type="button"
+              onClick={onLocateMe}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2 text-[11px] font-bold text-[var(--text-primary)] shadow-lg backdrop-blur-md hover:border-sky-400 cursor-pointer"
+            >
+              <img src="/icons/location-pin.png" alt="" className="h-3.5 w-3.5 object-contain dark:invert" />
+              <span>Use My Location</span>
+            </button>
+          )}
         </div>
       )}
       {onMapLocationSelect && (
