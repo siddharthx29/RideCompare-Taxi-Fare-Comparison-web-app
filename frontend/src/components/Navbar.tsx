@@ -129,15 +129,44 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={toggleDarkMode}
-            className="flex h-9 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--bg-secondary)] px-2.5 text-[var(--text-primary)] cursor-pointer"
-            aria-label="Toggle dark/light mode"
-            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            role="switch"
+            aria-checked={!darkMode}
+            aria-label="Toggle day and night mode"
+            title={darkMode ? 'Switch to Day mode' : 'Switch to Night mode'}
+            className="relative flex h-9 w-[72px] items-center justify-between rounded-full border border-[var(--glass-border)] bg-[var(--bg-secondary)] px-2 transition-colors cursor-pointer"
           >
-            <img
-              src="/icons/theme-toggle.png"
-              alt="Theme toggle"
-              className={`h-5 w-auto object-contain transition-transform ${darkMode ? 'invert' : ''}`}
+            <span
+              className={`absolute top-1 left-1 h-7 w-7 rounded-full shadow-sm transition-transform duration-300 ${
+                darkMode
+                  ? 'translate-x-0 bg-[#282a2a]'
+                  : 'translate-x-[34px] bg-[#ff8055]'
+              }`}
             />
+            {/* Vector Moon Icon (Night) */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`relative z-10 h-4 w-4 transition-colors ${darkMode ? 'text-[#ffb68e]' : 'text-[var(--text-secondary)]'}`}
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+            {/* Vector Sun Icon (Day) */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`relative z-10 h-4 w-4 transition-colors ${!darkMode ? 'text-white' : 'text-[var(--text-secondary)]'}`}
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+            </svg>
           </button>
         </div>
       </div>
