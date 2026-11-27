@@ -43,7 +43,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
     : providers.filter(p => p.eligibility === 'PARTIAL');
 
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'recommended' | 'price' | 'eta'>('recommended');
+  const [sortBy, setSortBy] = useState<'recommended' | 'category' | 'price' | 'eta'>('recommended');
   const [vehicleFilter, setVehicleFilter] = useState<'ALL' | 'CAB' | 'AUTO' | 'BIKE' | 'ROBOTAXI'>('ALL');
   const [nowTimestamp, setNowTimestamp] = useState(0);
   const [showAuditDrawer, setShowAuditDrawer] = useState(true);
@@ -74,16 +74,26 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
     .filter(p => p.referenceSnapshot)
     .map(p => p.referenceSnapshot as NonNullable<RideProviderDetails['referenceSnapshot']>);
 
+  const getVehicleCategory = (p: RideProviderDetails): 'BIKE' | 'AUTO' | 'CAB' | 'ROBOTAXI' => {
+    const type = (p.vehicleType || '').toUpperCase();
+    const name = (p.provider || '').toUpperCase();
+    const cat = (p.categoryTag || '').toUpperCase();
+    if (cat.includes('AUTONOMOUS') || name.includes('WAYMO') || name.includes('ROBOTAXI')) return 'ROBOTAXI';
+    if (type.includes('BIKE') || name.includes('BIKE') || name.includes('MOTO')) return 'BIKE';
+    if (type.includes('AUTO') || name.includes('AUTO') || name.includes('TUK')) return 'AUTO';
+    return 'CAB';
+  };
+
+  const categoryCounts = {
+    ALL: baseProviders.length,
+    CAB: baseProviders.filter(p => getVehicleCategory(p) === 'CAB').length,
+    AUTO: baseProviders.filter(p => getVehicleCategory(p) === 'AUTO').length,
+    BIKE: baseProviders.filter(p => getVehicleCategory(p) === 'BIKE').length,
+  };
+
   const filteredProviders = baseProviders.filter(p => {
     if (vehicleFilter === 'ALL') return true;
-    const type = p.vehicleType.toUpperCase();
-    const name = p.provider.toUpperCase();
-    const cat = (p.categoryTag || '').toUpperCase();
-    if (vehicleFilter === 'ROBOTAXI') return cat.includes('AUTONOMOUS') || name.includes('WAYMO') || name.includes('ROBOTAXI');
-    if (vehicleFilter === 'CAB') return type.includes('CAB') || name.includes('UBER') || name.includes('LYFT') || name.includes('GRAB') || name.includes('BOLT') || name.includes('G7') || name.includes('TAXI');
-    if (vehicleFilter === 'AUTO') return type.includes('AUTO') || name.includes('AUTO') || name.includes('TUK');
-    if (vehicleFilter === 'BIKE') return type.includes('BIKE') || name.includes('BIKE') || name.includes('MOTO');
-    return true;
+    return getVehicleCategory(p) === vehicleFilter;
   });
 
   const sortedProviders = [...filteredProviders].sort((a, b) => {
@@ -93,6 +103,11 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
         : Number.isFinite(provider.estimatedFare)
         ? Number(provider.estimatedFare)
         : Number(provider.predictedFare || Number.POSITIVE_INFINITY);
+    if (sortBy === 'category') {
+      const rank: Record<string, number> = { BIKE: 0, AUTO: 1, CAB: 2, ROBOTAXI: 3 };
+      const diff = (rank[getVehicleCategory(a)] ?? 9) - (rank[getVehicleCategory(b)] ?? 9);
+      return diff !== 0 ? diff : fareForSort(a) - fareForSort(b);
+    }
     if (sortBy === 'recommended') {
       return (
         Number(b.isBestValue) - Number(a.isBestValue)
@@ -659,25 +674,25 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
             onClick={() => setVehicleFilter('ALL')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${vehicleFilter === 'ALL' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'hover:text-[var(--text-primary)]'}`}
           >
-            All
+            All ({categoryCounts.ALL})
           </button>
           <button
             onClick={() => setVehicleFilter('CAB')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${vehicleFilter === 'CAB' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'hover:text-[var(--text-primary)]'}`}
           >
-            <Car size={13} /> Cabs
+            <Car size={13} /> Cabs ({categoryCounts.CAB})
           </button>
           <button
             onClick={() => setVehicleFilter('AUTO')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${vehicleFilter === 'AUTO' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'hover:text-[var(--text-primary)]'}`}
           >
-            <Navigation size={13} /> Autos / TukTuk
+            <Navigation size={13} /> Autos ({categoryCounts.AUTO})
           </button>
           <button
             onClick={() => setVehicleFilter('BIKE')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${vehicleFilter === 'BIKE' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'hover:text-[var(--text-primary)]'}`}
           >
-            <Bike size={13} /> Bikes
+            <Bike size={13} /> Bikes ({categoryCounts.BIKE})
           </button>
           {hasRobotaxi && (
             <button
@@ -697,6 +712,12 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
               className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${sortBy === 'recommended' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'hover:text-[var(--text-primary)]'}`}
             >
               Recommended
+            </button>
+            <button
+              onClick={() => setSortBy('category')}
+              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${sortBy === 'category' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'hover:text-[var(--text-primary)]'}`}
+            >
+              Type
             </button>
             <button
               onClick={() => setSortBy('price')}
