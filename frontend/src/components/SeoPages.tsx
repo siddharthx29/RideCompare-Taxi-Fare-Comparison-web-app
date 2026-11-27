@@ -1,6 +1,14 @@
 import { useEffect } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Clock, IndianRupee, MapPin, Navigation, Route as RouteIcon, ShieldCheck } from 'lucide-react';
-import { SEO_POSTS, SEO_ROUTES, findPostBySlug, findRouteBySlug, type SeoPost, type SeoRoute } from '../data/seoData';
+import {
+  SEO_POSTS,
+  SEO_ROUTES,
+  findPostBySlug,
+  findProgrammaticPage,
+  findRouteBySlug,
+  type SeoPost,
+  type SeoRoute,
+} from '../data/seoData';
 
 interface SeoNavigationProps {
   onNavigate: (path: string) => void;
@@ -394,6 +402,144 @@ export function BlogPostPage({ slug, onNavigate }: SeoNavigationProps & { slug: 
               </a>
             ))}
           </div>
+        </section>
+      )}
+    </article>
+  );
+}
+
+export function ProgrammaticLandingPage({ pathname, onNavigate }: SeoNavigationProps & { pathname: string }) {
+  const page = findProgrammaticPage(pathname);
+
+  useDocumentMeta(
+    page ? page.title : 'RideCompare — Cab Fare Comparison',
+    page ? page.description : 'Compare estimated taxi, auto, and cab fares across RideCompare.'
+  );
+
+  if (!page) {
+    return (
+      <div className="mx-auto max-w-3xl rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 text-center">
+        <h1 className="text-2xl font-bold">Page not found</h1>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">Browse supported routes or open the live fare calculator.</p>
+        <div className="mt-4 flex justify-center gap-3">
+          <button onClick={() => onNavigate('/routes')} className="rounded-xl border border-[var(--border-color)] px-4 py-2 text-xs font-bold cursor-pointer">
+            Route Guides
+          </button>
+          <button onClick={() => onNavigate('/')} className="rounded-xl bg-[var(--accent-color)] px-4 py-2 text-xs font-bold text-white cursor-pointer">
+            Compare Live Fares
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <article className="mx-auto w-full max-w-4xl space-y-6 animate-fade-in">
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+        {page.breadcrumbs.map((b, idx) => (
+          <span key={b.path} className="inline-flex items-center gap-2">
+            {idx > 0 && <span>/</span>}
+            <a
+              href={b.path}
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate(b.path);
+              }}
+              className="hover:text-[var(--text-primary)]"
+            >
+              {b.name}
+            </a>
+          </span>
+        ))}
+      </nav>
+
+      <section className="glass-panel rounded-2xl p-6 md:p-8">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+          <MapPin size={12} /> {page.location || page.pageType}
+        </span>
+        <h1 className="mt-3 text-3xl font-bold text-[var(--text-primary)]">{page.h1}</h1>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{page.intro}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {page.supportedServices.map((svc) => (
+            <span key={svc} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-2.5 py-1 text-[11px] font-semibold">
+              {svc}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-6">
+          <button
+            onClick={() => onNavigate('/')}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-color)] px-5 py-3 text-xs font-bold text-white hover:opacity-90 cursor-pointer"
+          >
+            Open Live Fare Calculator <ArrowRight size={14} />
+          </button>
+        </div>
+      </section>
+
+      {page.rateHighlights && page.rateHighlights.length > 0 && (
+        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 overflow-x-auto">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">Configured Statutory Rate Cards</h2>
+          <table className="mt-3 w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-[var(--border-color)] text-[var(--text-secondary)]">
+                <th className="py-2 pr-4">Service</th>
+                <th className="py-2 pr-4">Vehicle Type</th>
+                <th className="py-2 pr-4">Base Fare</th>
+                <th className="py-2">Per Km</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border-color)]">
+              {page.rateHighlights.map((r) => (
+                <tr key={r.service}>
+                  <td className="py-2.5 pr-4 font-bold">{r.service}</td>
+                  <td className="py-2.5 pr-4 text-[var(--text-secondary)]">{r.vehicleType}</td>
+                  <td className="py-2.5 pr-4 font-bold text-[var(--accent-color)]">{r.baseFare}</td>
+                  <td className="py-2.5">{r.perKmRate}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 space-y-4">
+        {page.sections.map((sec) => (
+          <div key={sec.heading}>
+            <h2 className="text-base font-bold text-[var(--text-primary)]">{sec.heading}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{sec.body}</p>
+          </div>
+        ))}
+      </section>
+
+      {page.faqs && page.faqs.length > 0 && (
+        <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 space-y-3">
+          <h2 className="text-base font-bold text-[var(--text-primary)]">Frequently Asked Questions</h2>
+          {page.faqs.map((f) => (
+            <div key={f.question} className="border-t border-[var(--border-color)] pt-3 first:border-t-0 first:pt-0">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{f.question}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{f.answer}</p>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {page.relatedLinks && page.relatedLinks.length > 0 && (
+        <section className="flex flex-wrap gap-2">
+          {page.relatedLinks.map((link) => (
+            <a
+              key={link.path}
+              href={link.path}
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate(link.path);
+              }}
+              className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3.5 py-2 text-xs font-semibold hover:border-[var(--accent-color)]"
+            >
+              {link.label}
+            </a>
+          ))}
         </section>
       )}
     </article>

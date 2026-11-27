@@ -4,7 +4,8 @@ import { SearchPanel } from './components/SearchPanel';
 import { MapView } from './components/MapView';
 import { RideComparison } from './components/RideComparison';
 import { About } from './components/About';
-import { RoutesIndexPage, RouteDetailPage, BlogIndexPage, BlogPostPage } from './components/SeoPages';
+import { RoutesIndexPage, RouteDetailPage, BlogIndexPage, BlogPostPage, ProgrammaticLandingPage } from './components/SeoPages';
+import { findProgrammaticPage } from './data/seoData';
 import type { MapSelectionMode } from './components/MapView';
 import { Download, X, Search, BarChart3, Home, Lock } from 'lucide-react';
 import type { ComparisonResult, LocationInfo, RouteGeometry, RideProviderDetails } from './types/ride';
@@ -25,6 +26,9 @@ const FareSurgeTracker = lazy(() =>
 );
 const FareIntelligence = lazy(() =>
   import('./components/FareIntelligence').then((m) => ({ default: m.FareIntelligence }))
+);
+const SeoAdminDashboard = lazy(() =>
+  import('./components/SeoAdminDashboard').then((m) => ({ default: m.SeoAdminDashboard }))
 );
 
 const MAX_STRAIGHT_LINE_KM = 240;
@@ -80,11 +84,12 @@ function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
-  const [adminTab, setAdminTab] = useState<'rate-cards' | 'analytics' | 'ml'>(() => {
+  const [adminTab, setAdminTab] = useState<'rate-cards' | 'analytics' | 'seo' | 'ml'>(() => {
     if (typeof window === 'undefined') return 'rate-cards';
     const params = new URLSearchParams(window.location.search);
     if (params.get('admin') === 'ml' || params.get('tab') === 'ml') return 'ml';
     if (params.get('tab') === 'analytics') return 'analytics';
+    if (params.get('tab') === 'seo') return 'seo';
     return 'rate-cards';
   });
   const [loading, setLoading] = useState(false);
@@ -419,6 +424,8 @@ function App() {
           <BlogIndexPage onNavigate={navigateTo} />
         ) : currentPath.startsWith('/blog/') ? (
           <BlogPostPage slug={currentPath.replace('/blog/', '')} onNavigate={navigateTo} />
+        ) : findProgrammaticPage(currentPath) ? (
+          <ProgrammaticLandingPage pathname={currentPath} onNavigate={navigateTo} />
         ) : showAbout ? (
           <About />
         ) : showFareIntelligence ? (
@@ -453,6 +460,15 @@ function App() {
                     Platform Analytics
                   </button>
                   <button
+                    onClick={() => setAdminTab('seo')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${adminTab === 'seo'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)] hover:text-white'
+                      }`}
+                  >
+                    SEO Growth Engine
+                  </button>
+                  <button
                     onClick={() => {
                       const pin = window.prompt("Enter Internal Developer Passcode:");
                       if (pin === "admin" || pin === "dev123" || pin === "ridecompare") {
@@ -482,6 +498,8 @@ function App() {
                   <RateCardAdmin />
                 ) : adminTab === 'analytics' ? (
                   <PlatformAnalyticsDashboard />
+                ) : adminTab === 'seo' ? (
+                  <SeoAdminDashboard />
                 ) : (
                   <InternalMLDashboard onExit={() => setAdminTab('rate-cards')} />
                 )}

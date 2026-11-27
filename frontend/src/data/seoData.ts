@@ -1,4 +1,22 @@
 import seoContent from './seoContent.json';
+import generatedProgrammatic from './generatedProgrammaticPages.json';
+
+export interface ProgrammaticPage {
+  pageId: string;
+  path: string;
+  pageType: string;
+  location: string | null;
+  title: string;
+  description: string;
+  h1: string;
+  intro: string;
+  supportedServices: string[];
+  rateHighlights?: { service: string; vehicleType: string; baseFare: string; perKmRate: string }[];
+  sections: { heading: string; body: string }[];
+  faqs?: { question: string; answer: string }[];
+  breadcrumbs: { name: string; path: string }[];
+  relatedLinks?: { label: string; path: string }[];
+}
 
 export interface RouteServiceEstimate {
   provider: string;
@@ -64,4 +82,12 @@ export function findRouteBySlug(slug: string): SeoRoute | undefined {
 
 export function findPostBySlug(slug: string): SeoPost | undefined {
   return SEO_POSTS.find((p) => p.slug === slug);
+}
+
+export const PROGRAMMATIC_PAGES: ProgrammaticPage[] =
+  (generatedProgrammatic as { pages: ProgrammaticPage[] }).pages || [];
+
+export function findProgrammaticPage(pathname: string): ProgrammaticPage | undefined {
+  const clean = pathname.replace(/\/+$/, '') || '/';
+  return PROGRAMMATIC_PAGES.find((p) => (p.path.replace(/\/+$/, '') || '/') === clean);
 }

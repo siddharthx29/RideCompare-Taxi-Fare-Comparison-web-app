@@ -300,3 +300,85 @@ class RateCard(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class SeoKeyword(Base):
+    __tablename__ = 'seo_keywords'
+
+    id = Column(Integer, primary_key=True, index=True)
+    keyword = Column(String(200), unique=True, nullable=False, index=True)
+    normalized_keyword = Column(String(200), nullable=False, index=True)
+    category = Column(String(40), nullable=False, index=True)  # general, competitor, local, route
+    intent = Column(String(40), nullable=False, default='commercial')
+    location = Column(String(100), nullable=True, index=True)
+    search_volume = Column(Integer, nullable=True)  # Only populated from verified CSV/API data
+    keyword_difficulty = Column(Float, nullable=True)
+    impressions = Column(Integer, nullable=False, default=0)
+    clicks = Column(Integer, nullable=False, default=0)
+    ctr = Column(Float, nullable=False, default=0.0)
+    avg_position = Column(Float, nullable=True)
+    mapped_page_slug = Column(String(255), nullable=True, index=True)
+    duplicate_of_id = Column(Integer, nullable=True)
+    opportunity_score = Column(Float, nullable=False, default=0.0, index=True)
+    data_source = Column(String(40), nullable=False, default='seed')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SeoPage(Base):
+    __tablename__ = 'seo_pages'
+
+    id = Column(Integer, primary_key=True, index=True)
+    page_id = Column(String(120), unique=True, nullable=False, index=True)
+    slug = Column(String(255), unique=True, nullable=False, index=True)
+    page_type = Column(String(40), nullable=False, index=True)  # pillar, comparison, city, airport, route, editorial
+    target_keyword = Column(String(200), nullable=False)
+    secondary_keywords = Column(Text, nullable=False, default='[]')
+    location = Column(String(100), nullable=True, index=True)
+    search_intent = Column(String(40), nullable=False, default='commercial')
+    seo_title = Column(String(255), nullable=False)
+    meta_description = Column(Text, nullable=False)
+    h1 = Column(String(255), nullable=False)
+    content_json = Column(Text, nullable=False, default='{}')
+    status = Column(String(30), nullable=False, default='published', index=True)  # draft, published, rejected, archived
+    quality_score = Column(Float, nullable=False, default=100.0)
+    quality_issues = Column(Text, nullable=False, default='[]')
+    canonical_url = Column(String(500), nullable=False)
+    is_indexable = Column(Boolean, nullable=False, default=True, index=True)
+    impressions = Column(Integer, nullable=False, default=0)
+    clicks = Column(Integer, nullable=False, default=0)
+    ctr = Column(Float, nullable=False, default=0.0)
+    avg_position = Column(Float, nullable=True)
+    last_audited_at = Column(DateTime, nullable=True)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SeoSearchMetric(Base):
+    __tablename__ = 'seo_search_metrics'
+    __table_args__ = (
+        Index('ix_seo_metrics_date_source', 'date', 'source'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(String(20), nullable=False, index=True)
+    source = Column(String(30), nullable=False, index=True)  # gsc, bing, ga4
+    page_url = Column(String(500), nullable=True, index=True)
+    query = Column(String(255), nullable=True, index=True)
+    clicks = Column(Integer, nullable=False, default=0)
+    impressions = Column(Integer, nullable=False, default=0)
+    ctr = Column(Float, nullable=False, default=0.0)
+    position = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SeoAuditLog(Base):
+    __tablename__ = 'seo_audit_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_type = Column(String(30), nullable=False, index=True)  # daily, weekly, monthly, manual
+    status = Column(String(20), nullable=False, default='ok')
+    summary = Column(Text, nullable=False)
+    recommendations_json = Column(Text, nullable=False, default='[]')
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+

@@ -1,0 +1,26 @@
+name: Scheduled SEO Maintenance
+
+on:
+  schedule:
+    - cron: '0 3 * * *'     # Daily sitemap & link health check
+    - cron: '0 4 * * 1'     # Weekly GSC/Bing sync & recommendations
+    - cron: '0 5 1 * *'     # Monthly catalog sync & opportunity review
+  workflow_dispatch:
+
+jobs:
+  seo-maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger RideCompare SEO Maintenance
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          if [ -z "$ADMIN_KEY" ]; then
+            echo "ADMIN_KEY secret not set; skipping remote maintenance trigger."
+            exit 0
+          fi
+          CADENCE="daily"
+          if [ "$(date +%u)" = "1" ]; then CADENCE="weekly"; fi
+          if [ "$(date +%d)" = "01" ]; then CADENCE="monthly"; fi
+          curl -fsS -X POST "https://ridecompare.world/api/seo/admin/maintenance/run?cadence=${CADENCE}" \
+            -H "X-Admin-Key: ${ADMIN_KEY}"

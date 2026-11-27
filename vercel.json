@@ -20,5 +20,15 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/seo/admin/maintenance/run?cadence=daily",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/seo/admin/maintenance/run?cadence=weekly",
+      "schedule": "0 4 * * 1"
+    }
   ]
 }

@@ -1,0 +1,2133 @@
+{
+  "generatedAt": "2026-11-27T09:20:02.856Z",
+  "pages": [
+    {
+      "pageId": "pillar-compare-cab-fares",
+      "path": "/compare-cab-fares/",
+      "pageType": "pillar",
+      "location": null,
+      "title": "Compare Cab Fares Online Across Uber, Ola, Rapido & Local Taxis — RideCompare",
+      "description": "Compare estimated cab, auto, and bike-taxi fares across Uber, Ola, Rapido, Namma Yatri, Kerala Savari, and GoaMiles in one place.",
+      "h1": "Compare Cab & Taxi Fares Online",
+      "intro": "RideCompare calculates route-aware fare estimates using verified statutory rate cards and regional geofencing so you can compare available ride services side by side before booking.",
+      "supportedServices": [
+        "Uber",
+        "Ola",
+        "Rapido",
+        "Namma Yatri",
+        "Kerala Savari",
+        "GoaMiles",
+        "Yatri Sathi"
+      ],
+      "sections": [
+        {
+          "heading": "How RideCompare Estimates Ride Fares",
+          "body": "Enter your pickup and drop-off points to measure road distance and estimated travel time, then inspect base fares, per-km rates, and regulated surge caps across every active provider in your city."
+        },
+        {
+          "heading": "Zero Scraping & Transparent Estimates",
+          "body": "All prices are presented as estimate ranges derived from statutory rate cards and demand models, with direct deep links to open the official provider app."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which cab service is cheapest in India?",
+          "answer": "For solo commutes, bike taxis like Rapido Bike or Uber Moto are usually cheapest. For autos and cabs, zero-commission apps like Namma Yatri, Kerala Savari, and Yatri Sathi often undercut private aggregators during surge hours."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Goa",
+          "path": "/cab-fare/goa/"
+        },
+        {
+          "label": "Taxi Fare in Kochi",
+          "path": "/cab-fare/kochi/"
+        },
+        {
+          "label": "Taxi Fare in Bangalore",
+          "path": "/cab-fare/bangalore/"
+        },
+        {
+          "label": "Taxi Fare in Mumbai",
+          "path": "/cab-fare/mumbai/"
+        },
+        {
+          "label": "Taxi Fare in Kolkata",
+          "path": "/cab-fare/kolkata/"
+        },
+        {
+          "label": "Taxi Fare in Tokyo",
+          "path": "/cab-fare/tokyo/"
+        }
+      ]
+    },
+    {
+      "pageId": "pillar-taxi-fare-calculator",
+      "path": "/taxi-fare-calculator/",
+      "pageType": "pillar",
+      "location": null,
+      "title": "Taxi Fare Calculator — Estimate Cab, Auto & Bike Ride Costs | RideCompare",
+      "description": "Use RideCompare’s route-aware taxi fare calculator to estimate cab, auto-rickshaw, and bike-taxi costs using statutory per-km rate cards.",
+      "h1": "Online Taxi Fare Calculator",
+      "intro": "Calculate estimated taxi, auto-rickshaw, and bike-taxi fares for any supported city route using road routing and regional transport tariffs.",
+      "supportedServices": [
+        "Uber",
+        "Ola",
+        "Rapido",
+        "Namma Yatri",
+        "Kerala Savari",
+        "GoaMiles"
+      ],
+      "sections": [
+        {
+          "heading": "What Goes Into a Fare Estimate",
+          "body": "Each calculation accounts for base fare, per-kilometre rate, ride duration, airport toll rules, and time-of-day peak multipliers capped by local transport rules."
+        },
+        {
+          "heading": "Supported Regions & Metered Fallbacks",
+          "body": "Where app aggregators do not operate, RideCompare checks whether government metered autos or local taxis serve the area and displays regulated minimum meter estimates."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How accurate is the taxi fare calculator?",
+          "answer": "Estimates are grounded in published city rate cards and road distance via OSRM routing. Final fares in provider apps can differ due to live driver availability, traffic detours, and tolls."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "label": "Uber vs Ola",
+          "path": "/uber-vs-ola/"
+        },
+        {
+          "label": "Uber vs Rapido",
+          "path": "/uber-vs-rapido/"
+        }
+      ]
+    },
+    {
+      "pageId": "comparison-uber-vs-ola",
+      "path": "/uber-vs-ola/",
+      "pageType": "comparison",
+      "location": null,
+      "title": "Uber vs Ola Fare Comparison — Which Cab App Is Cheaper? | RideCompare",
+      "description": "Compare Uber Go vs Ola Mini base fares, per-km rates, airport fees, and surge pricing across Indian cities before you book.",
+      "h1": "Uber vs Ola: Price & Rate Card Comparison",
+      "intro": "Both Uber and Ola use dynamic pricing, so neither app is cheapest on every trip. Comparing base tariffs, per-km rates, and peak multipliers helps you avoid overpaying.",
+      "supportedServices": [
+        "Uber Go",
+        "Uber Premier",
+        "Ola Mini",
+        "Ola Prime"
+      ],
+      "sections": [
+        {
+          "heading": "Base Fare & Per-Kilometre Differences",
+          "body": "In major Indian cities like Bangalore, Kochi, and Mumbai, Uber Go and Ola Mini base fares sit within a few rupees of each other, making surge multipliers and airport pickup fees the deciding factor."
+        },
+        {
+          "heading": "When to Check Alternatives",
+          "body": "During heavy rain or 6 PM office rush, checking Namma Yatri, Kerala Savari, or Yatri Sathi alongside Uber and Ola frequently reveals lower zero-surge fares."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Is Uber cheaper than Ola for airport rides?",
+          "answer": "During off-peak hours they are usually close in price, though whichever app has fewer waiting drivers at the airport bay will apply higher surge."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Uber vs Ola",
+          "path": "/uber-vs-ola/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Uber vs Rapido",
+          "path": "/uber-vs-rapido/"
+        },
+        {
+          "label": "Uber vs Ola vs Rapido in Kerala",
+          "path": "/blog/uber-vs-ola-vs-rapido-in-kerala"
+        }
+      ]
+    },
+    {
+      "pageId": "comparison-uber-vs-rapido",
+      "path": "/uber-vs-rapido/",
+      "pageType": "comparison",
+      "location": null,
+      "title": "Uber vs Rapido (and Ola) — Bike, Auto & Cab Fare Comparison | RideCompare",
+      "description": "Compare Uber Moto, Uber Auto, and Uber Go against Rapido Bike, Rapido Auto, and Ola across supported Indian cities.",
+      "h1": "Uber vs Rapido: Bike, Auto & Cab Comparison",
+      "intro": "Rapido specializes in fast, low-cost bike taxis and autos, while Uber covers bikes, autos, and AC cabs. Compare both before choosing your commute mode.",
+      "supportedServices": [
+        "Rapido Bike",
+        "Rapido Auto",
+        "Uber Moto",
+        "Uber Auto",
+        "Uber Go"
+      ],
+      "sections": [
+        {
+          "heading": "Solo Commutes: Bike Taxis",
+          "body": "For short 3–12 km city rides without luggage, Rapido Bike and Uber Moto typically cost less than half of an AC hatchback cab and cut through peak congestion."
+        },
+        {
+          "heading": "Autos & Cabs for Longer Trips",
+          "body": "When travelling with luggage, in rain, or to airports, compare Uber Go, Ola Mini, and state-backed options like Kerala Savari or Namma Yatri."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Is Rapido cheaper than Uber?",
+          "answer": "For solo riders on bike taxis or short auto trips, Rapido is often the lowest-cost option, though Uber Moto frequently matches its per-km tariff."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Uber vs Rapido",
+          "path": "/uber-vs-rapido/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Uber vs Ola",
+          "path": "/uber-vs-ola/"
+        },
+        {
+          "label": "How Surge Pricing Works",
+          "path": "/blog/how-surge-pricing-works"
+        }
+      ]
+    },
+    {
+      "pageId": "city-goa",
+      "path": "/cab-fare/goa/",
+      "pageType": "city",
+      "location": "Goa",
+      "title": "Taxi & Cab Fare in Goa — Compare GoaMiles | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Goa across GoaMiles. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Goa",
+      "intro": "RideCompare supports Goa (Goa, India) with verified regional geofencing and rate cards for GoaMiles.",
+      "supportedServices": [
+        "GoaMiles Hatchback",
+        "GoaMiles Sedan",
+        "GTDC Tourist Taxi"
+      ],
+      "rateHighlights": [
+        {
+          "service": "GoaMiles Hatchback",
+          "vehicleType": "Cab",
+          "baseFare": "₹80",
+          "perKmRate": "₹22/km"
+        },
+        {
+          "service": "GoaMiles Sedan",
+          "vehicleType": "Cab",
+          "baseFare": "₹110",
+          "perKmRate": "₹25/km"
+        },
+        {
+          "service": "GTDC Tourist Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹150",
+          "perKmRate": "₹26/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Goa",
+          "body": "Available ride options in Goa include GoaMiles Hatchback, GoaMiles Sedan, GTDC Tourist Taxi. Private app fleets (Uber/Ola/Rapido) are prohibited in Goa under state transport policy. GoaMiles and GTDC verified tourist cabs provide authorized service."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Goa",
+          "body": "Intra-city estimates use Goa's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Goa?",
+          "answer": "RideCompare currently tracks GoaMiles in Goa, covering GoaMiles Hatchback, GoaMiles Sedan, GTDC Tourist Taxi."
+        },
+        {
+          "question": "How can I estimate a cab fare in Goa?",
+          "answer": "Use the RideCompare fare calculator to select your Goa pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Goa",
+          "path": "/cab-fare/goa/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Goa Airport Taxi Fare",
+          "path": "/airport-taxi-fare/goa/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-goa",
+      "path": "/airport-taxi-fare/goa/",
+      "pageType": "airport",
+      "location": "Goa",
+      "title": "Goa Airport Taxi Fare — Compare GoaMiles | RideCompare",
+      "description": "Estimate Goa airport to city taxi and cab fares across GoaMiles. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Goa Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Goa airports (airport, dabolim, mopa, manohar) across GoaMiles.",
+      "supportedServices": [
+        "GoaMiles Hatchback",
+        "GoaMiles Sedan",
+        "GTDC Tourist Taxi"
+      ],
+      "rateHighlights": [
+        {
+          "service": "GoaMiles Hatchback",
+          "vehicleType": "Cab",
+          "baseFare": "₹80",
+          "perKmRate": "₹22/km"
+        },
+        {
+          "service": "GoaMiles Sedan",
+          "vehicleType": "Cab",
+          "baseFare": "₹110",
+          "perKmRate": "₹25/km"
+        },
+        {
+          "service": "GTDC Tourist Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹150",
+          "perKmRate": "₹26/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Goa",
+          "body": "Travellers arriving in Goa can compare GoaMiles Hatchback, GoaMiles Sedan, GTDC Tourist Taxi in RideCompare. Configured airport access/toll surcharge in rate cards: ₹100."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Goa Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across GoaMiles."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Goa Airport",
+          "path": "/airport-taxi-fare/goa/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Goa",
+          "path": "/cab-fare/goa/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-kochi",
+      "path": "/cab-fare/kochi/",
+      "pageType": "city",
+      "location": "Kochi",
+      "title": "Taxi & Cab Fare in Kochi — Compare Uber, Ola, Rapido | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Kochi across Uber, Ola, Rapido, NammaYatri, KeralaSavari. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Kochi",
+      "intro": "RideCompare supports Kochi (Kerala, India) with verified regional geofencing and rate cards for Uber, Ola, Rapido, NammaYatri, KeralaSavari.",
+      "supportedServices": [
+        "Kerala Savari Auto",
+        "Kerala Savari Cab",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Bike",
+        "Rapido Auto",
+        "Ola Mini",
+        "Namma Yatri Auto",
+        "Namma Yatri Cab"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Kerala Savari Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹25",
+          "perKmRate": "₹12/km"
+        },
+        {
+          "service": "Kerala Savari Cab",
+          "vehicleType": "Cab",
+          "baseFare": "₹40",
+          "perKmRate": "₹14/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹45",
+          "perKmRate": "₹13/km"
+        },
+        {
+          "service": "Uber Premier",
+          "vehicleType": "Cab",
+          "baseFare": "₹65",
+          "perKmRate": "₹16.5/km"
+        },
+        {
+          "service": "Rapido Bike",
+          "vehicleType": "Bike",
+          "baseFare": "₹12",
+          "perKmRate": "₹6.5/km"
+        },
+        {
+          "service": "Rapido Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹25",
+          "perKmRate": "₹9/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Kochi",
+          "body": "Available ride options in Kochi include Kerala Savari Auto, Kerala Savari Cab, Uber Go, Uber Premier, Rapido Bike, Rapido Auto, Ola Mini, Namma Yatri Auto, Namma Yatri Cab. Kerala Savari operates as India's first state-government-owned online taxi service with 100% zero surge pricing."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Kochi",
+          "body": "Intra-city estimates use Kochi's statutory base and per-km rate cards. Outstation coverage also supports popular destinations such as munnar, alappuzha, alleppey, thrissur, kottayam."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Kochi?",
+          "answer": "RideCompare currently tracks Uber, Ola, Rapido, NammaYatri, KeralaSavari in Kochi, covering Kerala Savari Auto, Kerala Savari Cab, Uber Go, Uber Premier, Rapido Bike."
+        },
+        {
+          "question": "How can I estimate a cab fare in Kochi?",
+          "answer": "Use the RideCompare fare calculator to select your Kochi pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Kochi",
+          "path": "/cab-fare/kochi/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Kochi Airport Taxi Fare",
+          "path": "/airport-taxi-fare/kochi/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-kochi",
+      "path": "/airport-taxi-fare/kochi/",
+      "pageType": "airport",
+      "location": "Kochi",
+      "title": "Kochi Airport Taxi Fare — Compare Uber, Ola, Rapido | RideCompare",
+      "description": "Estimate Kochi airport to city taxi and cab fares across Uber, Ola, Rapido, NammaYatri, KeralaSavari. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Kochi Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Kochi airports (airport, cochin, cial, nedumbassery) across Uber, Ola, Rapido, NammaYatri, KeralaSavari.",
+      "supportedServices": [
+        "Kerala Savari Auto",
+        "Kerala Savari Cab",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Bike",
+        "Rapido Auto",
+        "Ola Mini",
+        "Namma Yatri Auto",
+        "Namma Yatri Cab"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Kerala Savari Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹25",
+          "perKmRate": "₹12/km"
+        },
+        {
+          "service": "Kerala Savari Cab",
+          "vehicleType": "Cab",
+          "baseFare": "₹40",
+          "perKmRate": "₹14/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹45",
+          "perKmRate": "₹13/km"
+        },
+        {
+          "service": "Uber Premier",
+          "vehicleType": "Cab",
+          "baseFare": "₹65",
+          "perKmRate": "₹16.5/km"
+        },
+        {
+          "service": "Rapido Bike",
+          "vehicleType": "Bike",
+          "baseFare": "₹12",
+          "perKmRate": "₹6.5/km"
+        },
+        {
+          "service": "Rapido Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹25",
+          "perKmRate": "₹9/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Kochi",
+          "body": "Travellers arriving in Kochi can compare Kerala Savari Auto, Kerala Savari Cab, Uber Go, Uber Premier, Rapido Bike in RideCompare. Configured airport access/toll surcharge in rate cards: ₹80."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Kochi Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across Uber, Ola, Rapido, NammaYatri, KeralaSavari."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Kochi Airport",
+          "path": "/airport-taxi-fare/kochi/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Kochi",
+          "path": "/cab-fare/kochi/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-bangalore",
+      "path": "/cab-fare/bangalore/",
+      "pageType": "city",
+      "location": "Bangalore",
+      "title": "Taxi & Cab Fare in Bangalore — Compare LocalTaxi, Uber, Ola | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Bangalore across LocalTaxi, Uber, Ola, Rapido, NammaYatri. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Bangalore",
+      "intro": "RideCompare supports Bangalore (Karnataka, India) with verified regional geofencing and rate cards for LocalTaxi, Uber, Ola, Rapido, NammaYatri.",
+      "supportedServices": [
+        "Namma Yatri Auto",
+        "Namma Yatri Cab",
+        "KSTDC Airport Taxi",
+        "Uber Moto",
+        "Uber Auto",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Bike",
+        "Rapido Auto",
+        "Ola Mini",
+        "Ola Prime"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Namma Yatri Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹30",
+          "perKmRate": "₹15/km"
+        },
+        {
+          "service": "Namma Yatri Cab",
+          "vehicleType": "Cab",
+          "baseFare": "₹60",
+          "perKmRate": "₹16/km"
+        },
+        {
+          "service": "KSTDC Airport Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹100",
+          "perKmRate": "₹18/km"
+        },
+        {
+          "service": "Uber Moto",
+          "vehicleType": "Bike",
+          "baseFare": "₹15",
+          "perKmRate": "₹7/km"
+        },
+        {
+          "service": "Uber Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹28",
+          "perKmRate": "₹10/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹50",
+          "perKmRate": "₹14/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Bangalore",
+          "body": "Available ride options in Bangalore include Namma Yatri Auto, Namma Yatri Cab, KSTDC Airport Taxi, Uber Moto, Uber Auto, Uber Go, Uber Premier, Rapido Bike, Rapido Auto, Ola Mini, Ola Prime. Open Mobility and KSTDC State Tourism registered meters operate alongside commercial app fleets."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Bangalore",
+          "body": "Intra-city estimates use Bangalore's statutory base and per-km rate cards. Outstation coverage also supports popular destinations such as mysore, mysuru, coorg, madikeri, ooty."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Bangalore?",
+          "answer": "RideCompare currently tracks LocalTaxi, Uber, Ola, Rapido, NammaYatri in Bangalore, covering Namma Yatri Auto, Namma Yatri Cab, KSTDC Airport Taxi, Uber Moto, Uber Auto."
+        },
+        {
+          "question": "How can I estimate a cab fare in Bangalore?",
+          "answer": "Use the RideCompare fare calculator to select your Bangalore pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Bangalore",
+          "path": "/cab-fare/bangalore/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Bangalore Airport Taxi Fare",
+          "path": "/airport-taxi-fare/bangalore/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-bangalore",
+      "path": "/airport-taxi-fare/bangalore/",
+      "pageType": "airport",
+      "location": "Bangalore",
+      "title": "Bangalore Airport Taxi Fare — Compare LocalTaxi, Uber, Ola | RideCompare",
+      "description": "Estimate Bangalore airport to city taxi and cab fares across LocalTaxi, Uber, Ola, Rapido, NammaYatri. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Bangalore Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Bangalore airports (airport, kempegowda, kia, devenahalli) across LocalTaxi, Uber, Ola, Rapido, NammaYatri.",
+      "supportedServices": [
+        "Namma Yatri Auto",
+        "Namma Yatri Cab",
+        "KSTDC Airport Taxi",
+        "Uber Moto",
+        "Uber Auto",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Bike",
+        "Rapido Auto",
+        "Ola Mini",
+        "Ola Prime"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Namma Yatri Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹30",
+          "perKmRate": "₹15/km"
+        },
+        {
+          "service": "Namma Yatri Cab",
+          "vehicleType": "Cab",
+          "baseFare": "₹60",
+          "perKmRate": "₹16/km"
+        },
+        {
+          "service": "KSTDC Airport Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹100",
+          "perKmRate": "₹18/km"
+        },
+        {
+          "service": "Uber Moto",
+          "vehicleType": "Bike",
+          "baseFare": "₹15",
+          "perKmRate": "₹7/km"
+        },
+        {
+          "service": "Uber Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹28",
+          "perKmRate": "₹10/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹50",
+          "perKmRate": "₹14/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Bangalore",
+          "body": "Travellers arriving in Bangalore can compare Namma Yatri Auto, Namma Yatri Cab, KSTDC Airport Taxi, Uber Moto, Uber Auto in RideCompare. Configured airport access/toll surcharge in rate cards: ₹120."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Bangalore Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across LocalTaxi, Uber, Ola, Rapido, NammaYatri."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Bangalore Airport",
+          "path": "/airport-taxi-fare/bangalore/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Bangalore",
+          "path": "/cab-fare/bangalore/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-mumbai",
+      "path": "/cab-fare/mumbai/",
+      "pageType": "city",
+      "location": "Mumbai",
+      "title": "Taxi & Cab Fare in Mumbai — Compare LocalTaxi, Uber, Ola | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Mumbai across LocalTaxi, Uber, Ola, Rapido. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Mumbai",
+      "intro": "RideCompare supports Mumbai (Maharashtra, India) with verified regional geofencing and rate cards for LocalTaxi, Uber, Ola, Rapido.",
+      "supportedServices": [
+        "Mumbai Kaali Peeli",
+        "Mumbai Cool Cab",
+        "Mumbai Metered Auto",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Auto",
+        "Ola Mini",
+        "Ola Prime"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Mumbai Kaali Peeli",
+          "vehicleType": "Cab",
+          "baseFare": "₹28",
+          "perKmRate": "₹18.66/km"
+        },
+        {
+          "service": "Mumbai Cool Cab",
+          "vehicleType": "Cab",
+          "baseFare": "₹33",
+          "perKmRate": "₹23.33/km"
+        },
+        {
+          "service": "Mumbai Metered Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹23",
+          "perKmRate": "₹15.33/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹60",
+          "perKmRate": "₹16/km"
+        },
+        {
+          "service": "Uber Premier",
+          "vehicleType": "Cab",
+          "baseFare": "₹80",
+          "perKmRate": "₹21/km"
+        },
+        {
+          "service": "Rapido Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹30",
+          "perKmRate": "₹11.5/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Mumbai",
+          "body": "Available ride options in Mumbai include Mumbai Kaali Peeli, Mumbai Cool Cab, Mumbai Metered Auto, Uber Go, Uber Premier, Rapido Auto, Ola Mini, Ola Prime. Maharashtra RTO strictly regulates Kaali Peeli metered cabs and autos. Bike taxis are restricted under state transport guidelines."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Mumbai",
+          "body": "Intra-city estimates use Mumbai's statutory base and per-km rate cards. Outstation coverage also supports popular destinations such as pune, lonavala, khandala, alibaug, nashik."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Mumbai?",
+          "answer": "RideCompare currently tracks LocalTaxi, Uber, Ola, Rapido in Mumbai, covering Mumbai Kaali Peeli, Mumbai Cool Cab, Mumbai Metered Auto, Uber Go, Uber Premier."
+        },
+        {
+          "question": "How can I estimate a cab fare in Mumbai?",
+          "answer": "Use the RideCompare fare calculator to select your Mumbai pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Mumbai",
+          "path": "/cab-fare/mumbai/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Mumbai Airport Taxi Fare",
+          "path": "/airport-taxi-fare/mumbai/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-mumbai",
+      "path": "/airport-taxi-fare/mumbai/",
+      "pageType": "airport",
+      "location": "Mumbai",
+      "title": "Mumbai Airport Taxi Fare — Compare LocalTaxi, Uber, Ola | RideCompare",
+      "description": "Estimate Mumbai airport to city taxi and cab fares across LocalTaxi, Uber, Ola, Rapido. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Mumbai Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Mumbai airports (airport, mumbai, csia, sahar) across LocalTaxi, Uber, Ola, Rapido.",
+      "supportedServices": [
+        "Mumbai Kaali Peeli",
+        "Mumbai Cool Cab",
+        "Mumbai Metered Auto",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Auto",
+        "Ola Mini",
+        "Ola Prime"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Mumbai Kaali Peeli",
+          "vehicleType": "Cab",
+          "baseFare": "₹28",
+          "perKmRate": "₹18.66/km"
+        },
+        {
+          "service": "Mumbai Cool Cab",
+          "vehicleType": "Cab",
+          "baseFare": "₹33",
+          "perKmRate": "₹23.33/km"
+        },
+        {
+          "service": "Mumbai Metered Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹23",
+          "perKmRate": "₹15.33/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹60",
+          "perKmRate": "₹16/km"
+        },
+        {
+          "service": "Uber Premier",
+          "vehicleType": "Cab",
+          "baseFare": "₹80",
+          "perKmRate": "₹21/km"
+        },
+        {
+          "service": "Rapido Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹30",
+          "perKmRate": "₹11.5/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Mumbai",
+          "body": "Travellers arriving in Mumbai can compare Mumbai Kaali Peeli, Mumbai Cool Cab, Mumbai Metered Auto, Uber Go, Uber Premier in RideCompare. Configured airport access/toll surcharge in rate cards: ₹85."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Mumbai Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across LocalTaxi, Uber, Ola, Rapido."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Mumbai Airport",
+          "path": "/airport-taxi-fare/mumbai/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Mumbai",
+          "path": "/cab-fare/mumbai/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-kolkata",
+      "path": "/cab-fare/kolkata/",
+      "pageType": "city",
+      "location": "Kolkata",
+      "title": "Taxi & Cab Fare in Kolkata — Compare YatriSathi, Uber, Ola | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Kolkata across YatriSathi, Uber, Ola, Rapido. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Kolkata",
+      "intro": "RideCompare supports Kolkata (West Bengal, India) with verified regional geofencing and rate cards for YatriSathi, Uber, Ola, Rapido.",
+      "supportedServices": [
+        "Yatri Sathi Meter Taxi",
+        "Kolkata Yellow Taxi",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Bike",
+        "Rapido Auto",
+        "Ola Mini"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Yatri Sathi Meter Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹30",
+          "perKmRate": "₹15/km"
+        },
+        {
+          "service": "Kolkata Yellow Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹30",
+          "perKmRate": "₹15/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹45",
+          "perKmRate": "₹13.5/km"
+        },
+        {
+          "service": "Uber Premier",
+          "vehicleType": "Cab",
+          "baseFare": "₹65",
+          "perKmRate": "₹17.5/km"
+        },
+        {
+          "service": "Rapido Bike",
+          "vehicleType": "Bike",
+          "baseFare": "₹12",
+          "perKmRate": "₹6.8/km"
+        },
+        {
+          "service": "Rapido Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹25",
+          "perKmRate": "₹9.5/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Kolkata",
+          "body": "Available ride options in Kolkata include Yatri Sathi Meter Taxi, Kolkata Yellow Taxi, Uber Go, Uber Premier, Rapido Bike, Rapido Auto, Ola Mini. Yatri Sathi is the official Open Mobility initiative by the Government of West Bengal operating at regulated zero-surge rates."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Kolkata",
+          "body": "Intra-city estimates use Kolkata's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Kolkata?",
+          "answer": "RideCompare currently tracks YatriSathi, Uber, Ola, Rapido in Kolkata, covering Yatri Sathi Meter Taxi, Kolkata Yellow Taxi, Uber Go, Uber Premier, Rapido Bike."
+        },
+        {
+          "question": "How can I estimate a cab fare in Kolkata?",
+          "answer": "Use the RideCompare fare calculator to select your Kolkata pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Kolkata",
+          "path": "/cab-fare/kolkata/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Kolkata Airport Taxi Fare",
+          "path": "/airport-taxi-fare/kolkata/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-kolkata",
+      "path": "/airport-taxi-fare/kolkata/",
+      "pageType": "airport",
+      "location": "Kolkata",
+      "title": "Kolkata Airport Taxi Fare — Compare YatriSathi, Uber, Ola | RideCompare",
+      "description": "Estimate Kolkata airport to city taxi and cab fares across YatriSathi, Uber, Ola, Rapido. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Kolkata Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Kolkata airports (airport, dum dum, nsb) across YatriSathi, Uber, Ola, Rapido.",
+      "supportedServices": [
+        "Yatri Sathi Meter Taxi",
+        "Kolkata Yellow Taxi",
+        "Uber Go",
+        "Uber Premier",
+        "Rapido Bike",
+        "Rapido Auto",
+        "Ola Mini"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Yatri Sathi Meter Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹30",
+          "perKmRate": "₹15/km"
+        },
+        {
+          "service": "Kolkata Yellow Taxi",
+          "vehicleType": "Cab",
+          "baseFare": "₹30",
+          "perKmRate": "₹15/km"
+        },
+        {
+          "service": "Uber Go",
+          "vehicleType": "Cab",
+          "baseFare": "₹45",
+          "perKmRate": "₹13.5/km"
+        },
+        {
+          "service": "Uber Premier",
+          "vehicleType": "Cab",
+          "baseFare": "₹65",
+          "perKmRate": "₹17.5/km"
+        },
+        {
+          "service": "Rapido Bike",
+          "vehicleType": "Bike",
+          "baseFare": "₹12",
+          "perKmRate": "₹6.8/km"
+        },
+        {
+          "service": "Rapido Auto",
+          "vehicleType": "Auto",
+          "baseFare": "₹25",
+          "perKmRate": "₹9.5/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Kolkata",
+          "body": "Travellers arriving in Kolkata can compare Yatri Sathi Meter Taxi, Kolkata Yellow Taxi, Uber Go, Uber Premier, Rapido Bike in RideCompare. Configured airport access/toll surcharge in rate cards: ₹90."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Kolkata Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across YatriSathi, Uber, Ola, Rapido."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Kolkata Airport",
+          "path": "/airport-taxi-fare/kolkata/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Kolkata",
+          "path": "/cab-fare/kolkata/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-tokyo",
+      "path": "/cab-fare/tokyo/",
+      "pageType": "city",
+      "location": "Tokyo",
+      "title": "Taxi & Cab Fare in Tokyo — Compare GoAppJapan, Uber | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Tokyo across GoAppJapan, Uber. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Tokyo",
+      "intro": "RideCompare supports Tokyo (Kanto, Japan) with verified regional geofencing and rate cards for GoAppJapan, Uber.",
+      "supportedServices": [
+        "GO App (Tokyo Nihon Kotsu)",
+        "Uber Taxi Tokyo"
+      ],
+      "rateHighlights": [
+        {
+          "service": "GO App (Tokyo Nihon Kotsu)",
+          "vehicleType": "Cab",
+          "baseFare": "¥500",
+          "perKmRate": "¥400/km"
+        },
+        {
+          "service": "Uber Taxi Tokyo",
+          "vehicleType": "Cab",
+          "baseFare": "¥500",
+          "perKmRate": "¥410/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Tokyo",
+          "body": "Available ride options in Tokyo include GO App (Tokyo Nihon Kotsu), Uber Taxi Tokyo. Under Japan's Road Transport Act, all cabs (via GO, S.RIDE, Uber) are licensed commercial green-plate taxis with MLIT-regulated metered rates."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Tokyo",
+          "body": "Intra-city estimates use Tokyo's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Tokyo?",
+          "answer": "RideCompare currently tracks GoAppJapan, Uber in Tokyo, covering GO App (Tokyo Nihon Kotsu), Uber Taxi Tokyo."
+        },
+        {
+          "question": "How can I estimate a cab fare in Tokyo?",
+          "answer": "Use the RideCompare fare calculator to select your Tokyo pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Tokyo",
+          "path": "/cab-fare/tokyo/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Tokyo Airport Taxi Fare",
+          "path": "/airport-taxi-fare/tokyo/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-tokyo",
+      "path": "/airport-taxi-fare/tokyo/",
+      "pageType": "airport",
+      "location": "Tokyo",
+      "title": "Tokyo Airport Taxi Fare — Compare GoAppJapan, Uber | RideCompare",
+      "description": "Estimate Tokyo airport to city taxi and cab fares across GoAppJapan, Uber. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Tokyo Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Tokyo airports (haneda, narita, expressway, shutoko) across GoAppJapan, Uber.",
+      "supportedServices": [
+        "GO App (Tokyo Nihon Kotsu)",
+        "Uber Taxi Tokyo"
+      ],
+      "rateHighlights": [
+        {
+          "service": "GO App (Tokyo Nihon Kotsu)",
+          "vehicleType": "Cab",
+          "baseFare": "¥500",
+          "perKmRate": "¥400/km"
+        },
+        {
+          "service": "Uber Taxi Tokyo",
+          "vehicleType": "Cab",
+          "baseFare": "¥500",
+          "perKmRate": "¥410/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Tokyo",
+          "body": "Travellers arriving in Tokyo can compare GO App (Tokyo Nihon Kotsu), Uber Taxi Tokyo in RideCompare. Configured airport access/toll surcharge in rate cards: ¥1200."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Tokyo Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across GoAppJapan, Uber."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Tokyo Airport",
+          "path": "/airport-taxi-fare/tokyo/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Tokyo",
+          "path": "/cab-fare/tokyo/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-san-francisco",
+      "path": "/cab-fare/san-francisco/",
+      "pageType": "city",
+      "location": "San Francisco",
+      "title": "Taxi & Cab Fare in San Francisco — Compare Waymo, Uber, Lyft | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in San Francisco across Waymo, Uber, Lyft, CurbTaxi. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in San Francisco",
+      "intro": "RideCompare supports San Francisco (California, United States) with verified regional geofencing and rate cards for Waymo, Uber, Lyft, CurbTaxi.",
+      "supportedServices": [
+        "Waymo One (Autonomous Robotaxi)",
+        "UberX San Francisco",
+        "Uber Black San Francisco",
+        "Lyft SF",
+        "Curb Taxi (TLC)"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Waymo One (Autonomous Robotaxi)",
+          "vehicleType": "Cab",
+          "baseFare": "$5",
+          "perKmRate": "$1.8/km"
+        },
+        {
+          "service": "Lyft SF",
+          "vehicleType": "Cab",
+          "baseFare": "$3.4",
+          "perKmRate": "$1.65/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in San Francisco",
+          "body": "Available ride options in San Francisco include Waymo One (Autonomous Robotaxi), UberX San Francisco, Uber Black San Francisco, Lyft SF, Curb Taxi (TLC). San Francisco is the global hub for Autonomous Robotaxis (Waymo One) operating fully driverless commercial fleets."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in San Francisco",
+          "body": "Intra-city estimates use San Francisco's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in San Francisco?",
+          "answer": "RideCompare currently tracks Waymo, Uber, Lyft, CurbTaxi in San Francisco, covering Waymo One (Autonomous Robotaxi), UberX San Francisco, Uber Black San Francisco, Lyft SF, Curb Taxi (TLC)."
+        },
+        {
+          "question": "How can I estimate a cab fare in San Francisco?",
+          "answer": "Use the RideCompare fare calculator to select your San Francisco pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "San Francisco",
+          "path": "/cab-fare/san-francisco/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "San Francisco Airport Taxi Fare",
+          "path": "/airport-taxi-fare/san-francisco/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-san-francisco",
+      "path": "/airport-taxi-fare/san-francisco/",
+      "pageType": "airport",
+      "location": "San Francisco",
+      "title": "San Francisco Airport Taxi Fare — Compare Waymo, Uber, Lyft | RideCompare",
+      "description": "Estimate San Francisco airport to city taxi and cab fares across Waymo, Uber, Lyft, CurbTaxi. Includes airport toll rules and rate-card comparisons.",
+      "h1": "San Francisco Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from San Francisco airports (sfo, san francisco airport, bay bridge, golden gate) across Waymo, Uber, Lyft, CurbTaxi.",
+      "supportedServices": [
+        "Waymo One (Autonomous Robotaxi)",
+        "UberX San Francisco",
+        "Uber Black San Francisco",
+        "Lyft SF",
+        "Curb Taxi (TLC)"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Waymo One (Autonomous Robotaxi)",
+          "vehicleType": "Cab",
+          "baseFare": "$5",
+          "perKmRate": "$1.8/km"
+        },
+        {
+          "service": "Lyft SF",
+          "vehicleType": "Cab",
+          "baseFare": "$3.4",
+          "perKmRate": "$1.65/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in San Francisco",
+          "body": "Travellers arriving in San Francisco can compare Waymo One (Autonomous Robotaxi), UberX San Francisco, Uber Black San Francisco, Lyft SF, Curb Taxi (TLC) in RideCompare. Configured airport access/toll surcharge in rate cards: $7."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from San Francisco Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across Waymo, Uber, Lyft, CurbTaxi."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "San Francisco Airport",
+          "path": "/airport-taxi-fare/san-francisco/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in San Francisco",
+          "path": "/cab-fare/san-francisco/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-london",
+      "path": "/cab-fare/london/",
+      "pageType": "city",
+      "location": "London",
+      "title": "Taxi & Cab Fare in London — Compare TfLBlackCab, FreeNow, Bolt | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in London across TfLBlackCab, FreeNow, Bolt, Uber. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in London",
+      "intro": "RideCompare supports London (Greater London, United Kingdom) with verified regional geofencing and rate cards for TfLBlackCab, FreeNow, Bolt, Uber.",
+      "supportedServices": [
+        "TfL Licensed Black Cab",
+        "FreeNow London",
+        "Bolt London",
+        "UberX London"
+      ],
+      "rateHighlights": [
+        {
+          "service": "TfL Licensed Black Cab",
+          "vehicleType": "Cab",
+          "baseFare": "£4.4",
+          "perKmRate": "£2.8/km"
+        },
+        {
+          "service": "Bolt London",
+          "vehicleType": "Cab",
+          "baseFare": "£3.5",
+          "perKmRate": "£1.45/km"
+        },
+        {
+          "service": "UberX London",
+          "vehicleType": "Cab",
+          "baseFare": "£3.5",
+          "perKmRate": "£1.55/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in London",
+          "body": "Available ride options in London include TfL Licensed Black Cab, FreeNow London, Bolt London, UberX London. London Hackney Carriages (Black Cabs) operate on strict Transport for London (TfL) metered tariffs with bus lane access and zero algorithmic surge."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in London",
+          "body": "Intra-city estimates use London's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in London?",
+          "answer": "RideCompare currently tracks TfLBlackCab, FreeNow, Bolt, Uber in London, covering TfL Licensed Black Cab, FreeNow London, Bolt London, UberX London."
+        },
+        {
+          "question": "How can I estimate a cab fare in London?",
+          "answer": "Use the RideCompare fare calculator to select your London pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "London",
+          "path": "/cab-fare/london/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "London Airport Taxi Fare",
+          "path": "/airport-taxi-fare/london/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-london",
+      "path": "/airport-taxi-fare/london/",
+      "pageType": "airport",
+      "location": "London",
+      "title": "London Airport Taxi Fare — Compare TfLBlackCab, FreeNow, Bolt | RideCompare",
+      "description": "Estimate London airport to city taxi and cab fares across TfLBlackCab, FreeNow, Bolt, Uber. Includes airport toll rules and rate-card comparisons.",
+      "h1": "London Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from London airports (heathrow, gatwick, stansted, luton) across TfLBlackCab, FreeNow, Bolt, Uber.",
+      "supportedServices": [
+        "TfL Licensed Black Cab",
+        "FreeNow London",
+        "Bolt London",
+        "UberX London"
+      ],
+      "rateHighlights": [
+        {
+          "service": "TfL Licensed Black Cab",
+          "vehicleType": "Cab",
+          "baseFare": "£4.4",
+          "perKmRate": "£2.8/km"
+        },
+        {
+          "service": "Bolt London",
+          "vehicleType": "Cab",
+          "baseFare": "£3.5",
+          "perKmRate": "£1.45/km"
+        },
+        {
+          "service": "UberX London",
+          "vehicleType": "Cab",
+          "baseFare": "£3.5",
+          "perKmRate": "£1.55/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in London",
+          "body": "Travellers arriving in London can compare TfL Licensed Black Cab, FreeNow London, Bolt London, UberX London in RideCompare. Configured airport access/toll surcharge in rate cards: £5."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from London Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across TfLBlackCab, FreeNow, Bolt, Uber."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "London Airport",
+          "path": "/airport-taxi-fare/london/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in London",
+          "path": "/cab-fare/london/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-dubai",
+      "path": "/cab-fare/dubai/",
+      "pageType": "city",
+      "location": "Dubai",
+      "title": "Taxi & Cab Fare in Dubai — Compare DubaiTaxi, Careem | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Dubai across DubaiTaxi, Careem. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Dubai",
+      "intro": "RideCompare supports Dubai (Dubai, United Arab Emirates) with verified regional geofencing and rate cards for DubaiTaxi, Careem.",
+      "supportedServices": [
+        "Dubai Taxi (DTC / RTA)",
+        "Hala Taxi (via Careem)",
+        "Careem Comfort"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Dubai Taxi (DTC / RTA)",
+          "vehicleType": "Cab",
+          "baseFare": "AED 12",
+          "perKmRate": "AED 2.21/km"
+        },
+        {
+          "service": "Hala Taxi (via Careem)",
+          "vehicleType": "Cab",
+          "baseFare": "AED 12",
+          "perKmRate": "AED 2.21/km"
+        },
+        {
+          "service": "Careem Comfort",
+          "vehicleType": "Cab",
+          "baseFare": "AED 15",
+          "perKmRate": "AED 2.9/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Dubai",
+          "body": "Available ride options in Dubai include Dubai Taxi (DTC / RTA), Hala Taxi (via Careem), Careem Comfort. Dubai Taxi Company (DTC) and Hala operate under strict Roads and Transport Authority (RTA) metered pricing."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Dubai",
+          "body": "Intra-city estimates use Dubai's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Dubai?",
+          "answer": "RideCompare currently tracks DubaiTaxi, Careem in Dubai, covering Dubai Taxi (DTC / RTA), Hala Taxi (via Careem), Careem Comfort."
+        },
+        {
+          "question": "How can I estimate a cab fare in Dubai?",
+          "answer": "Use the RideCompare fare calculator to select your Dubai pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Dubai",
+          "path": "/cab-fare/dubai/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Dubai Airport Taxi Fare",
+          "path": "/airport-taxi-fare/dubai/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-dubai",
+      "path": "/airport-taxi-fare/dubai/",
+      "pageType": "airport",
+      "location": "Dubai",
+      "title": "Dubai Airport Taxi Fare — Compare DubaiTaxi, Careem | RideCompare",
+      "description": "Estimate Dubai airport to city taxi and cab fares across DubaiTaxi, Careem. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Dubai Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Dubai airports (dxb, airport, al maktoum, salik) across DubaiTaxi, Careem.",
+      "supportedServices": [
+        "Dubai Taxi (DTC / RTA)",
+        "Hala Taxi (via Careem)",
+        "Careem Comfort"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Dubai Taxi (DTC / RTA)",
+          "vehicleType": "Cab",
+          "baseFare": "AED 12",
+          "perKmRate": "AED 2.21/km"
+        },
+        {
+          "service": "Hala Taxi (via Careem)",
+          "vehicleType": "Cab",
+          "baseFare": "AED 12",
+          "perKmRate": "AED 2.21/km"
+        },
+        {
+          "service": "Careem Comfort",
+          "vehicleType": "Cab",
+          "baseFare": "AED 15",
+          "perKmRate": "AED 2.9/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Dubai",
+          "body": "Travellers arriving in Dubai can compare Dubai Taxi (DTC / RTA), Hala Taxi (via Careem), Careem Comfort in RideCompare. Configured airport access/toll surcharge in rate cards: AED 25."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Dubai Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across DubaiTaxi, Careem."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Dubai Airport",
+          "path": "/airport-taxi-fare/dubai/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Dubai",
+          "path": "/cab-fare/dubai/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-singapore",
+      "path": "/cab-fare/singapore/",
+      "pageType": "city",
+      "location": "Singapore",
+      "title": "Taxi & Cab Fare in Singapore — Compare CDGZig, Grab | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Singapore across CDGZig, Grab. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Singapore",
+      "intro": "RideCompare supports Singapore (Central, Singapore) with verified regional geofencing and rate cards for CDGZig, Grab.",
+      "supportedServices": [
+        "ComfortDelGro (CDG Zig Taxi)",
+        "GrabCar Singapore"
+      ],
+      "rateHighlights": [
+        {
+          "service": "ComfortDelGro (CDG Zig Taxi)",
+          "vehicleType": "Cab",
+          "baseFare": "S$4.4",
+          "perKmRate": "S$0.65/km"
+        },
+        {
+          "service": "GrabCar Singapore",
+          "vehicleType": "Cab",
+          "baseFare": "S$3.8",
+          "perKmRate": "S$0.75/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Singapore",
+          "body": "Available ride options in Singapore include ComfortDelGro (CDG Zig Taxi), GrabCar Singapore. ComfortDelGro operates under Land Transport Authority (LTA) regulated meter rates. Grab, Gojek, and TADA provide upfront dynamic ride-hail."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Singapore",
+          "body": "Intra-city estimates use Singapore's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Singapore?",
+          "answer": "RideCompare currently tracks CDGZig, Grab in Singapore, covering ComfortDelGro (CDG Zig Taxi), GrabCar Singapore."
+        },
+        {
+          "question": "How can I estimate a cab fare in Singapore?",
+          "answer": "Use the RideCompare fare calculator to select your Singapore pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Singapore",
+          "path": "/cab-fare/singapore/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Singapore Airport Taxi Fare",
+          "path": "/airport-taxi-fare/singapore/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-singapore",
+      "path": "/airport-taxi-fare/singapore/",
+      "pageType": "airport",
+      "location": "Singapore",
+      "title": "Singapore Airport Taxi Fare — Compare CDGZig, Grab | RideCompare",
+      "description": "Estimate Singapore airport to city taxi and cab fares across CDGZig, Grab. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Singapore Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Singapore airports (changi, airport, erp, jewel) across CDGZig, Grab.",
+      "supportedServices": [
+        "ComfortDelGro (CDG Zig Taxi)",
+        "GrabCar Singapore"
+      ],
+      "rateHighlights": [
+        {
+          "service": "ComfortDelGro (CDG Zig Taxi)",
+          "vehicleType": "Cab",
+          "baseFare": "S$4.4",
+          "perKmRate": "S$0.65/km"
+        },
+        {
+          "service": "GrabCar Singapore",
+          "vehicleType": "Cab",
+          "baseFare": "S$3.8",
+          "perKmRate": "S$0.75/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Singapore",
+          "body": "Travellers arriving in Singapore can compare ComfortDelGro (CDG Zig Taxi), GrabCar Singapore in RideCompare. Configured airport access/toll surcharge in rate cards: S$5."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Singapore Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across CDGZig, Grab."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Singapore Airport",
+          "path": "/airport-taxi-fare/singapore/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Singapore",
+          "path": "/cab-fare/singapore/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    },
+    {
+      "pageId": "city-ho-chi-minh-city",
+      "path": "/cab-fare/ho-chi-minh-city/",
+      "pageType": "city",
+      "location": "Ho Chi Minh City",
+      "title": "Taxi & Cab Fare in Ho Chi Minh City — Compare XanhSM, Grab | RideCompare",
+      "description": "Compare estimated taxi, auto, and cab fares in Ho Chi Minh City across XanhSM, Grab. Check statutory rate cards and route estimates.",
+      "h1": "Taxi & Cab Fare Comparison in Ho Chi Minh City",
+      "intro": "RideCompare supports Ho Chi Minh City (Southeast, Vietnam) with verified regional geofencing and rate cards for XanhSM, Grab.",
+      "supportedServices": [
+        "Xanh SM Electric Taxi (VinFast)",
+        "GrabCar Vietnam",
+        "GrabBike Vietnam"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Xanh SM Electric Taxi (VinFast)",
+          "vehicleType": "Cab",
+          "baseFare": "₫20000",
+          "perKmRate": "₫14500/km"
+        },
+        {
+          "service": "GrabCar Vietnam",
+          "vehicleType": "Cab",
+          "baseFare": "₫22000",
+          "perKmRate": "₫13500/km"
+        },
+        {
+          "service": "GrabBike Vietnam",
+          "vehicleType": "Bike",
+          "baseFare": "₫12500",
+          "perKmRate": "₫4300/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Active Ride Services in Ho Chi Minh City",
+          "body": "Available ride options in Ho Chi Minh City include Xanh SM Electric Taxi (VinFast), GrabCar Vietnam, GrabBike Vietnam. Xanh SM is Vietnam's revolutionary 100% pure electric VinFast taxi fleet with fixed transparent tariffs and zero traffic surcharges."
+        },
+        {
+          "heading": "Local Pricing & Intercity Rules in Ho Chi Minh City",
+          "body": "Intra-city estimates use Ho Chi Minh City's statutory base and per-km rate cards. Standard city-ride tariffs apply within the supported local geofence."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "Which taxi apps operate in Ho Chi Minh City?",
+          "answer": "RideCompare currently tracks XanhSM, Grab in Ho Chi Minh City, covering Xanh SM Electric Taxi (VinFast), GrabCar Vietnam, GrabBike Vietnam."
+        },
+        {
+          "question": "How can I estimate a cab fare in Ho Chi Minh City?",
+          "answer": "Use the RideCompare fare calculator to select your Ho Chi Minh City pickup and drop locations and compare estimated ranges sorted cheapest first."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Cab Fares",
+          "path": "/compare-cab-fares/"
+        },
+        {
+          "name": "Ho Chi Minh City",
+          "path": "/cab-fare/ho-chi-minh-city/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Ho Chi Minh City Airport Taxi Fare",
+          "path": "/airport-taxi-fare/ho-chi-minh-city/"
+        },
+        {
+          "label": "Taxi Fare Calculator",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "label": "All Route Guides",
+          "path": "/routes"
+        }
+      ]
+    },
+    {
+      "pageId": "airport-ho-chi-minh-city",
+      "path": "/airport-taxi-fare/ho-chi-minh-city/",
+      "pageType": "airport",
+      "location": "Ho Chi Minh City",
+      "title": "Ho Chi Minh City Airport Taxi Fare — Compare XanhSM, Grab | RideCompare",
+      "description": "Estimate Ho Chi Minh City airport to city taxi and cab fares across XanhSM, Grab. Includes airport toll rules and rate-card comparisons.",
+      "h1": "Ho Chi Minh City Airport Taxi & Cab Fare Guide",
+      "intro": "Compare airport transfer estimates to and from Ho Chi Minh City airports (tan son nhat, airport) across XanhSM, Grab.",
+      "supportedServices": [
+        "Xanh SM Electric Taxi (VinFast)",
+        "GrabCar Vietnam",
+        "GrabBike Vietnam"
+      ],
+      "rateHighlights": [
+        {
+          "service": "Xanh SM Electric Taxi (VinFast)",
+          "vehicleType": "Cab",
+          "baseFare": "₫20000",
+          "perKmRate": "₫14500/km"
+        },
+        {
+          "service": "GrabCar Vietnam",
+          "vehicleType": "Cab",
+          "baseFare": "₫22000",
+          "perKmRate": "₫13500/km"
+        },
+        {
+          "service": "GrabBike Vietnam",
+          "vehicleType": "Bike",
+          "baseFare": "₫12500",
+          "perKmRate": "₫4300/km"
+        }
+      ],
+      "sections": [
+        {
+          "heading": "Airport Pickup Options in Ho Chi Minh City",
+          "body": "Travellers arriving in Ho Chi Minh City can compare Xanh SM Electric Taxi (VinFast), GrabCar Vietnam, GrabBike Vietnam in RideCompare. Configured airport access/toll surcharge in rate cards: ₫15000."
+        },
+        {
+          "heading": "Tips to Avoid Airport Surge",
+          "body": "Flight bank arrivals often trigger temporary demand spikes on private aggregator apps. Compare government-backed or zero-surge services where available before confirming."
+        }
+      ],
+      "faqs": [
+        {
+          "question": "How much is a taxi from Ho Chi Minh City Airport?",
+          "answer": "Fares depend on drop-off distance and vehicle class. Enter your exact destination in RideCompare to see estimated ranges across XanhSM, Grab."
+        }
+      ],
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "/"
+        },
+        {
+          "name": "Airport Taxi Fares",
+          "path": "/taxi-fare-calculator/"
+        },
+        {
+          "name": "Ho Chi Minh City Airport",
+          "path": "/airport-taxi-fare/ho-chi-minh-city/"
+        }
+      ],
+      "relatedLinks": [
+        {
+          "label": "Taxi Fare in Ho Chi Minh City",
+          "path": "/cab-fare/ho-chi-minh-city/"
+        },
+        {
+          "label": "Compare Cab Fares",
+          "path": "/compare-cab-fares/"
+        }
+      ]
+    }
+  ]
+}

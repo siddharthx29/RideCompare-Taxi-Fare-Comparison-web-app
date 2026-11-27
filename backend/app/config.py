@@ -42,6 +42,12 @@ class Settings(BaseSettings):
         "RideCompare/3.0 (https://ridecompare.world; contact: support@ridecompare.world)"
     )
     LOCATION_CACHE_TTL_DAYS: int = int(os.getenv("LOCATION_CACHE_TTL_DAYS", "14"))
+    SITE_URL: str = os.getenv("SITE_URL", "https://ridecompare.world").rstrip("/")
+    GSC_SITE_URL: str = os.getenv("GSC_SITE_URL", "")
+    GOOGLE_SERVICE_ACCOUNT_JSON: str = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+    BING_WEBMASTER_API_KEY: str = os.getenv("BING_WEBMASTER_API_KEY", "")
+    GA4_PROPERTY_ID: str = os.getenv("GA4_PROPERTY_ID", "")
+    CRON_SECRET: str = os.getenv("CRON_SECRET", "")
 
     @property
     def allowed_origins_list(self) -> List[str]:
