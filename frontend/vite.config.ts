@@ -16,6 +16,22 @@ export default defineConfig({
       }
     }
   },
+  preview: {
+    port: 4173,
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'https://ridecompare.world',
+        changeOrigin: true,
+        secure: true
+      },
+      '/health': {
+        target: 'https://ridecompare.world',
+        changeOrigin: true,
+        secure: true
+      }
+    }
+  },
   server: {
     port: 5173,
     host: true,

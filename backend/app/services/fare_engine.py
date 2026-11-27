@@ -215,10 +215,10 @@ def generate_deep_link(
 
     if "uber" in s:
         deep = f"uber://?action=setPickup&pickup[latitude]={pickup_lat}&pickup[longitude]={pickup_lng}&pickup[formatted_address]={p_name_encoded}&dropoff[latitude]={drop_lat}&dropoff[longitude]={drop_lng}&dropoff[formatted_address]={d_name_encoded}"
-        web = f"https://m.uber.com/looking?pickup[latitude]={pickup_lat}&pickup[longitude]={pickup_lng}&dropoff[latitude]={drop_lat}&dropoff[longitude]={drop_lng}"
+        web = f"https://m.uber.com/looking?pickup[latitude]={pickup_lat}&pickup[longitude]={pickup_lng}&pickup[formatted_address]={p_name_encoded}&dropoff[latitude]={drop_lat}&dropoff[longitude]={drop_lng}&dropoff[formatted_address]={d_name_encoded}"
     elif "ola" in s:
         deep = f"ola://ride?lat={pickup_lat}&lng={pickup_lng}&drop_lat={drop_lat}&drop_lng={drop_lng}"
-        web = "https://book.olacabs.com"
+        web = f"https://book.olacabs.com/?lat={pickup_lat}&lng={pickup_lng}&drop_lat={drop_lat}&drop_lng={drop_lng}"
     elif "rapido" in s:
         deep = f"rapido://ride?pickup_lat={pickup_lat}&pickup_lng={pickup_lng}&drop_lat={drop_lat}&drop_lng={drop_lng}"
         web = "https://rapido.bike"
@@ -230,22 +230,13 @@ def generate_deep_link(
         web = "https://bolt.eu"
     elif "lyft" in s:
         deep = f"lyft://riderequest?pickup[latitude]={pickup_lat}&pickup[longitude]={pickup_lng}&destination[latitude]={drop_lat}&destination[longitude]={drop_lng}"
-        web = "https://ride.lyft.com"
+        web = f"https://ride.lyft.com/riderequest?pickup[latitude]={pickup_lat}&pickup[longitude]={pickup_lng}&destination[latitude]={drop_lat}&destination[longitude]={drop_lng}"
     elif "grab" in s:
         deep = f"grab://open?screenType=TAXI&pickup_latitude={pickup_lat}&pickup_longitude={pickup_lng}&dropoff_latitude={drop_lat}&dropoff_longitude={drop_lng}"
         web = "https://grab.com"
-    elif "indrive" in s:
-        deep = "indrive://"
-        web = "https://indrive.com"
-    elif "kerala savari" in s:
-        deep = "keralasavari://"
-        web = "https://keralasavari.kerala.gov.in"
-    elif "goamiles" in s:
-        deep = "goamiles://"
-        web = "https://goamiles.com"
     else:
-        deep = f"tel:112"
-        web = "https://ridecompare.world"
+        deep = ""
+        web = ""
 
     return deep, web
 

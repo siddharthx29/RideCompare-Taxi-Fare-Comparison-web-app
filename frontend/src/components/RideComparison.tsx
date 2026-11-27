@@ -428,13 +428,40 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
     };
   };
 
+  const hasValidDeepLink = (p: RideProviderDetails): boolean => {
+    const deep = p.deeplink || p.appDeepLink || '';
+    const web = p.webLink || '';
+    if (deep.startsWith('tel:') || web === 'https://ridecompare.world') return false;
+    return Boolean(
+      deep.includes('lat') ||
+      deep.includes('pickup') ||
+      web.includes('lat') ||
+      web.includes('pickup')
+    );
+  };
+
   const handleBook = (p: RideProviderDetails, e: React.MouseEvent) => {
     e.stopPropagation();
     onBooking(p.provider, p.low ?? p.fareMin ?? 0);
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const destinationUrl = (isMobile && p.deeplink) ? p.deeplink : (p.deeplink || p.appDeepLink || p.webLink);
-    if (destinationUrl) {
-      window.open(destinationUrl, '_blank', 'noopener,noreferrer');
+    const deep = p.deeplink || p.appDeepLink || '';
+    const web = p.webLink || '';
+
+    if (isMobile && deep) {
+      window.location.href = deep;
+      if (web) {
+        window.setTimeout(() => {
+          if (!document.hidden) {
+            window.open(web, '_blank', 'noopener,noreferrer');
+          }
+        }, 1200);
+      }
+      return;
+    }
+
+    const desktopUrl = web || deep;
+    if (desktopUrl) {
+      window.open(desktopUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -919,14 +946,16 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={(e) => handleBook(p, e)}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
-                        title={`Open ${brand.appName}`}
-                      >
-                        <span>Open in app</span>
-                        <ArrowUpRight size={13} />
-                      </button>
+                      {hasValidDeepLink(p) && (
+                        <button
+                          onClick={(e) => handleBook(p, e)}
+                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
+                          title={`Open ${brand.appName} with route pre-filled`}
+                        >
+                          <span>Open in app</span>
+                          <ArrowUpRight size={13} />
+                        </button>
+                      )}
 
                       <button
                         onClick={(e) => {
