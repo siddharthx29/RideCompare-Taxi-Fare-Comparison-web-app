@@ -4,6 +4,7 @@ import { SearchPanel } from './components/SearchPanel';
 import { MapView } from './components/MapView';
 import { RideComparison } from './components/RideComparison';
 import { About } from './components/About';
+import { CarThemeBackdrop } from './components/CarThemeBackdrop';
 import { RoutesIndexPage, RouteDetailPage, BlogIndexPage, BlogPostPage, ProgrammaticLandingPage } from './components/SeoPages';
 import { findProgrammaticPage } from './data/seoData';
 import type { MapSelectionMode } from './components/MapView';
@@ -115,24 +116,43 @@ function App() {
       return;
     }
 
+    const immediateLoc: LocationInfo = {
+      label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      lat,
+      lng,
+      address: {}
+    };
+
+    if (mode === 'pickup') {
+      setSourceLoc(immediateLoc);
+    } else {
+      setDestLoc(immediateLoc);
+    }
+
+    let resolved = immediateLoc;
     try {
       const location = await reverseGeocodeLocation(lat, lng);
-      const resolved = location || {
-        label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-        lat,
-        lng,
-        address: {}
-      };
-      if (mode === 'pickup') {
-        setSourceLoc(resolved);
-      } else {
-        setDestLoc(resolved);
+      if (location) {
+        resolved = location;
+        if (mode === 'pickup') {
+          setSourceLoc(resolved);
+        } else {
+          setDestLoc(resolved);
+        }
       }
-      setSearchPanelKey(key => key + 1);
+    } catch {
+      // Keep coordinate fallback when reverse geocoding is unavailable
     } finally {
       setMapSelectionMode(null);
     }
-  }, []);
+
+    // If user already has both pins and is viewing comparison results, refresh prices automatically
+    const nextSource = mode === 'pickup' ? resolved : sourceLoc;
+    const nextDest = mode === 'destination' ? resolved : destLoc;
+    if (comparison && nextSource && nextDest) {
+      void handleSearch(nextSource, nextDest);
+    }
+  }, [comparison, sourceLoc, destLoc]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -366,7 +386,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] transition-all">
+    <div className="relative min-h-screen flex flex-col transition-all">
+      <CarThemeBackdrop darkMode={darkMode} />
       <Navbar
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
@@ -509,22 +530,22 @@ function App() {
         ) : (
           <div>
             {!comparison && !loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start py-3 md:py-12 animate-fade-in">
-                <div className="md:col-span-6 space-y-6">
-                  <div className="space-y-4">
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-semibold tracking-wide bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)]">
-                      Ride comparison
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch py-2 md:py-6 animate-fade-in">
+                <div className="lg:col-span-6 relative z-20 glass-panel rounded-3xl p-5 sm:p-7 flex flex-col justify-between gap-6">
+                  <div className="space-y-3">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[var(--bg-secondary)] text-[var(--accent-color)] border border-[var(--glass-border)]">
+                      Live Route &amp; Fare Engine
                     </span>
-                    <h2 className="text-4xl md:text-6xl font-bold tracking-[-0.05em] text-[var(--text-primary)] leading-[1.05]">
+                    <h2 className="text-3xl sm:text-5xl font-bold tracking-[-0.04em] text-[var(--text-primary)] leading-[1.06]">
                       Compare Rides.<br />
                       <span className="text-[var(--text-secondary)]">Save time and money.</span>
                     </h2>
-                    <p className="text-sm font-medium text-[var(--text-secondary)] leading-relaxed max-w-[480px]">
+                    <p className="text-xs sm:text-sm font-medium text-[var(--text-secondary)] leading-relaxed">
                       Compare route-aware fare estimates, ETAs, and configured local ride services in one place.
                     </p>
                   </div>
 
-                  <div className="max-w-[480px] shadow-xl shadow-slate-900/5 dark:shadow-black/20">
+                  <div className="w-full">
                     <SearchPanel
                       key={searchPanelKey}
                       selectedSource={sourceLoc}
@@ -537,7 +558,7 @@ function App() {
                   </div>
 
                   {distanceError && (
-                    <div className="max-w-[480px] flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 rounded-2xl px-4 py-3 shadow-sm animate-fade-in">
+                    <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 rounded-2xl px-4 py-3 shadow-sm animate-fade-in">
                       <span className="text-lg leading-none mt-0.5">⚠️</span>
                       <div>
                         <p className="text-xs font-bold mb-0.5">Route &amp; Coverage Notice</p>
@@ -547,8 +568,7 @@ function App() {
                   )}
                 </div>
 
-                <div className="md:col-span-6 h-[380px] sm:h-[440px] lg:h-[520px] relative md:sticky md:top-24">
-                  <div className="absolute inset-0 bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full filter blur-3xl -z-10 w-3/4 h-3/4 mx-auto my-auto" />
+                <div className="lg:col-span-6 relative z-10 glass-panel rounded-3xl p-2.5 flex flex-col min-h-[380px] sm:min-h-[460px] lg:min-h-[560px]">
                   <MapView
                     sourceCoords={sourceLoc ? [sourceLoc.lat, sourceLoc.lng] : null}
                     destCoords={destLoc ? [destLoc.lat, destLoc.lng] : null}
@@ -557,6 +577,45 @@ function App() {
                     onSelectionModeChange={setMapSelectionMode}
                     onMapLocationSelect={handleMapLocationSelect}
                   />
+                </div>
+
+                <div className="lg:col-span-12 glass-panel rounded-3xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <a
+                    href="/cab-fare/kochi/"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/cab-fare/kochi/'); }}
+                    className="rounded-2xl border border-[var(--glass-border)] bg-[var(--bg-secondary)] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent-color)]"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-color)]">Kerala</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">Kochi Cab &amp; Auto Fares</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">Uber, Ola, Rapido, Kerala Savari</p>
+                  </a>
+                  <a
+                    href="/cab-fare/bangalore/"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/cab-fare/bangalore/'); }}
+                    className="rounded-2xl border border-[var(--glass-border)] bg-[var(--bg-secondary)] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent-color)]"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-color)]">Karnataka</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">Bangalore Cab &amp; Auto Fares</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">Namma Yatri, Uber, Ola, KSTDC</p>
+                  </a>
+                  <a
+                    href="/routes/kochi-airport-to-alappuzha-taxi-fare"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/routes/kochi-airport-to-alappuzha-taxi-fare'); }}
+                    className="rounded-2xl border border-[var(--glass-border)] bg-[var(--bg-secondary)] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent-color)]"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-color)]">Popular Route</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">Kochi Airport to Alappuzha</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">83 km · Est. ₹1,850 – ₹2,850</p>
+                  </a>
+                  <a
+                    href="/blog/how-surge-pricing-works"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/blog/how-surge-pricing-works'); }}
+                    className="rounded-2xl border border-[var(--glass-border)] bg-[var(--bg-secondary)] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent-color)]"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-color)]">Travel Guide</span>
+                    <p className="mt-1 text-xs font-bold text-[var(--text-primary)]">How Surge Pricing Works</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">5 practical ways to pay less</p>
+                  </a>
                 </div>
               </div>
             ) : (
@@ -665,7 +724,7 @@ function App() {
         </button>
       </div>
 
-      <footer id="about" className="py-6 px-4 border-t border-[var(--border-color)] text-center text-xs text-[var(--text-secondary)] bg-[var(--bg-secondary)] transition-all mb-14 md:mb-0">
+      <footer id="about" className="glass-panel py-6 px-4 border-x-0 border-b-0 text-center text-xs text-[var(--text-secondary)] transition-all mb-14 md:mb-0">
         <div className="max-w-4xl mx-auto space-y-3">
           <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] font-semibold">
             <a href="/routes" onClick={(e) => { e.preventDefault(); navigateTo('/routes'); }} className="hover:text-[var(--accent-color)]">

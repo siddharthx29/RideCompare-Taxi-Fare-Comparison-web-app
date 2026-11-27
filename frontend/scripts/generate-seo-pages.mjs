@@ -290,30 +290,30 @@ function renderShell({ title, description, canonicalPath, jsonLd, bodyHtml }) {
     <style>
       :root { color-scheme: dark; }
       * { box-sizing: border-box; }
-      body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: #0c0d0f; color: #f4f5f6; line-height: 1.6; }
+      body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(900px circle at 12% 8%, rgba(232,109,16,0.16), transparent 55%), radial-gradient(800px circle at 88% 18%, rgba(99,102,241,0.14), transparent 55%), #090b0e; background-attachment: fixed; color: #f4f5f6; line-height: 1.6; }
       a { color: #ff8055; text-decoration: none; }
       a:hover { text-decoration: underline; }
-      header { background: #111414; border-bottom: 1px solid #292b30; padding: 14px 20px; }
+      header { position: sticky; top: 0; z-index: 20; background: rgba(16, 20, 24, 0.62); backdrop-filter: blur(20px) saturate(165%); -webkit-backdrop-filter: blur(20px) saturate(165%); border-bottom: 1px solid rgba(255,255,255,0.14); padding: 14px 20px; }
       .nav-wrap { max-width: 980px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
       .brand { font-weight: 800; color: #e1e3e2; font-size: 1.05rem; }
       nav { display: flex; gap: 16px; font-size: 0.875rem; font-weight: 600; flex-wrap: wrap; }
       nav a { color: #dfc0b1; }
       main { max-width: 980px; margin: 0 auto; padding: 28px 20px 48px; }
-      .card { background: #141619; border: 1px solid #292b30; border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+      .card { background: rgba(18, 21, 26, 0.58); backdrop-filter: blur(20px) saturate(165%); -webkit-backdrop-filter: blur(20px) saturate(165%); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 8px 32px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.10); border-radius: 16px; padding: 22px; margin-bottom: 18px; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-      .badge { display: inline-block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px; border: 1px solid #292b30; color: #9a9fa7; }
+      .badge { display: inline-block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); color: #a1a7b3; }
       h1 { font-size: 1.9rem; line-height: 1.2; margin: 12px 0; }
       h2 { font-size: 1.2rem; margin: 0 0 10px; }
       h3 { font-size: 1rem; margin: 0 0 6px; }
       p, li { color: #c4c8cf; font-size: 0.95rem; }
       table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
-      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #292b30; }
-      th { color: #9a9fa7; font-size: 0.78rem; text-transform: uppercase; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.10); }
+      th { color: #a1a7b3; font-size: 0.78rem; text-transform: uppercase; }
       .price { color: #ff8055; font-weight: 700; white-space: nowrap; }
       .green { color: #5adda4; font-weight: 700; }
-      .cta { display: inline-block; background: #e86d10; color: #fff; font-weight: 700; font-size: 0.88rem; padding: 11px 18px; border-radius: 10px; margin-top: 10px; }
+      .cta { display: inline-block; background: #e86d10; color: #fff; font-weight: 700; font-size: 0.88rem; padding: 11px 18px; border-radius: 10px; margin-top: 10px; box-shadow: 0 4px 18px rgba(232,109,16,0.35); }
       .cta:hover { text-decoration: none; opacity: 0.92; }
-      footer { border-top: 1px solid #292b30; padding: 22px 20px; text-align: center; font-size: 0.78rem; color: #9a9fa7; }
+      footer { background: rgba(18, 21, 26, 0.56); backdrop-filter: blur(18px); border-top: 1px solid rgba(255,255,255,0.12); padding: 22px 20px; text-align: center; font-size: 0.78rem; color: #a1a7b3; }
     </style>
   </head>
   <body>

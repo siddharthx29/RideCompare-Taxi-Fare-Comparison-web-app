@@ -25,6 +25,24 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const [sourceInput, setSourceInput] = useState(selectedSource?.label || '');
   const [destInput, setDestInput] = useState(selectedDest?.label || '');
 
+  useEffect(() => {
+    if (selectedSource?.label) {
+      setSourceInput(selectedSource.label);
+      setSourceError(null);
+    } else if (!selectedSource) {
+      setSourceInput('');
+    }
+  }, [selectedSource]);
+
+  useEffect(() => {
+    if (selectedDest?.label) {
+      setDestInput(selectedDest.label);
+      setDestError(null);
+    } else if (!selectedDest) {
+      setDestInput('');
+    }
+  }, [selectedDest]);
+
   const [geolocating, setGeolocating] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [sourceError, setSourceError] = useState<string | null>(null);

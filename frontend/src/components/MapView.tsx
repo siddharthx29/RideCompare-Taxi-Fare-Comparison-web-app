@@ -199,13 +199,18 @@ export const MapView: React.FC<MapViewProps> = ({
       });
     }
     const handleMapClick = (event: L.LeafletMouseEvent) => {
-      if (selectionMode && onMapLocationSelect) {
-        const mode = selectionMode;
-        const coords: [number, number] = [event.latlng.lat, event.latlng.lng];
-        setPendingSelection({ mode, coords });
+      if (!onMapLocationSelect) return;
+      const autoMode: Exclude<MapSelectionMode, null> = selectionMode
+        ? selectionMode
+        : !sourceCoords
+          ? 'pickup'
+          : 'destination';
+      const coords: [number, number] = [event.latlng.lat, event.latlng.lng];
+      setPendingSelection({ mode: autoMode, coords });
+      if (selectionMode) {
         onSelectionModeChange?.(null);
-        void Promise.resolve(onMapLocationSelect(mode, coords)).finally(() => setPendingSelection(null));
       }
+      void Promise.resolve(onMapLocationSelect(autoMode, coords)).finally(() => setPendingSelection(null));
     };
     map.on('click', handleMapClick);
     return () => {
@@ -233,29 +238,42 @@ export const MapView: React.FC<MapViewProps> = ({
           <button
             type="button"
             onClick={() => onSelectionModeChange(selectionMode === 'pickup' ? null : 'pickup')}
-            className={`rounded-full border px-3 py-2 text-[11px] font-bold shadow-lg transition-colors ${
+            className={`rounded-full border px-3 py-2 text-[11px] font-bold shadow-lg backdrop-blur-md transition-colors cursor-pointer ${
               selectionMode === 'pickup'
                 ? 'border-green-500 bg-green-500 text-white'
-                : 'border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:border-green-500'
+                : 'border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-primary)] hover:border-green-500'
             }`}
           >
-            {selectionMode === 'pickup' ? 'Click map for pickup' : 'Select pickup on map'}
+            {selectionMode === 'pickup' ? 'Tap map for Pickup (A)' : 'Pin Pickup (A)'}
           </button>
           <button
             type="button"
             onClick={() => onSelectionModeChange(selectionMode === 'destination' ? null : 'destination')}
-            className={`rounded-full border px-3 py-2 text-[11px] font-bold shadow-lg transition-colors ${
+            className={`rounded-full border px-3 py-2 text-[11px] font-bold shadow-lg backdrop-blur-md transition-colors cursor-pointer ${
               selectionMode === 'destination'
                 ? 'border-red-500 bg-red-500 text-white'
-                : 'border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:border-red-500'
+                : 'border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-primary)] hover:border-red-500'
             }`}
           >
-            {selectionMode === 'destination' ? 'Click map for destination' : 'Select destination on map'}
+            {selectionMode === 'destination' ? 'Tap map for Drop (B)' : 'Pin Drop (B)'}
           </button>
         </div>
       )}
+      {onMapLocationSelect && (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-40 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-primary)] shadow-md backdrop-blur-md">
+          {selectionMode === 'pickup'
+            ? 'Click map to place Pickup (A)'
+            : selectionMode === 'destination'
+              ? 'Click map to place Destination (B)'
+              : !sourceCoords
+                ? 'Click anywhere on map to pin Pickup (A)'
+                : !destCoords
+                  ? 'Click map to pin Destination (B)'
+                  : 'Drag A/B pins or click map to adjust Destination'}
+        </div>
+      )}
       {/* Map DOM target */}
-      <div ref={mapContainerRef} className={`leaflet-container w-full h-full z-10 ${selectionMode ? 'cursor-crosshair' : ''}`} />
+      <div ref={mapContainerRef} className="leaflet-container w-full h-full z-10 cursor-crosshair" />
     </div>
   );
 };
