@@ -390,7 +390,7 @@ function App() {
         }}
       />
 
-      <main className={`flex-1 w-full flex flex-col mb-16 md:mb-0 ${showSurgeTracker ? '' : 'max-w-7xl mx-auto p-4 md:p-10 gap-4 md:gap-8'}`}>
+      <main className={`flex-1 w-full flex flex-col mb-16 md:mb-0 ${showSurgeTracker ? 'pt-16' : 'max-w-7xl mx-auto px-4 pt-20 pb-6 md:px-10 md:pt-24 md:pb-10 gap-4 md:gap-8'}`}>
         {showInstallBanner && (
           <div className="w-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] p-4 rounded-xl flex items-center justify-between shadow-sm animate-fade-in">
             <div className="flex items-center gap-3">

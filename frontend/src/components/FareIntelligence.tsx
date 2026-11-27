@@ -286,10 +286,11 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
     }
   };
 
-  const inputClass = 'w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-color)]';
+  const inputClass = 'w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-color)]';
+  const labelClass = 'flex flex-col gap-1.5 text-xs font-semibold text-[var(--text-secondary)]';
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="mx-auto w-full max-w-5xl space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">Fare Intelligence</h1>
@@ -355,8 +356,8 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
               onMapLocationSelect={handleMapLocationSelect}
             />
           </div>
-          <label className="text-xs font-semibold">
-            Taxi platform
+          <label className={labelClass}>
+            <span>Taxi platform</span>
             <select
               className={inputClass}
               value={form.provider}
@@ -365,8 +366,8 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
               {PROVIDER_OPTIONS.map((provider) => <option key={provider} value={provider}>{provider}</option>)}
             </select>
           </label>
-          <label className="text-xs font-semibold">
-            Vehicle category
+          <label className={labelClass}>
+            <span>Vehicle category</span>
             <select
               required
               className={inputClass}
@@ -378,23 +379,34 @@ export function FareIntelligence({ initialTab = 'submit' }: { initialTab?: FareI
               ))}
             </select>
           </label>
-          <label className="text-xs font-semibold">
-            Currency
+          <label className={labelClass}>
+            <span>Currency</span>
             <select className={inputClass} value={form.currency} onChange={(event) => update('currency', event.target.value)}>
               {CURRENCY_OPTIONS.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
             </select>
           </label>
-          <label className="text-xs font-semibold">
-            Exact fare ({form.currency})
+          <label className={labelClass}>
+            <span>Exact fare ({form.currency})</span>
             <input required type="number" min="1" step="0.01" className={inputClass} value={form.submittedFare} onChange={(event) => update('submittedFare', event.target.value)} />
           </label>
-          <label className="text-xs font-semibold">Quotation time<input required type="datetime-local" className={inputClass} value={form.quotationTimestamp} onChange={(e) => update('quotationTimestamp', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Distance (km)<input required type="number" min="0.1" step="0.1" className={inputClass} value={form.estimatedDistanceKm} onChange={(e) => update('estimatedDistanceKm', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Duration (minutes)<input required type="number" min="1" step="1" className={inputClass} value={form.estimatedDurationMin} onChange={(e) => update('estimatedDurationMin', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Surge multiplier (optional)<input type="number" min="0" step="0.1" className={inputClass} value={form.surgeMultiplier} onChange={(e) => update('surgeMultiplier', e.target.value)} /></label>
-          <label className="text-xs font-semibold">Additional fees<input type="number" min="0" step="1" className={inputClass} value={form.additionalFees} onChange={(e) => update('additionalFees', e.target.value)} /></label>
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--border-color)] p-3 text-xs font-semibold"><FileImage size={16} />{screenshotName || 'Optional screenshot'}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void uploadScreenshot(e.target.files?.[0])} /></label>
-          <button disabled={submitting} className="rounded-xl bg-[var(--accent-color)] px-4 py-3 text-sm font-bold text-black disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit Fare for Verification'}</button>
+          <label className={labelClass}><span>Quotation time</span><input required type="datetime-local" className={inputClass} value={form.quotationTimestamp} onChange={(e) => update('quotationTimestamp', e.target.value)} /></label>
+          <label className={labelClass}><span>Distance (km)</span><input required type="number" min="0.1" step="0.1" className={inputClass} value={form.estimatedDistanceKm} onChange={(e) => update('estimatedDistanceKm', e.target.value)} /></label>
+          <label className={labelClass}><span>Duration (minutes)</span><input required type="number" min="1" step="1" className={inputClass} value={form.estimatedDurationMin} onChange={(e) => update('estimatedDurationMin', e.target.value)} /></label>
+          <label className={labelClass}><span>Surge multiplier (optional)</span><input type="number" min="0" step="0.1" className={inputClass} value={form.surgeMultiplier} onChange={(e) => update('surgeMultiplier', e.target.value)} /></label>
+          <label className={labelClass}><span>Additional fees</span><input type="number" min="0" step="1" className={inputClass} value={form.additionalFees} onChange={(e) => update('additionalFees', e.target.value)} /></label>
+          <div className={labelClass}>
+            <span>Evidence screenshot (optional)</span>
+            <label className="flex h-[42px] cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--bg-primary)] px-3 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--accent-color)]">
+              <FileImage size={16} />
+              <span className="truncate">{screenshotName || 'Upload screenshot'}</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void uploadScreenshot(e.target.files?.[0])} />
+            </label>
+          </div>
+          <div className="md:col-span-2 pt-1">
+            <button disabled={submitting} className="w-full rounded-xl bg-[var(--accent-color)] px-4 py-3 text-sm font-bold text-black hover:opacity-90 disabled:opacity-50 cursor-pointer">
+              {submitting ? 'Submitting...' : 'Submit Fare for Verification'}
+            </button>
+          </div>
         </form>
         <p className="mt-4 text-[11px] leading-relaxed text-[var(--text-secondary)]">Submitted fares are subject to automated validation and community verification. Unverified submissions will not be displayed as confirmed live prices.</p>
         {message && <p className="mt-3 rounded-xl bg-[var(--bg-primary)] px-3 py-2 text-xs text-[var(--accent-color)]">{message}</p>}
