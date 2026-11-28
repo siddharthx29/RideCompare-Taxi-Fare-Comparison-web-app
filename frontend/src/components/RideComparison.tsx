@@ -14,13 +14,15 @@ interface RideComparisonProps {
   onBooking: (providerName: string, fare: number) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  onSuggestPrice?: (provider: RideProviderDetails, suggestedFare: number) => Promise<boolean>;
 }
 
 export const RideComparison: React.FC<RideComparisonProps> = ({
   comparison,
   onBooking,
   onRefresh,
-  refreshing = false
+  refreshing = false,
+  onSuggestPrice,
 }) => {
   const {
     providers, insights, detectedCity,
@@ -47,6 +49,10 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
   const [vehicleFilter, setVehicleFilter] = useState<'ALL' | 'CAB' | 'AUTO' | 'BIKE' | 'ROBOTAXI'>('ALL');
   const [nowTimestamp, setNowTimestamp] = useState(0);
   const [showAuditDrawer, setShowAuditDrawer] = useState(true);
+  const [suggestKey, setSuggestKey] = useState<string | null>(null);
+  const [suggestAmount, setSuggestAmount] = useState('');
+  const [suggestSaving, setSuggestSaving] = useState(false);
+  const [suggestSubmitted, setSuggestSubmitted] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -968,6 +974,20 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5">
+                      {onSuggestPrice && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSuggestKey(suggestKey === cardKey ? null : cardKey);
+                            setSuggestAmount(String(realtimeRate));
+                          }}
+                          className="px-2.5 py-2 rounded-xl text-[11px] font-semibold border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)] cursor-pointer"
+                          title="Suggest a corrected fare for this ride"
+                        >
+                          {suggestSubmitted[cardKey] ? '✓ Sent' : 'Suggest Price'}
+                        </button>
+                      )}
                       {hasValidDeepLink(p) && (
                         <button
                           onClick={(e) => handleBook(p, e)}
@@ -992,6 +1012,42 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {suggestKey === cardKey && onSuggestPrice && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)]"
+                  >
+                    <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                      Observed / Desired Fare ({sym}):
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={suggestAmount}
+                      onChange={(e) => setSuggestAmount(e.target.value)}
+                      className="w-24 px-2.5 py-1 rounded-lg bg-[var(--bg-dashboard)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-color)]"
+                    />
+                    <button
+                      type="button"
+                      disabled={suggestSaving || !(Number(suggestAmount) > 0)}
+                      onClick={async () => {
+                        const val = Number(suggestAmount);
+                        if (!(val > 0)) return;
+                        setSuggestSaving(true);
+                        const ok = await onSuggestPrice(p, val);
+                        setSuggestSaving(false);
+                        if (ok) {
+                          setSuggestSubmitted((prev) => ({ ...prev, [cardKey]: true }));
+                          setSuggestKey(null);
+                        }
+                      }}
+                      className="px-3 py-1 rounded-lg bg-[var(--accent-color)] text-[var(--accent-ink)] text-xs font-bold disabled:opacity-50 cursor-pointer"
+                    >
+                      {suggestSaving ? 'Sending...' : 'Submit'}
+                    </button>
+                  </div>
+                )}
 
                 {/* Demand & Surge Range Bar */}
                 <div className="p-2.5 rounded-xl bg-[var(--bg-primary)]/70 border border-[var(--border-color)] space-y-1.5">

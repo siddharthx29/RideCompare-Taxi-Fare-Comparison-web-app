@@ -169,6 +169,24 @@ function App() {
   }, [applyDetectedLocation]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const flat = Number(params.get('flat'));
+      const flng = Number(params.get('flng'));
+      const from = params.get('from');
+      if (Number.isFinite(flat) && Number.isFinite(flng) && from) {
+        const src: LocationInfo = { label: from, lat: flat, lng: flng };
+        setSourceLoc(src);
+        setMapCenter([flat, flng]);
+        const tlat = Number(params.get('tlat'));
+        const tlng = Number(params.get('tlng'));
+        const to = params.get('to');
+        if (Number.isFinite(tlat) && Number.isFinite(tlng) && to) {
+          setDestLoc({ label: to, lat: tlat, lng: tlng });
+        }
+        return;
+      }
+    }
     detectCurrentLocation();
   }, [detectCurrentLocation]);
   const [routeGeometry, setRouteGeometry] = useState<RouteGeometry | null>(null);
@@ -869,6 +887,33 @@ function App() {
                         onBooking={handleBookingRedirect}
                         onRefresh={() => sourceLoc && destLoc && handleSearch(sourceLoc, destLoc)}
                         refreshing={loading}
+                        onSuggestPrice={async (providerObj, suggestedFare) => {
+                          if (!sourceLoc || !destLoc) return false;
+                          try {
+                            const res = await apiFetch('/api/fares/submit', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                provider: providerObj.provider,
+                                pickupLocation: sourceLoc.label,
+                                destinationLocation: destLoc.label,
+                                pickupCoordinates: [sourceLoc.lat, sourceLoc.lng],
+                                destinationCoordinates: [destLoc.lat, destLoc.lng],
+                                vehicleCategory: providerObj.vehicleType || 'Cab',
+                                submittedFare: suggestedFare,
+                                currency: (providerObj.currency || 'INR').slice(0, 3),
+                                quotationTimestamp: new Date().toISOString(),
+                                estimatedDistanceKm: Math.max(0.5, comparison.distanceKm || 1),
+                                estimatedDurationMin: Math.max(1, comparison.durationMins || 5),
+                                surgeMultiplier: providerObj.surgeMultiplier || 1.0,
+                                deviceFingerprint: 'ridecompare-web-client-v1',
+                              }),
+                            });
+                            return res.ok;
+                          } catch {
+                            return false;
+                          }
+                        }}
                       />
                     </div>
                   )}

@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUpDown, Search, Loader2, History, Bookmark, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowUpDown, Search, Loader2, History, Bookmark, Clock, AlertTriangle, CheckCircle2, Share2, MessageCircle, Send, Copy } from 'lucide-react';
 import type { LocationInfo } from '../types/ride';
 import { LocationAutocompleteInput } from './LocationAutocompleteInput';
 import { reverseGeocodeLocation, suggestLocations, retrieveLocation, detectIpLocation } from '../utils/locationService';
 import { apiFetch } from '../utils/api';
+import {
+  buildLocationShareText,
+  shareToWhatsApp,
+  shareToMessages,
+  shareToInstagramDM,
+  copyShareValue,
+  triggerNativeShare,
+} from '../utils/shareRoute';
 
 interface SearchPanelProps {
   selectedSource: LocationInfo | null;
@@ -49,6 +57,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const [destError, setDestError] = useState<string | null>(null);
   const [departMode, setDepartMode] = useState<'now' | 'later'>('now');
   const [departTime, setDepartTime] = useState<string>('');
+  const [shareOpenKey, setShareOpenKey] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [coverageStatus, setCoverageStatus] = useState<{
     covered?: boolean;
     name?: string;
@@ -180,11 +190,11 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         revResult && !(isGenericCoordLabel && fallbackLabel)
           ? revResult
           : {
-              label: fallbackLabel || revResult?.label || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
-              lat: latitude,
-              lng: longitude,
-              address: revResult?.address || {}
-            };
+            label: fallbackLabel || revResult?.label || `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+            lat: latitude,
+            lng: longitude,
+            address: revResult?.address || {}
+          };
       onSourceSelect(locationData);
       setSourceInput(locationData.label);
       setSourceError(null);
@@ -298,17 +308,83 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {recentLocations.map(location => (
-                    <div key={`recent-${locationKey(location)}`} className="flex max-w-full items-center rounded-lg border border-[var(--border-color)]">
-                      <button type="button" onClick={() => selectSavedLocation(location, 'source')} className="truncate px-2.5 py-1.5 text-xs text-[var(--text-primary)] hover:text-indigo-500">
-                        {location.placeName || location.label}
-                      </button>
-                      <button type="button" onClick={() => toggleFavourite(location)} className="p-1.5 text-[var(--text-secondary)] hover:text-indigo-500" aria-label={`Favourite ${location.label}`}>
-                        <Bookmark size={13} />
-                      </button>
-                    </div>
-                  ))}
+                  {recentLocations.map(location => {
+                    const key = locationKey(location);
+                    const isShareOpen = shareOpenKey === key;
+                    const { text: shareText, url: shareUrl } = buildLocationShareText(
+                      location,
+                      selectedDest && selectedDest.label !== location.label ? selectedDest : null,
+                      location.placeName || location.label
+                    );
+                    return (
+                      <div key={`recent-${key}`} className="flex flex-col max-w-full rounded-lg border border-[var(--border-color)]">
+                        <div className="flex items-center">
+                          <button type="button" onClick={() => selectSavedLocation(location, 'source')} className="truncate px-2.5 py-1.5 text-xs text-[var(--text-primary)] hover:text-[var(--accent-color)]">
+                            {location.placeName || location.label}
+                          </button>
+                          <button type="button" onClick={() => toggleFavourite(location)} className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)]" aria-label={`Favourite ${location.label}`}>
+                            <Bookmark size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShareOpenKey(isShareOpen ? null : key)}
+                            className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)]"
+                            aria-label={`Share ${location.label}`}
+                            title="Share link via WhatsApp, Messages, or Instagram DM"
+                          >
+                            <Share2 size={13} />
+                          </button>
+                        </div>
+                        {isShareOpen && (
+                          <div className="flex flex-wrap items-center gap-1 px-2 pb-1.5 pt-1 border-t border-[var(--border-color)] text-[10px] font-semibold">
+                            <button
+                              type="button"
+                              onClick={() => shareToWhatsApp(shareText)}
+                              className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <MessageCircle size={10} /> WhatsApp
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => shareToMessages(shareText)}
+                              className="px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Send size={10} /> Messages
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const copied = await shareToInstagramDM(shareText);
+                                setShareNotice(copied ? 'Link copied! Paste in Instagram DM.' : 'Opened Instagram Direct.');
+                                setTimeout(() => setShareNotice(null), 2600);
+                              }}
+                              className="px-2 py-0.5 rounded bg-pink-500/15 text-pink-400 hover:bg-pink-500/25 cursor-pointer"
+                            >
+                              Instagram DM
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const shared = await triggerNativeShare('RideCompare Route', shareText, shareUrl);
+                                if (!shared) {
+                                  const copied = await copyShareValue(shareUrl);
+                                  setShareNotice(copied ? 'Route URL copied!' : shareUrl);
+                                  setTimeout(() => setShareNotice(null), 2600);
+                                }
+                              }}
+                              className="px-2 py-0.5 rounded bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-color)] inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Copy size={10} /> Copy URL
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+                {shareNotice && (
+                  <p className="mt-1.5 text-[11px] font-semibold text-[var(--accent-color)]">{shareNotice}</p>
+                )}
               </div>
             )}
             {favouriteLocations.length > 0 && (
