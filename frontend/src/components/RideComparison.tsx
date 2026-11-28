@@ -4,13 +4,23 @@ import {
   Clock, Car, Bike, Navigation, ShieldCheck,
   RefreshCw, AlertCircle, Bot, TrendingUp,
   Activity, CheckCircle2, Route, AlertTriangle,
-  ArrowRight, ShieldAlert, Layers
+  ArrowRight, ShieldAlert, Layers, Flag, Share2,
+  MessageCircle, Send, Copy
 } from 'lucide-react';
-import type { RideProviderDetails, ComparisonResult } from '../types/ride';
+import type { RideProviderDetails, ComparisonResult, LocationInfo } from '../types/ride';
 import { PriceHistoryGraph } from './PriceHistoryGraph';
+import {
+  buildRouteShareUrl,
+  shareToWhatsApp,
+  shareToMessages,
+  shareToInstagramDM,
+  copyShareValue,
+} from '../utils/shareRoute';
 
 interface RideComparisonProps {
   comparison: ComparisonResult;
+  sourceLoc?: LocationInfo | null;
+  destLoc?: LocationInfo | null;
   onBooking: (providerName: string, fare: number) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -19,6 +29,8 @@ interface RideComparisonProps {
 
 export const RideComparison: React.FC<RideComparisonProps> = ({
   comparison,
+  sourceLoc,
+  destLoc,
   onBooking,
   onRefresh,
   refreshing = false,
@@ -53,6 +65,31 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
   const [suggestAmount, setSuggestAmount] = useState('');
   const [suggestSaving, setSuggestSaving] = useState(false);
   const [suggestSubmitted, setSuggestSubmitted] = useState<Record<string, boolean>>({});
+  const [showHeaderShare, setShowHeaderShare] = useState(false);
+  const [cardShareKey, setCardShareKey] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
+  const buildSummaryShareText = (focusRide?: RideProviderDetails) => {
+    const url = buildRouteShareUrl(sourceLoc, destLoc);
+    const fromLabel = sourceLoc?.placeName || sourceLoc?.label || 'Pickup';
+    const toLabel = destLoc?.placeName || destLoc?.label || 'Destination';
+    if (focusRide) {
+      const fSym = focusRide.currencySymbol || defaultSym;
+      const fMin = focusRide.low ?? focusRide.fareMin ?? focusRide.estimatedFare;
+      const fMax = focusRide.high ?? focusRide.fareMax ?? focusRide.estimatedFare;
+      return `RideCompare.world (${comparison.distanceKm} km):\n${fromLabel} → ${toLabel}\n${focusRide.provider}: ${fSym}${fMin}–${fSym}${fMax}\n${url}`;
+    }
+    const topLines = sortedProviders
+      .slice(0, 5)
+      .map((r) => {
+        const rSym = r.currencySymbol || defaultSym;
+        const rMin = r.low ?? r.fareMin ?? r.estimatedFare;
+        const rMax = r.high ?? r.fareMax ?? r.estimatedFare;
+        return `• ${r.provider}: ${rSym}${rMin}–${rSym}${rMax}`;
+      })
+      .join('\n');
+    return `RideCompare.world (${comparison.distanceKm} km):\n${fromLabel} → ${toLabel}\n${topLines}\n${url}`;
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -647,12 +684,12 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
           </div>
         )}
 
-        <div className="pt-2 flex items-end justify-between">
+        <div className="pt-2 flex flex-wrap items-end justify-between gap-3">
           <div>
             <span className="text-[11px] font-medium text-slate-400 block">
               Lowest Estimated Fare (Statutory Rate Cards)
             </span>
-            <div className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
+            <div className="text-base font-bold text-white flex flex-wrap items-center gap-2 mt-0.5">
               <span>{cheapestProvider?.provider}</span>
               {cheapestProvider && (
                 <span className="text-[var(--text-primary)] font-bold text-lg">
@@ -662,15 +699,69 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
             </div>
           </div>
 
-          {fareSpread > 0 && (
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Fare Variance</span>
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-700/50 px-2 py-0.5 rounded-md inline-block mt-0.5">
-                Save up to {activeSym}{fareSpread} ({spreadPercentage}%)
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {fareSpread > 0 && (
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Fare Variance</span>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-700/50 px-2 py-0.5 rounded-md inline-block mt-0.5">
+                  Save up to {activeSym}{fareSpread} ({spreadPercentage}%)
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowHeaderShare((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-[#0d1014]/90 px-3 py-2 text-xs font-semibold text-white hover:border-[var(--accent-color)] transition-all cursor-pointer"
+              title="Share source, destination & fares"
+            >
+              <Share2 size={13} className="text-[var(--accent-color)]" />
+              <span>Share</span>
+            </button>
+          </div>
         </div>
+
+        {showHeaderShare && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-[#0d1014]/90 p-2 text-xs font-semibold">
+            <span className="text-[11px] text-slate-400 px-1">Share route &amp; prices:</span>
+            <button
+              type="button"
+              onClick={() => shareToWhatsApp(buildSummaryShareText())}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/12 px-2.5 py-1 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer"
+            >
+              <MessageCircle size={12} /> WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => shareToMessages(buildSummaryShareText())}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-500/35 bg-sky-500/12 px-2.5 py-1 text-sky-400 hover:bg-sky-500/20 cursor-pointer"
+            >
+              <Send size={12} /> Messages
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const copied = await shareToInstagramDM(buildSummaryShareText());
+                setShareToast(copied ? 'Copied! Paste in Instagram DM.' : 'Opened Instagram Direct.');
+                setTimeout(() => setShareToast(null), 2500);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-pink-500/35 bg-pink-500/12 px-2.5 py-1 text-pink-400 hover:bg-pink-500/20 cursor-pointer"
+            >
+              Instagram DM
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const ok = await copyShareValue(buildSummaryShareText());
+                setShareToast(ok ? 'Route & fares copied!' : 'Copy unavailable');
+                setTimeout(() => setShareToast(null), 2500);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-2.5 py-1 text-slate-200 hover:bg-white/[0.08] cursor-pointer"
+            >
+              <Copy size={12} /> Copy
+            </button>
+            {shareToast && <span className="text-[11px] text-emerald-400 ml-1">{shareToast}</span>}
+          </div>
+        )}
 
       </div>
 
@@ -953,8 +1044,8 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                     </div>
                   </div>
 
-                  {/* Regulated Fare Range Block (Always Range + Real-time Rate) */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
+                  {/* Regulated Fare Range Block + Redesigned Action Pill Bar */}
+                  <div className="flex flex-col sm:items-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)] shrink-0">
                     <div className="text-left sm:text-right space-y-0.5">
                       <div className="flex items-center sm:justify-end gap-1.5 flex-wrap">
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
@@ -965,7 +1056,7 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                           Live: ~{sym}{realtimeRate}
                         </span>
                       </div>
-                      <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                      <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight whitespace-nowrap">
                         {sym}{liveMin} – {sym}{liveMax}
                       </div>
                       <span className="text-[10px] text-[var(--text-secondary)] font-medium block">
@@ -973,7 +1064,17 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="inline-flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/10 bg-[#0d1014]/90 p-1">
+                      {hasValidDeepLink(p) && (
+                        <button
+                          onClick={(e) => handleBook(p, e)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/15 px-3 py-1.5 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/25 transition-all cursor-pointer"
+                          title={`Open ${brand.appName} with route pre-filled`}
+                        >
+                          <span>Open in app</span>
+                          <ArrowUpRight size={13} />
+                        </button>
+                      )}
                       {onSuggestPrice && (
                         <button
                           type="button"
@@ -982,36 +1083,83 @@ export const RideComparison: React.FC<RideComparisonProps> = ({
                             setSuggestKey(suggestKey === cardKey ? null : cardKey);
                             setSuggestAmount(String(realtimeRate));
                           }}
-                          className="px-2.5 py-2 rounded-xl text-[11px] font-semibold border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)] cursor-pointer"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-white/[0.08] transition-all cursor-pointer"
                           title="Suggest a corrected fare for this ride"
                         >
-                          {suggestSubmitted[cardKey] ? '✓ Sent' : 'Suggest Price'}
+                          <Flag size={12} className="text-amber-400" />
+                          <span>{suggestSubmitted[cardKey] ? 'Sent' : 'Suggest'}</span>
                         </button>
                       )}
-                      {hasValidDeepLink(p) && (
-                        <button
-                          onClick={(e) => handleBook(p, e)}
-                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 shadow-xs cursor-pointer ${brand.buttonClass}`}
-                          title={`Open ${brand.appName} with route pre-filled`}
-                        >
-                          <span>Open in app</span>
-                          <ArrowUpRight size={13} />
-                        </button>
-                      )}
-
+                      <span className="hidden sm:block h-4 w-px bg-white/10" aria-hidden="true" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCardShareKey(cardShareKey === cardKey ? null : cardKey);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-xl border border-white/12 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-white/[0.08] transition-all cursor-pointer"
+                        title="Share this fare via WhatsApp, Messages, or Instagram DM"
+                      >
+                        <Share2 size={12} />
+                        <span>Share</span>
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleExpand(cardKey);
                         }}
-                        className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-lg cursor-pointer"
+                        className="p-1.5 text-[var(--text-secondary)] hover:text-white transition-colors rounded-xl cursor-pointer"
                         title="View fare details"
                       >
-                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                       </button>
                     </div>
                   </div>
                 </div>
+
+                {cardShareKey === cardKey && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex flex-wrap items-center gap-1.5 p-2 rounded-2xl bg-[#0d1014]/90 border border-white/10 text-[11px] font-semibold"
+                  >
+                    <span className="text-slate-400 px-1">Share {p.provider}:</span>
+                    <button
+                      type="button"
+                      onClick={() => shareToWhatsApp(buildSummaryShareText(p))}
+                      className="px-2.5 py-1 rounded-xl border border-emerald-500/35 bg-emerald-500/12 text-emerald-400 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <MessageCircle size={11} /> WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => shareToMessages(buildSummaryShareText(p))}
+                      className="px-2.5 py-1 rounded-xl border border-sky-500/35 bg-sky-500/12 text-sky-400 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Send size={11} /> Messages
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const copied = await shareToInstagramDM(buildSummaryShareText(p));
+                        setShareToast(copied ? 'Copied for Instagram DM!' : 'Opened Instagram Direct.');
+                        setTimeout(() => setShareToast(null), 2500);
+                      }}
+                      className="px-2.5 py-1 rounded-xl border border-pink-500/35 bg-pink-500/12 text-pink-400 cursor-pointer"
+                    >
+                      Instagram DM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await copyShareValue(buildSummaryShareText(p));
+                        setCardShareKey(null);
+                      }}
+                      className="px-2.5 py-1 rounded-xl border border-white/12 bg-white/[0.04] text-slate-200 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy size={11} /> Copy
+                    </button>
+                  </div>
+                )}
 
                 {suggestKey === cardKey && onSuggestPrice && (
                   <div

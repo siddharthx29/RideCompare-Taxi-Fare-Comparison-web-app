@@ -884,6 +884,8 @@ function App() {
                     <div className="animate-slide-up">
                       <RideComparison
                         comparison={comparison}
+                        sourceLoc={sourceLoc}
+                        destLoc={destLoc}
                         onBooking={handleBookingRedirect}
                         onRefresh={() => sourceLoc && destLoc && handleSearch(sourceLoc, destLoc)}
                         refreshing={loading}
