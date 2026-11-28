@@ -1,8 +1,9 @@
 import math
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import quote_plus
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 import httpx
 
@@ -13,6 +14,57 @@ logger = logging.getLogger(__name__)
 # In-memory LRU cache for routing queries
 _ROUTE_CACHE: Dict[str, Tuple[float, float, float]] = {}  # key -> (distance_km, duration_min, timestamp)
 CACHE_TTL_SECONDS = 3600
+
+
+REGION_TIMEZONES: Dict[str, Tuple[str, float]] = {
+    "bengaluru": ("Asia/Kolkata", 5.5),
+    "bangalore": ("Asia/Kolkata", 5.5),
+    "kochi": ("Asia/Kolkata", 5.5),
+    "mumbai": ("Asia/Kolkata", 5.5),
+    "delhi": ("Asia/Kolkata", 5.5),
+    "goa": ("Asia/Kolkata", 5.5),
+    "kolkata": ("Asia/Kolkata", 5.5),
+    "london": ("Europe/London", 0.0),
+    "new_york": ("America/New_York", -5.0),
+    "san_francisco": ("America/Los_Angeles", -8.0),
+    "singapore": ("Asia/Singapore", 8.0),
+    "dubai": ("Asia/Dubai", 4.0),
+    "tokyo": ("Asia/Tokyo", 9.0),
+}
+
+COUNTRY_TIMEZONES: Dict[str, Tuple[str, float]] = {
+    "IN": ("Asia/Kolkata", 5.5),
+    "GB": ("Europe/London", 0.0),
+    "UK": ("Europe/London", 0.0),
+    "US": ("America/New_York", -5.0),
+    "SG": ("Asia/Singapore", 8.0),
+    "AE": ("Asia/Dubai", 4.0),
+    "JP": ("Asia/Tokyo", 9.0),
+}
+
+
+def to_region_local_datetime(
+    depart_at: Optional[datetime],
+    region_id: Optional[str] = None,
+    country: Optional[str] = None,
+) -> datetime:
+    """Converts a naive/aware UTC datetime to the target region's local wall-clock time."""
+    dt = depart_at or datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    tz_spec = (
+        REGION_TIMEZONES.get((region_id or "").lower())
+        or COUNTRY_TIMEZONES.get((country or "").upper())
+    )
+    if not tz_spec:
+        return dt.astimezone(timezone.utc)
+
+    iana_name, offset_hours = tz_spec
+    try:
+        return dt.astimezone(ZoneInfo(iana_name))
+    except Exception:
+        return dt.astimezone(timezone(timedelta(hours=offset_hours)))
 
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -256,7 +308,11 @@ def get_service_estimates(
     db: Session
 ) -> List[Dict[str, Any]]:
     """Calculates estimates for all active rate cards in the region, sorted cheapest first."""
-    dt = depart_at or datetime.utcnow()
+    dt = to_region_local_datetime(
+        depart_at,
+        region_id=getattr(region, "region_id", None),
+        country=getattr(region, "country", None),
+    )
     is_night = dt.hour >= 23 or dt.hour < 5
     legal_cap = region.legal_surge_cap or 2.0
     surge_low, surge_high, surge_current, period_name = calculate_surge_window_with_realtime(dt, legal_cap=legal_cap)

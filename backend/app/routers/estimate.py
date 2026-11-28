@@ -13,7 +13,8 @@ from backend.app.services.fare_engine import (
     get_route_distance_and_duration,
     get_service_estimates,
     compute_metered_auto_estimate,
-    haversine_distance
+    haversine_distance,
+    to_region_local_datetime,
 )
 
 logger = logging.getLogger(__name__)
@@ -136,7 +137,11 @@ async def estimate_fares(payload: EstimateRequest, db: Session = Depends(get_db)
 
     # Case B: No ride-hailing apps operate here, typical metered auto fare estimate
     if avail.case == "B":
-        dt = depart_dt or datetime.utcnow()
+        dt = to_region_local_datetime(
+            depart_dt,
+            region_id=avail.region.region_id if avail.region else None,
+            country=avail.region.country if avail.region else None,
+        )
         is_night = dt.hour >= 23 or dt.hour < 5
         auto_low, auto_high, curr, sym = compute_metered_auto_estimate(
             avail.metered_auto_fare, distance_km, is_night=is_night
